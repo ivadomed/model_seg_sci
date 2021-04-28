@@ -2,6 +2,9 @@
 
 Preprocessing pipeline to prepare dataset for training lesion segmentation model in SCI.
 
+![Screen Shot 2021-04-28 at 4 15 17 PM](https://user-images.githubusercontent.com/2482071/116466831-f95c1e00-a83c-11eb-9626-d7f668e62d41.png)
+
+
 ## Data organization
 
 Data are organized according to the BIDS structure:
