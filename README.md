@@ -7,7 +7,7 @@ Preprocessing pipeline to prepare dataset for training lesion segmentation model
 
 ## Data organization
 
-Data are organized according to the BIDS structure:
+Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure:
 
 ~~~
 dataset
@@ -37,6 +37,8 @@ dataset
                 ├── sub-ubc06_ses-02_T2w_lesion-manual.json
                 └── sub-ubc06_ses-02_T2w_lesion-manual.nii.gz  <---------- manually-created lesion segmentation
 ~~~
+
+More details to convert a dataset into BIDS is available from the [spine-generic](https://spine-generic.readthedocs.io/en/latest/data-acquisition.html#data-conversion-dicom-to-bids) project.
 
 ## Data (private)
 The data come from the following sites:
