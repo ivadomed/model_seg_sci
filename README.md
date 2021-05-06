@@ -34,6 +34,8 @@ dataset
     └── labels
         └── sub-ubc06
             └── anat
+                ├── sub-ubc06_ses-02_T2w_seg-manual.json
+                └── sub-ubc06_ses-02_T2w_seg-manual.nii.gz  <------------- manually-corrected spinal cord segmentation
                 ├── sub-ubc06_ses-02_T2w_lesion-manual.json
                 └── sub-ubc06_ses-02_T2w_lesion-manual.nii.gz  <---------- manually-created lesion segmentation
 ~~~
