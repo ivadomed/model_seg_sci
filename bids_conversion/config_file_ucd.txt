@@ -1,0 +1,20 @@
+{
+    "descriptions": [
+        {
+            "dataType": "anat",
+            "modalityLabel": "T1w",
+            "criteria": {
+	        "SeriesDescription": "Sag T1 FLAIR",
+                "ProtocolName": "*PPCM*"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "T2w",
+            "criteria": {
+                "SeriesDescription": "Sag T2 frFSE",
+                "ProtocolName": "*PPCM*"
+            }
+        }
+    ]
+}
