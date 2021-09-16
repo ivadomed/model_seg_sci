@@ -3,6 +3,9 @@
 # dcm2bids
 # dcm2niix
 
+# How to use ?
+# python curate_bids_ucd.py -i PATH_TO_DATASET_TO_CONVERT -o OUTPUT_PATH -c PATH_TO_CONFIG_FILE
+
 import os
 import shutil
 import json
