@@ -45,8 +45,8 @@ dataset
 More details to convert a dataset into BIDS is available from the [spine-generic](https://spine-generic.readthedocs.io/en/latest/data-acquisition.html#data-conversion-dicom-to-bids) project.
 
 ## Data (private)
-The data come from the following sites:
-- University of Zurich 🇨🇭
+The data come from the following sites (in brackets: the name of the dataset at NeuroPoly's internal server):
+- University of Zurich (`sci-zurich`) 🇨🇭
 - UCSF / Zuckerberg San Francisco General Hospital  🇺🇸
-- University of Colorado Anschutz Medical Campus 🇺🇸
+- University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
 
