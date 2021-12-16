@@ -1,4 +1,4 @@
-# sci-lesion-segmentation
+# Segmentation of T2 hyperintense lesion in acute spinal cord injury
 
 Preprocessing pipeline to prepare dataset for training lesion segmentation model in SCI.
 
