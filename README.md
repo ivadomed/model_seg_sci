@@ -7,7 +7,7 @@ Preprocessing pipeline to prepare dataset for training lesion segmentation model
 
 ## Data organization
 
-Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure:
+Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure, as in the example below:
 
 ~~~
 dataset
