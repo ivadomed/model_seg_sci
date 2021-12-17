@@ -10,10 +10,15 @@ Data used for this project hosted on a private repository.
 
 Data for this project come from the following sites (in brackets: the name of the dataset at NeuroPoly's internal server):
 - University of Zurich (`sci-zurich`) 🇨🇭
-- UCSF / Zuckerberg San Francisco General Hospital  🇺🇸
+  - Contrasts: T1w sag, T2w sag, T2w ax
+  - Manual segmentation done on the T2w sag
+  - Multiple sessions (1, 2, 3)
 - University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
+  - Contrasts: T1w ax, T2w ax
+  - Manual segmentation: none
+  - Single session
 
-Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure:
+Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure, as in the example below:
 
 ~~~
 dataset
