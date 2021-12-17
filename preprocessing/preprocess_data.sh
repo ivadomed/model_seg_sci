@@ -107,13 +107,14 @@ rsync -Ravzh $PATH_DATA/./$SUBJECT .
 
 # Copy segmentation ground truths (GT)
 mkdir -p derivatives/labels
-rsync -avzh $PATH_DATA/derivatives/labels/$SUBJECT derivatives/labels/.
+rsync -Ravzh $PATH_DATA/derivatives/labels/./$SUBJECT derivatives/labels/.
 
 # Go to subject folder for source images
 cd ${SUBJECT}/anat
 
 # Define variables
-file="${SUBJECT}"
+# We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
+file="${SUBJECT//[\/]/_}"
 
 # Make sure the image metadata is a valid JSON object
 if [[ ! -s ${file}.json ]]; then
