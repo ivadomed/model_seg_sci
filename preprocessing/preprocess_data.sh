@@ -116,6 +116,9 @@ cd ${SUBJECT}/anat
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
 file="${SUBJECT//[\/]/_}"
 
+# Add suffix corresponding to contrast
+file=${file}_acq-sag_T2w
+
 # Make sure the image metadata is a valid JSON object
 if [[ ! -s ${file}.json ]]; then
   echo "{}" >> ${file}.json
@@ -137,7 +140,7 @@ sct_crop_image -i ${file}.nii.gz -m ${file_seg}_dilate.nii.gz -o ${file}_crop.ni
 cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 
 # Define variables
-file_gt="${SUBJECT}_lesion-manual"
+file_gt="${file}_lesion-manual"
 
 # Redefine variable for final SC segmentation mask as path changed
 file_seg_dil=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_seg}_dilate
