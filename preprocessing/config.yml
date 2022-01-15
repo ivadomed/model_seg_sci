@@ -1,0 +1,34 @@
+########################################################################################################
+# config.yml: Configuration parameters for sct_run_batch
+#
+# Usage: "sct_run_batch -script process_data.sh -config config.yml"
+########################################################################################################
+
+# Path to the folder containing the BIDS dataset
+path_data: "/home/GRAMES.POLYMTL.CA/u114716/sct_preprocess/datasets/sci_zurich"
+
+# Path to save the output to. This path is what determines the following subdirectory environment variables:
+#   - PATH_DATA_PROCESSED: <path_output>/data_processed
+#   - PATH_RESULTS:        <path_output>/results
+#   - PATH_QC:             <path_output>/qc
+#   - PATH_LOG:            <path_output>/log
+# You can then use these subdirectory environment variables to direct the output for your batch processing script.
+path_output: "/home/GRAMES.POLYMTL.CA/u114716/sct_preprocess/outputs"
+
+# # Location of manually-corrected segmentations
+# path_segmanual: /home/GRAMES.POLYMTL.CA/u114716/sct_preprocess/seg_manual"
+
+# If each subject folder starts with a prefix, indicate it here. Otherwise, set to ""
+subject_prefix: "sub-"
+
+# If you only want to process specific subjects, uncomment one or both the lines below:
+#include_list: ["zh01", "zh02", "zh03"]
+#exclude-list: sub-03
+
+# Number of jobs for parallel processing
+# To know the number of available cores, run: getconf _NPROCESSORS_ONLN
+# We recommend not using more than half the number of available cores.
+jobs: 16
+
+# Number of jobs for ANTs routine. Set to 1 if ANTs functions crash when CPU saturates.
+#itk_threads: 1
