@@ -6,13 +6,10 @@
 # - SCT (5.4.0)
 #
 # Usage:
-#   ./preprocess_data.sh <SUBJECT> <TASK>
-#
-# <SUBJECT> is the name of the subject in BIDS convention (sub-XXX)
-# <TASK> is the aimed training task which will guide preprocessing (scseg or lesionseg)
-#
+# sct_run_batch -script preprocess_data.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
+
 # Manual segmentations or labels should be located under:
-# PATH_DATA/derivatives/labels/SUBJECT/<CONTRAST>/
+# PATH_DATA/derivatives/labels/SUBJECT/ses-0X/anat/
 
 # The following global variables are retrieved from the caller sct_run_batch
 # but could be overwritten by uncommenting the lines below:
@@ -73,7 +70,6 @@ segment_if_does_not_exist() {
 
 # Retrieve input params and other params
 SUBJECT=$1
-TASK=${2:-"lesionseg"}
 
 # get starting time:
 start=`date +%s`
@@ -124,9 +120,7 @@ if [[ ! -s ${file}.json ]]; then
   echo "{}" >> ${file}.json
 fi
 
-# Spinal cord segmentation. Here, we are dealing with MP2RAGE contrast. We 
-# specify t1 contrast because the cord is bright and the CSF is dark (like on 
-# the traditional MPRAGE T1w data).
+# Spinal cord segmentation using the T2w contrast
 segment_if_does_not_exist ${file} t2 ${CENTERLINE_METHOD}
 file_seg="${FILESEG}"
 
@@ -156,44 +150,21 @@ sct_crop_image -i ${file_gt}.nii.gz -m ${file_seg_dil}.nii.gz -o ${file_gt}_crop
 # Go back to the root output path
 cd $PATH_OUTPUT
 
-# TODO: deal with the code below once we are happy with the preprocessing
 # Create and populate clean data processed folder for training
-# PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
+PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
 
 # Copy over required BIDs files
-# mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
-# rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
-# rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
-# rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
-# 
-# if [[ $TASK == "lesionseg" ]]; then
-#   # For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
-#   rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
-#   rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
-#   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-#   rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt1}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt1}.nii.gz
-#   rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt1}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt1}.json
-#   # If second rater is present, copy the other files
-#   if [[ -f ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_gt2}.nii.gz ]]; then
-#     # Copy the second rater GT and aggregated GTs if second rater is present
-#     rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt2}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt2}.nii.gz
-#     rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt2}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt2}.json
-#     rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gtc}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gtc}.nii.gz
-#     rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_soft}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_soft}.nii.gz
-#   fi
-# elif [[ $TASK == "scseg" ]]; then
-#   # For SC segmentation task, copy raw subject images as inputs and SC masks as targets
-#   rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
-#   rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
-#   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-#   file_seg_gt="${file}_seg-manual"
-#   rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_seg.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_seg_gt}.nii.gz
-#   # TODO: Get the correct JSON below, skipping for now.
-#   rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt1}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_seg_gt}.json
-# else
-#   echo "Task = ${TASK} is not recognized!"
-#   exit 1
-# fi
+mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
+rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
+rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
+rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
+
+# For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
+rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
+rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
+mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
+rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.nii.gz
+rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.json
 
 
 # Display useful info for the log
