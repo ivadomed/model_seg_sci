@@ -68,25 +68,33 @@ More details to convert a dataset into BIDS is available from the [spine-generic
 git clone https://github.com/ivadomed/model_seg_sci.git
 ~~~
 
-## Get the data
+## Name and Version of the Data
 
-- data.neuro.polymtl.ca:sci-zurich
+- git@data.neuro.polymtl.ca:datasets/sci-zurich
 - Commit: 4ef05bf0b70c04490cd73f433cac4f5f43e5dac3
+
+### Downloading the Dataset
+~~~
+git clone git@data.neuro.polymtl.ca:datasets/sci-zurich
+cd sci-zurich
+git annex get .
+cd ..
+~~~
  
 ## Prepare the data
 
-The data need to be preprocessed before training. The general syntax for preprocessing is:
+The data need to be preprocessed before training. The preprocessing crops the input volume to focus on the region-of-interest i.e. the SC and the lesions. The syntax for preprocessing is:
 
 ~~~
-sct_run_batch -script preprocessing/preprocess_data.sh -path-data <PATH_TO_DATA>/sci-zurich/ -path-output <PATH_OUTPUT> -script-args "-task scseg" -jobs <JOBS>
+sct_run_batch -script preprocessing/preprocess_data.sh -path-data <PATH_TO_DATA>/sci-zurich/ -path-output <PATH_OUTPUT>/sci-zurich-preprocessed -jobs <JOBS>
 ~~~
 
 where:
-- `<TASK>`: `lesionseg` (default value) or `scseg`. You can leave the `-script-args` argument empty to stick to the default values.
 - `<JOBS>`: Number of CPU cores to use
 
-## Quality control
+### Quality control
 
-After running the preprocessing, you should check the QC report under qc/index.html.
+After running the preprocessing, it is recommended to check the QC report under `<PATH-OUTPUT>/qc/index.html` and run `preprocessing/qc_preprocess.py` which logs the following statistics as a sanity check: (i) resolutions and sizes for each subject image (both raw and cropped), ii) performs basic shape checks for the cropped SC images and ground-truths (GTs), and most importantly, (iii) checks if any intermediate step during preprocessing (i.e. dilation, cropping) left out any GT lesions.  
 
-TODO: add further details on how to QC and do manual corrections.
+TODO: add further details on manual corrections.
+TODO: add training details
