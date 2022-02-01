@@ -55,20 +55,20 @@ dataset
 
 More details to convert a dataset into BIDS is available from the [spine-generic](https://spine-generic.readthedocs.io/en/latest/data-acquisition.html#data-conversion-dicom-to-bids) project.
 
-# Getting started
+## Getting started
 
-## Dependencies
+### Dependencies
 
 - [SCT](https://spinalcordtoolbox.com/) commit: 7fd2ea718751dd858840c3823c0830a910d9777c
 - [ivadomed](https://ivadomed.org) commit: XXX
 
-## Clone this repository
+### Clone this repository
 
 ~~~
 git clone https://github.com/ivadomed/model_seg_sci.git
 ~~~
 
-## Name and Version of the Data
+### Name and Version of the Data
 
 - git@data.neuro.polymtl.ca:datasets/sci-zurich
 - Commit: 4ef05bf0b70c04490cd73f433cac4f5f43e5dac3
@@ -81,7 +81,7 @@ git annex get .
 cd ..
 ~~~
  
-## Prepare the data
+### Prepare the data
 
 The data need to be preprocessed before training. The preprocessing crops the input volume to focus on the region-of-interest i.e. the SC and the lesions. The syntax for preprocessing is:
 
@@ -98,3 +98,7 @@ After running the preprocessing, it is recommended to check the QC report under 
 
 TODO: add further details on manual corrections.
 TODO: add training details
+
+## Literature
+
+[Here](https://intranet.neuro.polymtl.ca/bibliography/spinal-cord-injury.html#) is a list of relevant articles in relation to this project.
