@@ -112,60 +112,86 @@ cd ${SUBJECT}/anat
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
 file="${SUBJECT//[\/]/_}"
 
-# Add suffix corresponding to contrast
-file=${file}_acq-sag_T2w
+# Add suffix corresponding to contrast (Sagittal T2w)
+file_sag=${file}_acq-sag_T2w
 
-# Make sure the image metadata is a valid JSON object
-if [[ ! -s ${file}.json ]]; then
-  echo "{}" >> ${file}.json
+# Add suffix corresponding to contrast (Axial T2w)
+file_ax=${file}_acq-ax_T2w
+
+# Make sure the Sagittal image metadata is a valid JSON object
+if [[ ! -s ${file_sag}.json ]]; then
+  echo "{}" >> ${file_sag}.json
 fi
 
-# Spinal cord segmentation using the T2w contrast
-segment_if_does_not_exist ${file} t2 ${CENTERLINE_METHOD}
-file_seg="${FILESEG}"
+# Make sure the Axial image metadata is a valid JSON object
+if [[ ! -s ${file_ax}.json ]]; then
+  echo "{}" >> ${file_ax}.json
+fi
 
-# Dilate spinal cord mask
-sct_maths -i ${file_seg}.nii.gz -dilate 5 -shape ball -o ${file_seg}_dilate.nii.gz
+# Resample both images to isotropic 1mm x 1mm x 1mm resolution
+flirt -in ${file_sag}.nii.gz -ref ${file_sag}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_sag}_res.nii.gz
+flirt -in ${file_ax}.nii.gz -ref ${file_ax}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_ax}_res.nii.gz
 
-# Use dilated mask to crop the original image and manual MS segmentations
-sct_crop_image -i ${file}.nii.gz -m ${file_seg}_dilate.nii.gz -o ${file}_crop.nii.gz
+# Spinal cord segmentation using the Sagittal T2w contrast
+segment_if_does_not_exist ${file_sag}_res t2 ${CENTERLINE_METHOD}
+file_sag_res_seg="${FILESEG}"
+
+# Spinal cord segmentation using the Axial T2w contrast
+segment_if_does_not_exist ${file_ax}_res t2 ${CENTERLINE_METHOD}
+file_ax_res_seg="${FILESEG}"
+
+# TODO: Perform the registration axial T2w (moving) --> sag T2w (fixed)
+# NOTE: We are passing the un-resampled / original axial image as the input to avoid double interpolation
+sct_register_multimodal -i ${file_ax}.nii.gz -iseg ${file_ax_res_seg}.nii.gz -d ${file_sag}_res.nii.gz -dseg ${file_sag_res_seg}.nii.gz -o ${file_ax}_reg.nii.gz -param step=1,type=seg,algo=slicereg,metric=MeanSquares,smooth=3
+
+# Dilate spinal cord masks for both images 
+sct_maths -i ${file_sag_res_seg}.nii.gz -dilate 5 -shape ball -o ${file_sag_res_seg}_dilate.nii.gz
+sct_maths -i ${file_ax_res_seg}.nii.gz -dilate 5 -shape ball -o ${file_ax_res_seg}_dilate.nii.gz
+
+# TODO: Also crop the axial image ?
+# Use dilated mask to crop the resampled image and manual MS segmentations
+sct_crop_image -i ${file_sag}_res.nii.gz -m ${file_sag_res_seg}_dilate.nii.gz -o ${file_sag}_crop.nii.gz
+
 
 # Go to subject folder for segmentation GTs
 cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 
 # Define variables
-file_gt="${file}_lesion-manual"
+file_sag_gt="${file_sag}_lesion-manual"
 
 # Redefine variable for final SC segmentation mask as path changed
-file_seg_dil=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_seg}_dilate
+file_sag_res_seg_dil=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_sag_res_seg}_dilate
 
 # Make sure the first rater metadata is a valid JSON object
-if [[ ! -s ${file_gt}.json ]]; then
-  echo "{}" >> ${file_gt}.json
+if [[ ! -s ${file_sag_gt}.json ]]; then
+  echo "{}" >> ${file_sag_gt}.json
 fi
 
+# Resample GT to isotropic 1mm x 1mm x 1mm resolution
+flirt -in ${file_sag_gt}.nii.gz -ref ${file_sag_gt}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_sag_gt}_res.nii.gz
+
 # Crop the manual seg
-sct_crop_image -i ${file_gt}.nii.gz -m ${file_seg_dil}.nii.gz -o ${file_gt}_crop.nii.gz
+sct_crop_image -i ${file_sag_gt}_res.nii.gz -m ${file_sag_res_seg_dil}.nii.gz -o ${file_sag_gt}_crop.nii.gz
 
 # Go back to the root output path
 cd $PATH_OUTPUT
 
-# Create and populate clean data processed folder for training
-PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
+# # Create and populate clean data processed folder for training
+# PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
 
-# Copy over required BIDs files
-mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
-rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
-rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
-rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
-rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/derivatives/
+# # Copy over required BIDs files
+# mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
+# rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
+# rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
+# rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
+# rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/derivatives/
 
-# For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
-rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
-rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
-mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.nii.gz
-rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.json
+# # For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
+# rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file_sag}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file_sag}.nii.gz
+# rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file_sag}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file_sag}.json
+# mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
+# rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_sag_gt}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_sag_gt}.nii.gz
+# rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_sag_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_sag_gt}.json
 
 
 # Display useful info for the log
