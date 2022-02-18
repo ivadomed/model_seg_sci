@@ -128,25 +128,27 @@ if [[ ! -s ${file_ax}.json ]]; then
   echo "{}" >> ${file_ax}.json
 fi
 
-# Resample both images to isotropic 1mm x 1mm x 1mm resolution
-flirt -in ${file_sag}.nii.gz -ref ${file_sag}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_sag}_res.nii.gz
-flirt -in ${file_ax}.nii.gz -ref ${file_ax}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_ax}_res.nii.gz
+# Resample the Sagittal T2w to isotropic 1mm x 1mm x 1mm resolution
+sct_resample -i ${file_sag}.nii.gz -mm 1x1x1 -o ${file_sag}_res.nii.gz
+
+# Bring the Axial image to the same space as the "resampled" Sagittal image (for visualization purposes only)
+sct_register_multimodal -i ${file_ax}.nii.gz -d ${file_sag}_res.nii.gz -o ${file_ax}_same.nii.gz -identity 1
 
 # Spinal cord segmentation using the Sagittal T2w contrast
 segment_if_does_not_exist ${file_sag}_res t2 ${CENTERLINE_METHOD}
 file_sag_res_seg="${FILESEG}"
 
 # Spinal cord segmentation using the Axial T2w contrast
-segment_if_does_not_exist ${file_ax}_res t2 ${CENTERLINE_METHOD}
-file_ax_res_seg="${FILESEG}"
+segment_if_does_not_exist ${file_ax} t2 ${CENTERLINE_METHOD}
+file_ax_seg="${FILESEG}"
 
-# TODO: Perform the registration axial T2w (moving) --> sag T2w (fixed)
+# Perform the registration axial T2w (moving) --> sag T2w (fixed)
 # NOTE: We are passing the un-resampled / original axial image as the input to avoid double interpolation
-sct_register_multimodal -i ${file_ax}.nii.gz -iseg ${file_ax_res_seg}.nii.gz -d ${file_sag}_res.nii.gz -dseg ${file_sag_res_seg}.nii.gz -o ${file_ax}_reg.nii.gz -param step=1,type=seg,algo=slicereg,metric=MeanSquares,smooth=3
+sct_register_multimodal -i ${file_ax}.nii.gz -iseg ${file_ax_seg}.nii.gz -d ${file_sag}_res.nii.gz -dseg ${file_sag_res_seg}.nii.gz -o ${file_ax}_reg.nii.gz -param step=1,type=seg,algo=slicereg,metric=MeanSquares,smooth=3
 
 # Dilate spinal cord masks for both images 
 sct_maths -i ${file_sag_res_seg}.nii.gz -dilate 5 -shape ball -o ${file_sag_res_seg}_dilate.nii.gz
-sct_maths -i ${file_ax_res_seg}.nii.gz -dilate 5 -shape ball -o ${file_ax_res_seg}_dilate.nii.gz
+sct_maths -i ${file_ax_seg}.nii.gz -dilate 5 -shape ball -o ${file_ax_seg}_dilate.nii.gz
 
 # TODO: Also crop the axial image ?
 # Use dilated mask to crop the resampled image and manual MS segmentations
@@ -168,7 +170,7 @@ if [[ ! -s ${file_sag_gt}.json ]]; then
 fi
 
 # Resample GT to isotropic 1mm x 1mm x 1mm resolution
-flirt -in ${file_sag_gt}.nii.gz -ref ${file_sag_gt}.nii.gz -applyisoxfm 1.0 -nosearch -out ${file_sag_gt}_res.nii.gz
+sct_resample -i ${file_sag_gt}.nii.gz -mm 1x1x1 -o ${file_sag_gt}_res.nii.gz
 
 # Crop the manual seg
 sct_crop_image -i ${file_sag_gt}_res.nii.gz -m ${file_sag_res_seg_dil}.nii.gz -o ${file_sag_gt}_crop.nii.gz
