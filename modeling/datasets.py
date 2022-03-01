@@ -11,8 +11,8 @@ from scipy.ndimage import zoom
 import torch
 from torch.utils.data import Dataset, random_split
 
-from ivadomed.transforms import CenterCrop, \
-     RandomAffine, ElasticTransform, NormalizeInstance, RandomReverse
+from ivadomed.transforms import CenterCrop, RandomAffine, ElasticTransform, \
+     NormalizeInstance, RandomReverse, RandomGamma, RandomBiasField, RandomBlur
 from ivadomed.metrics import dice_score, hausdorff_score, intersection_over_union, \
     precision_score, recall_score, specificity_score, numeric_score
 from utils import volume2subvolumes, subvolumes2volume
@@ -39,16 +39,18 @@ class SCIZurichDataset(Dataset):
     :param (int) seed: Seed for reproducibility (e.g. we want the same train-val split with same seed)
     """
     def __init__(self, root, fraction_data=1.0, fraction_hold_out=0.2,
-                 center_crop_size=(384, 96, 64), subvolume_size=(64, 48, 16),
-                 stride_size=(16, 16, 16), results_dir='outputs', visualize_test_preds=True, seed=42):
+                 center_crop_size=(96, 384, 64), subvolume_size=(48, 64, 16),
+                 stride_size=(16, 16, 16), only_eval=False, results_dir='outputs', 
+                 visualize_test_preds=True, seed=42):
         super(SCIZurichDataset).__init__()
 
-        # # Set / create the results path for the test phase
-        # if not os.path.exists(results_dir):
-        #     os.makedirs(results_dir)
-        # else:
-        #     print('WARNING: results_dir=%s already exists! Files might be overwritten...' % results_dir)
-        # self.results_dir = results_dir
+        # Set / create the results path for the test phase
+        if only_eval:
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir)
+            else:
+                print('WARNING: results_dir=%s already exists! Files might be overwritten...' % results_dir)
+        self.results_dir = results_dir
         self.visualize_test_preds = visualize_test_preds
         # variables for calculating the test metrics
         self.metric_fns = [dice_score, hausdorff_score, intersection_over_union, 
@@ -123,39 +125,37 @@ class SCIZurichDataset(Dataset):
                 # Read original subject image (i.e. 3D volume) to be used for training
                 # img_path = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session))
                 sag_img = nib.load(os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session)))
-                hfac, wfac, dfac = sag_img.header.get_zooms()
+                ax_img = nib.load(os.path.join(subject_images_path, '%s_%s_acq-ax_T2w.nii.gz' % (subject, session)))
+                # hfac, wfac, dfac = sag_img.header.get_zooms()
                 # Read original subject ground-truths (GT)
-                # gt_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session))
                 gt = nib.load(os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session)))
 
                 # Check if image sizes and resolutions match
-                assert sag_img.shape == gt.shape
-                assert sag_img.header['pixdim'].tolist() == gt.header['pixdim'].tolist()
+                assert sag_img.shape == ax_img.shape == gt.shape
+                # print(sag_img.shape, ax_img.shape, gt.shape)  # careful! the 2nd dim is the sagittal one
+                # assert np.round((sag_img.header['pixdim'].tolist()[1:4]), 2) == np.round((ax_img.header['pixdim'].tolist()[1:4]), 2) == np.round((gt.header['pixdim'].tolist()[1:4]), 2)
 
                 # Convert to Numpy
-                sag_img, gt = sag_img.get_fdata(), gt.get_fdata()
+                sag_img, ax_img, gt = sag_img.get_fdata(), ax_img.get_fdata(), gt.get_fdata()
 
                 # Apply Preprocessing steps
-                # 1. Resample
-                hfactor, wfactor, dfactor  = hfac/1.0, wfac/1.0, dfac/1.0   # resample to 1x1x1 mm3
-                params_resample = (hfactor, wfactor, dfactor)
-                sag_img = zoom(sag_img, zoom=params_resample, order=1)  # trilinear interpolation
-                gt = zoom(gt, zoom=params_resample, order=1)
-
-                # 2. center-cropping
+                # 1. center-cropping
                 center_crop = CenterCrop(size=center_crop_size)
                 sag_img = center_crop(sample=sag_img, metadata={'crop_params': {}})[0]
+                ax_img = center_crop(sample=ax_img, metadata={'crop_params': {}})[0]
                 gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
 
                 # Get subvolumes from volumes and update the list
                 sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
+                ax_img_subvolumes = volume2subvolumes(volume=ax_img, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
                 gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
 
-                assert len(sag_img_subvolumes) == len(gt_subvolumes)
+                assert len(sag_img_subvolumes) == len(ax_img_subvolumes) == len(gt_subvolumes)
 
                 for i in range(len(sag_img_subvolumes)):
                     subvolumes_ = {
                         'sag_img': sag_img_subvolumes[i],
+                        'ax_img': ax_img_subvolumes[i],                        
                         'gt': gt_subvolumes[i]}
                     self.subvolumes.append(subvolumes_)
 
@@ -176,22 +176,38 @@ class SCIZurichDataset(Dataset):
 
     def __getitem__(self, index):
         subvolumes = self.subvolumes[index]
-        sag_img_subvolume, gt_subvolume = subvolumes['sag_img'], subvolumes['gt']
+        sag_img_subvolume, ax_img_subvolume, gt_subvolume = subvolumes['sag_img'], subvolumes['ax_img'], subvolumes['gt']
         
         # Apply training augmentations
         if self.train:
             # Apply Affine Transformation with P=0.6 and Reverse with P=0.4
-            if random.random() < 0.6:
-                random_affine = RandomAffine(degrees=10, translate=[0.05, 0.05, 0.05], scale=[0.1, 0.1, 0.1])
-                sag_img_subvolume, metadata = random_affine(sample=sag_img_subvolume, metadata={})
-                gt_subvolume, _ = random_affine(sample=gt_subvolume, metadata=metadata)
+            if random.random() < 0.5:
+                # random_affine = RandomAffine(degrees=10, translate=[0.05, 0.05, 0.05], scale=[0.1, 0.1, 0.1])
+                # sag_img_subvolume, metadata = random_affine(sample=sag_img_subvolume, metadata={})
+                # ax_img_subvolume, metadata = random_affine(sample=ax_img_subvolume, metadata={})
+                # gt_subvolume, _ = random_affine(sample=gt_subvolume, metadata=metadata)
+                #  Elastic transform
+                elastic_transform = ElasticTransform(alpha_range=[25.0, 35.0], sigma_range=[3.5, 5.5], p=1.0)
+                sag_img_subvolume, metadata = elastic_transform(sample=sag_img_subvolume, metadata={})
+                ax_img_subvolume, metadata = elastic_transform(sample=ax_img_subvolume, metadata={})
+                gt_subvolume, _ = elastic_transform(sample=gt_subvolume, metadata=metadata)
             else:
+                # # Random Gamma transform
+                # random_gamma = RandomGamma(log_gamma_range=[-3.0, 3.0], p=1.0)
+                # sag_img_subvolume, metadata = random_gamma(sample=sag_img_subvolume, metadata={})
+                # ax_img_subvolume, metadata = random_gamma(sample=ax_img_subvolume, metadata={})                
+                # Random Reverse transform
                 random_reverse = RandomReverse()
                 sag_img_subvolume, metadata = random_reverse(sample=sag_img_subvolume, metadata={})
+                ax_img_subvolume, metadata = random_reverse(sample=ax_img_subvolume, metadata={})                
                 gt_subvolume, _ = random_reverse(sample=gt_subvolume, metadata=metadata)
+                # Random Blur
+                random_blur = RandomBlur(sigma_range=[0.0, 2.0], p=1.0)
+                sag_img_subvolume, metadata = random_blur(sample=sag_img_subvolume, metadata={})
+                ax_img_subvolume, metadata = random_blur(sample=ax_img_subvolume, metadata={})
 
         # check whether img and gt sizes are altered by any chance
-        sag_img_subvolume.shape == gt_subvolume.shape == self.subvolume_size
+        sag_img_subvolume.shape == ax_img_subvolume.shape == gt_subvolume.shape == self.subvolume_size
 
         # Normalize to zero mean and unit variance
         normalize_instance = NormalizeInstance()
@@ -199,14 +215,18 @@ class SCIZurichDataset(Dataset):
             sag_img_subvolume = sag_img_subvolume - sag_img_subvolume.mean()
         else:
             sag_img_subvolume, _ = normalize_instance(sample=sag_img_subvolume, metadata={})
+        if ax_img_subvolume.std() < 1e-5:
+            ax_img_subvolume = ax_img_subvolume - ax_img_subvolume.mean()
+        else:
+            ax_img_subvolume, _ = normalize_instance(sample=ax_img_subvolume, metadata={})
 
         # Return subvolumes after converting to PyTorch tensors
         x1 = torch.tensor(sag_img_subvolume, dtype=torch.float)
-        # x2 = torch.tensor(sag_img_subvolume, dtype=torch.float)
+        x2 = torch.tensor(ax_img_subvolume, dtype=torch.float)
         seg_y = torch.tensor(gt_subvolume, dtype=torch.float)
         # clf_y = torch.tensor(int(np.any(gt_subvolume)), dtype=torch.long)
 
-        return index, x1, seg_y # , clf_y    
+        return index, x1, x2, seg_y # , clf_y    
 
     def test(self, model):
         """Implements the test phase via animaSegPerfAnalyzer"""
@@ -230,9 +250,9 @@ class SCIZurichDataset(Dataset):
         if adjusted_center_crop_size != self.center_crop_size:
             print('[WARNING] Adjusted Center-Crop Size: ', adjusted_center_crop_size)
 
-        # Compute num. subvolumes per dim and total for a quick check later on
-        num_subvolumes_per_dim = [adjusted_center_crop_size[i] // self.subvolume_size[i] for i in range(3)]
-        num_subvolumes = np.prod(num_subvolumes_per_dim)        
+        # # Compute num. subvolumes per dim and total for a quick check later on
+        # num_subvolumes_per_dim = [adjusted_center_crop_size[i] // self.subvolume_size[i] for i in range(3)]
+        # num_subvolumes = np.prod(num_subvolumes_per_dim)        
 
         for subject_no, subject in enumerate(tqdm(self.subjects_hold_out, desc='Loading Volumes')):
 
@@ -247,78 +267,83 @@ class SCIZurichDataset(Dataset):
                 subject_labels_path = os.path.join(self.root, 'derivatives', 'labels', subject, session, 'anat')
 
                 # Read original subject image (i.e. 3D volume) to be used for training
-                # img_path = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session))
                 sag_img = nib.load(os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session)))
-                hfac, wfac, dfac = sag_img.header.get_zooms()
+                ax_img = nib.load(os.path.join(subject_images_path, '%s_%s_acq-ax_T2w.nii.gz' % (subject, session)))
+                # hfac, wfac, dfac = sag_img.header.get_zooms()
                 # Read original subject ground-truths (GT)
-                # gt_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session))
                 gt = nib.load(os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session)))
 
                 # Check if image sizes and resolutions match
-                assert sag_img.shape == gt.shape
-                assert sag_img.header['pixdim'].tolist() == gt.header['pixdim'].tolist()
+                assert sag_img.shape == ax_img.shape == gt.shape
+                # assert sag_img.header['pixdim'].tolist() == ax_img.header['pixdim'].tolist() == gt.header['pixdim'].tolist()
 
                 # Convert to Numpy
-                sag_img, gt = sag_img.get_fdata(), gt.get_fdata()
-
-                # Resample
-                hfactor, wfactor, dfactor  = hfac/1.0, wfac/1.0, dfac/1.0   # resample to 1x1x1 mm3
-                params_resample = (hfactor, wfactor, dfactor)
-                sag_img = zoom(sag_img, zoom=params_resample, order=1)  # trilinear interpolation
-                gt = zoom(gt, zoom=params_resample, order=1)
+                sag_img, ax_img, gt = sag_img.get_fdata(), ax_img.get_fdata(), gt.get_fdata()
 
                 # Apply center-cropping
                 center_crop = CenterCrop(size=self.center_crop_size)
                 sag_img = center_crop(sample=sag_img, metadata={'crop_params': {}})[0]
+                ax_img = center_crop(sample=ax_img, metadata={'crop_params': {}})[0]                
                 gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
 
                 # Get subvolumes from volumes
                 # NOTE: We use subvolume size for the stride size to get non-overlapping test subvolumes
                 sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
+                ax_img_subvolumes = volume2subvolumes(volume=ax_img, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
                 gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
-                assert len(sag_img_subvolumes) == len(gt_subvolumes)
+                assert len(sag_img_subvolumes) == len(ax_img_subvolumes) == len(gt_subvolumes)
 
                 # Collect individual subvolume predictions for full volume segmentation (i.e. full scan for one subject)
                 pred_subvolumes = []
                 for i in range(len(sag_img_subvolumes)):
-                    sag_img_subvolume, gt_subvolume = sag_img_subvolumes[i], gt_subvolumes[i]
+                    sag_img_subvolume, ax_img_subvolume, gt_subvolume = sag_img_subvolumes[i], ax_img_subvolumes[i], gt_subvolumes[i]
                     # Normalize images to zero mean and unit variance
+                    normalize_instance = NormalizeInstance()
                     if sag_img_subvolume.std() < 1e-5:
                         # If subvolumes uniform: do mean-subtraction
                         sag_img_subvolume = sag_img_subvolume - sag_img_subvolume.mean()
                     else:
-                        normalize_instance = NormalizeInstance()
                         sag_img_subvolume, _ = normalize_instance(sample=sag_img_subvolume, metadata={})
-
+                    if ax_img_subvolume.std() < 1e-5:
+                        ax_img_subvolume = ax_img_subvolume - ax_img_subvolume.mean()
+                    else:
+                        ax_img_subvolume, _ = normalize_instance(sample=ax_img_subvolume, metadata={})
                     # twice unsqueezed such that batch_size=1 and num_channels=1
                     x1 = torch.tensor(sag_img_subvolume, dtype=torch.float).view(1, 1, *sag_img_subvolume.shape)
+                    x2 = torch.tensor(ax_img_subvolume, dtype=torch.float).view(1, 1, *ax_img_subvolume.shape)
 
                     # Get the standard subvolume prediction
-                    seg_y_hat = model(x1).squeeze().detach().cpu().numpy()
+                    seg_y_hat = model(x1, x2).squeeze().detach().cpu().numpy()
 
                     pred_subvolumes.append(seg_y_hat)
 
-            # Convert the list of subvolume predictions to a single volume segmentation / prediction
-            pred = subvolumes2volume(subvolumes=pred_subvolumes, volume_size=adjusted_center_crop_size)
-            assert pred.shape == gt.shape
+                # Convert the list of subvolume predictions to a single volume segmentation / prediction
+                pred = subvolumes2volume(subvolumes=pred_subvolumes, volume_size=adjusted_center_crop_size)
+                assert pred.shape == gt.shape
 
-            # Apply the original center-crop size in case it was adjusted before
-            if pred.shape != self.center_crop_size:
-                gt_sum_before_crop = np.sum(gt)
-                center_crop = CenterCrop(size=self.center_crop_size)
-                pred = center_crop(sample=pred, metadata={'crop_params': {}})[0]
-                gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
+                # Apply the original center-crop size in case it was adjusted before
+                if pred.shape != self.center_crop_size:
+                    gt_sum_before_crop = np.sum(gt)
+                    center_crop = CenterCrop(size=self.center_crop_size)
+                    pred = center_crop(sample=pred, metadata={'crop_params': {}})[0]
+                    gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
 
-                # Check if padding & un-padding removes any lesion GTs; only continue if it does not
-                if abs(np.sum(gt) - gt_sum_before_crop) > 1e-6:
-                    # NOTE: Apparently np.sum() can have epsilon differences even with same values!
-                    raise ValueError('Padding & un-padding cropped out lesions! Check your center-crop parameters!')
-        
-            # Calculate the test metrics on the "soft" prediction only
-            for metric_fn in self.metric_fns:
-                res = metric_fn(pred, gt)
-                dict_key = metric_fn.__name__
-                self.test_metrics[dict_key].append(res)
+                    # Check if padding & un-padding removes any lesion GTs; only continue if it does not
+                    if abs(np.sum(gt) - gt_sum_before_crop) > 1e-6:
+                        # NOTE: Apparently np.sum() can have epsilon differences even with same values!
+                        raise ValueError('Padding & un-padding cropped out lesions! Check your center-crop parameters!')
+            
+                # Calculate the test metrics on the "soft" prediction only
+                for metric_fn in self.metric_fns:
+                    res = metric_fn(pred, gt)
+                    dict_key = metric_fn.__name__
+                    self.test_metrics[dict_key].append(res)
+
+                # Save the prediction and the center-cropped GT as new NIfTI files
+                pred_nib = nib.Nifti1Image(pred, affine=np.eye(4))
+                gt_nib = nib.Nifti1Image(gt, affine=np.eye(4))
+                nib.save(img=pred_nib, filename=os.path.join(self.results_dir, '%s_%s_pred.nii.gz' % (subject, session)))
+                nib.save(img=gt_nib, filename=os.path.join(self.results_dir, '%s_%s_gt.nii.gz' % (subject, session)))            
         
         print()
         # Print the mean and std for each metric
