@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-
+import torchvision.utils as vutils
+import wandb
 
 def volume2subvolumes(volume, subvolume_size, stride_size):
     """Converts 3D volumes into 3D subvolumes; works with PyTorch tensors."""
@@ -37,3 +38,63 @@ def subvolumes2volume(subvolumes, volume_size):
     
     return volume
 
+def convert_labels_to_RGB(grid_img):
+    """Converts 2D images to RGB encoded images for display on WandB.
+    Taken from https://github.com/ivadomed/ivadomed/blob/master/ivadomed/visualize.py#107
+    Args: grid_img (Tensor): GT or prediction tensor with dimensions (batch size, number of classes, height, width).
+    Returns: tensor: RGB image with shape (height, width, 3).
+    """
+    # Keep always the same color labels
+    batch_size, n_class, h, w = grid_img.shape
+    rgb_img = torch.zeros((batch_size, 3, h, w))
+
+    # Keep always the same color labels
+    np.random.seed(6)
+    for i in range(n_class):
+        r, g, b = np.random.randint(0, 256, size=3)
+        rgb_img[:, 0, ] = r * grid_img[:, i, ]
+        rgb_img[:, 1, ] = g * grid_img[:, i, ]
+        rgb_img[:, 2, ] = b * grid_img[:, i, ]
+
+    return rgb_img
+
+def save_wandb_img(dataset_type, input_samples, gt_samples, preds):
+    """Saves input images, gt and predictions in WandB.
+    Taken from: https://github.com/ivadomed/ivadomed/blob/master/ivadomed/visualize.py#L131
+    Args:
+        dataset_type (str): Choice between Training or Validation.
+        input_samples (Tensor): Input images with shape (batch size, number of channel, height, width, depth) if 3D else
+            (batch size, number of channel, height, width)
+        gt_samples (Tensor): GT images with shape (batch size, number of channel, height, width, depth) if 3D else
+            (batch size, number of channel, height, width)
+        preds (Tensor): Model's prediction with shape (batch size, number of channel, height, width, depth) if 3D else
+            (batch size, number of channel, height, width)
+    """
+    # Take all images stacked on depth dimension
+    num_2d_img = input_samples.shape[-1]
+    input_samples_copy = input_samples.clone()
+    preds_copy = preds.clone()
+    gt_samples_copy = gt_samples.clone()
+    for idx in range(num_2d_img):
+        input_samples = input_samples_copy[..., idx]
+        preds = preds_copy[..., idx]
+        gt_samples = gt_samples_copy[..., idx]
+        # Only display images with labels
+        if gt_samples.sum() == 0:
+            continue
+
+        # take only one modality for grid
+        if not isinstance(input_samples, list) and input_samples.shape[1] > 1:
+            tensor = input_samples[:, 0, ][:, None, ]
+            input_samples = torch.cat((tensor, tensor, tensor), 1)
+        elif isinstance(input_samples, list):
+            input_samples = input_samples[0]
+
+        grid_img = vutils.make_grid(torch.transpose(input_samples, 2, 3), normalize=True, scale_each=True)
+        wandb.log({dataset_type+"/Input": wandb.Image(grid_img)})
+
+        grid_img = vutils.make_grid(torch.transpose(convert_labels_to_RGB(preds), 2, 3), normalize=True, scale_each=True)
+        wandb.log({dataset_type+"/Predictions": wandb.Image(grid_img)})
+
+        grid_img = vutils.make_grid(torch.transpose(convert_labels_to_RGB(gt_samples), 2, 3), normalize=True, scale_each=True)
+        wandb.log({dataset_type+"/Ground-Truth": wandb.Image(grid_img)})
