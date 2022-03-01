@@ -245,19 +245,17 @@ class ModifiedUNet3D(nn.Module):
                                                   base_n_filter=cfg.base_n_filter, flatten=False)
         self.unet_decoder = ModifiedUNet3DDecoder(cfg, n_classes=1, base_n_filter=cfg.base_n_filter)
 
-    def forward(self, x1):
+    def forward(self, x1, x2):
         # x1: (B, 1, SV, SV, SV), x2: (B, 1, SV, SV, SV)
 
-        # if self.cfg.task == '2':
+        # if self.cfg.task == 'mc':   # mc: multi-"contrast"
         #     # Concat. TPs (to be used when axial scan is also included)
-        #     x = torch.cat([x1, x2], dim=1).to(x1.device)
-        #     # x: (B, 2, SV, SV, SV)
+        #     x = torch.cat([x1, x2], dim=1).to(x1.device)    # x: (B, 2, SV, SV, SV)
         # else:
         #     # Discard x2
-        #     x = x1
-        #     # x: (B, 1, SV, SV, SV)
+        #     x = x1      # x: (B, 1, SV, SV, SV)
 
-        x = x1
+        x = torch.cat([x1, x2], dim=1).to(x1.device)    # x: (B, 2, SV, SV, SV)
         x, context_features = self.unet_encoder(x)
         # x: (B, 8 * F, SV // 8, SV // 8, SV // 8)
         # context_features: [4]
