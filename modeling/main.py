@@ -18,12 +18,14 @@ from torch.utils.data import DataLoader, dataloader, random_split
 import torchvision.transforms as transforms
 
 # dataloaders and segmentation models
-from datasets import SCIZurichDataset
+from datasets_sc import SCIZurichDataset
 from unet3d import ModifiedUNet3D
-from ivadomed.losses import DiceLoss
+from simple_unet3d import UNet3D
+from ivadomed.losses import DiceLoss, FocalLoss, TverskyLoss
 from utils import save_wandb_img
 
-grp_name = 'multichannel-training'
+# grp_name = 'multichannel-training'
+grp_name = 'singlechannel-training'
 
 parser = argparse.ArgumentParser(description='Script for training custom models for SCI Lesion Segmentation.')
 # Arguments for model, data, and training and saving
@@ -31,26 +33,27 @@ parser.add_argument('-e', '--only_eval', default=False, action='store_true', hel
 parser.add_argument('-m', '--model_type', choices=['unet'], default='unet', type=str, help='Model type to be used')
 # dataset
 parser.add_argument('-dr', '--dataset_root', 
-                    default='/home/GRAMES.POLYMTL.CA/u114716/duke/temp/muena/sci-zurich_registered', type=str,
+                    default='/home/GRAMES.POLYMTL.CA/u114716/duke/temp/muena/sci-zurich_preprocessed', type=str,
                     help='Root path to the BIDS- and ivadomed-compatible dataset')
 parser.add_argument('-fd', '--fraction_data', default=1.0, type=float, help='Fraction of data to use. Helps with debugging.')
-parser.add_argument('-fho', '--fraction_hold_out', default=0.3, type=float, help='Fraction of data to hold-out of for the test phase')
+parser.add_argument('-fho', '--fraction_hold_out', default=0.2, type=float, help='Fraction of data to hold-out of for the test phase')
 parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.6, 0.2], 
                     help="Train and validation split. Should sum to (fraction_data - fraction_hold_out)")
 # model 
-parser.add_argument('-t', '--task', choices=['sc', 'mc'], default='mc', type=str, help="Single-channel or Multi-channel model ")
+parser.add_argument('-t', '--task', choices=['sc', 'mc'], default='sc', type=str, help="Single-channel or Multi-channel model ")
 parser.add_argument('-bnf', '--base_n_filter', default=8, type=int, help="Number of Base Filters")
-parser.add_argument('-ccs', '--center_crop_size', nargs='+', default=[128, 512, 96], help='List containing center crop size for preprocessing')
-parser.add_argument('-svs', '--subvolume_size', nargs='+', default=[64, 256, 48], help='List containing subvolume size')
-parser.add_argument('-srs', '--stride_size', nargs='+', default=[32, 128, 24], help='List containing stride size')
+parser.add_argument('-dep', '--depth', default=4, type=int, help="Depth of Simple UNet3D")
+parser.add_argument('-ccs', '--center_crop_size', nargs='+', default=[128, 256, 96], help='List containing center crop size for preprocessing')
+parser.add_argument('-svs', '--subvolume_size', nargs='+', default=[128, 256, 96], help='List containing subvolume size')
+parser.add_argument('-srs', '--stride_size', nargs='+', default=[128, 256, 96], help='List containing stride size')
 # optimizations
 parser.add_argument('-p', '--precision', default=32, type=int, help='Precision for training')
 parser.add_argument('-ne', '--num_epochs', default=500, type=int, help='Number of epochs for the training process')
-parser.add_argument('-bs', '--batch_size', default=16, type=int, help='Batch size of the training and validation processes')
+parser.add_argument('-bs', '--batch_size', default=8, type=int, help='Batch size of the training and validation processes')
 parser.add_argument('-nw', '--num_workers', default=4, type=int, help='Number of workers for the dataloaders')
 parser.add_argument('-lr', '--learning_rate', default=1e-3, type=float, help='Learning rate for training the model')
 parser.add_argument('-wd', '--weight_decay', type=float, default=0.01, help='Weight decay (i.e. regularization) value in AdamW')
-parser.add_argument('-pat', '--patience', default=50, type=int, help='number of validation steps (val_every_n_iters) to wait before early stopping')
+parser.add_argument('-pat', '--patience', default=100, type=int, help='number of validation steps (val_every_n_iters) to wait before early stopping')
 parser.add_argument('--T_0', default=500, type=int, help='number of steps in each cosine cycle')
 parser.add_argument('-epb', '--enable_progress_bar', default=False, type=bool, help='by default is disabled since it doesnt work in colab')
 # parser.add_argument('--val_every_n_iters', default='100', type=int, help='num of iterations before validation')
@@ -62,15 +65,15 @@ parser.add_argument('-gpus', '--num_gpus', default=1, type=int, help="Number of 
 # parser.add_argument('-n_mc', '--num_mc_samples', default=0, type=int, help="Number of MC samples to use")
 # saving
 parser.add_argument('-mn', '--model_name', default='unet3d', type=str, help='Model ID to-be-used for saving the .pt saved model file')
-parser.add_argument('-s', '--save', default='./saved_models', type=str, help='Path to the saved models directory')
+parser.add_argument('-s', '--save', default='saved_models', type=str, help='Path to the saved models directory')
 parser.add_argument('-c', '--continue_from_checkpoint', default=False, action='store_true', help='Load model from checkpoint and continue training')
 parser.add_argument('-se', '--seed', default=42, type=int, help='Set seeds for reproducibility')
 parser.add_argument('-v', '--visualize_test_preds', default=False, action='store_true',
                     help='Enable to save subvolume predictions during the test phase for visual assessment')
 
 cfg = parser.parse_args()
-model_id = '%s-t=%s-ccs=%d-svs=%d-srs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d' % \
-            (cfg.model_name, cfg.task, cfg.center_crop_size[1], cfg.subvolume_size[1], cfg.stride_size[1],
+model_id = '%s-t=%s-ccs=%d-svs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d' % \
+            (cfg.model_name, cfg.task, cfg.center_crop_size[1], cfg.subvolume_size[1],
             cfg.batch_size, str(cfg.learning_rate), cfg.num_epochs, cfg.base_n_filter, cfg.seed)
 print('MODEL ID: %s' % model_id)
 
@@ -112,7 +115,12 @@ class SCISegModel(pl.LightningModule):
         #     self.cfg.continue_from_checkpoint = True
 
         # instantiate model and datasets
-        self.net = ModifiedUNet3D(cfg=self.cfg)
+        if self.cfg.model_name == 'unet3d':
+            self.net = ModifiedUNet3D(cfg=self.cfg)
+        elif self.cfg.model_name == 'simple-unet3d':
+            self.net = UNet3D(n_channels=1 if self.cfg.task == 'sc' else 2, 
+                                init_filters=self.cfg.base_n_filter, n_classes=1, depth=self.cfg.depth)
+            
         
         # Data split for train and validation phases
         train_size = int(self.cfg.fraction_train_val[0] * len(dataset)) 
@@ -120,10 +128,11 @@ class SCISegModel(pl.LightningModule):
         self.train_dataset, self.valid_dataset = random_split(dataset, lengths=[train_size, valid_size])
 
         # Define loss function
-        self.seg_criterion = DiceLoss(smooth=1.0)
+        # self.seg_criterion = DiceLoss(smooth=1.0)
+        self.seg_criterion = FocalLoss()
 
         # for logging/visualizing
-        self.loss_visualization_step = 0.1
+        self.loss_visualization_step = 0.05
         self.best_valid_loss, self.best_train_loss = 1.0, 1.0
         self.train_losses, self.valid_losses = [], []
         self.num_iters_per_epoch = int(np.ceil(len(self.train_dataset) / self.cfg.batch_size))
@@ -133,15 +142,24 @@ class SCISegModel(pl.LightningModule):
 
     def compute_loss(self, batch):
         """ Loss function for training the model """
-        dataset_indices, x1, x2, seg_y = batch
-        x1, x2 = x1.unsqueeze(1), x2.unsqueeze(1)    # add channel dimension
-        seg_y_hat = self.net(x1, x2)
+        if self.cfg.task == 'mc':       # multi-channel model
+            dataset_indices, x1, x2, seg_y = batch
+            x1, x2 = x1.unsqueeze(1), x2.unsqueeze(1)    # add channel dimension for concatenation
+            seg_y_hat = self.net(x1, x2)
+        elif self.cfg.task == 'sc':     # single-channel model
+            dataset_indices, x, seg_y = batch
+            x = x.unsqueeze(1)
+            seg_y_hat = self.net(x)            
+        
         seg_loss = self.seg_criterion(seg_y_hat, seg_y)
         return seg_y_hat, seg_loss
 
     def training_step(self, batch, batch_idx):
         dataset.train = True
-        _, img1, img2, gts = batch
+        if self.cfg.task == 'mc':       # multi-channel model
+            _, img1, img2, gts = batch
+        elif self.cfg.task == 'sc':
+            _, img1, gts = batch
         preds, loss = self.compute_loss(batch)
         self.train_losses += [loss.item()] * len(img1)
 
@@ -153,7 +171,10 @@ class SCISegModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         dataset.train = False
-        _, img1, img2, gts = batch
+        if self.cfg.task == 'mc':       # multi-channel model
+            _, img1, img2, gts = batch
+        elif self.cfg.task == 'sc':
+            _, img1, gts = batch
         preds, loss = self.compute_loss(batch)
         self.valid_losses += [loss.item()] * len(img1)
 
@@ -174,7 +195,7 @@ class SCISegModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(params=self.parameters(), lr=self.cfg.learning_rate, weight_decay=self.cfg.weight_decay)
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=40, eta_min=1e-5)
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=self.cfg.T_0, eta_min=1e-5)
         
         return [optimizer], [scheduler]
     
@@ -239,7 +260,7 @@ def main(cfg):
 
     else:
         # Also, perform evaluation independently if specified
-        loaded_model = model.load_from_checkpoint(os.path.join(cfg.save, model_id), strict=False)
+        loaded_model = model.load_from_checkpoint(os.path.join(cfg.save, model_id)+ ".ckpt", strict=False)
         print("------- Evaluating on the test subjects! -------")
         dataset.train = False
         dataset.test(loaded_model.net)
