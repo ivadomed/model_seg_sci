@@ -148,29 +148,36 @@ class SCIZurichDataset(Dataset):
                 sag_img = center_crop(sample=sag_img, metadata={'crop_params': {}})[0]
                 gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
 
-                # Get subvolumes from volumes and update the list
-                sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
-                gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
-
-                assert len(sag_img_subvolumes) == len(gt_subvolumes)
-
-                for i in range(len(sag_img_subvolumes)):
+                if center_crop_size == subvolume_size:
+                    # directly store the whole volume and save the subvolumes computation
                     subvolumes_ = {
-                        'sag_img': sag_img_subvolumes[i],
-                        'gt': gt_subvolumes[i]}
+                        'sag_img': sag_img,
+                        'gt': gt}
                     self.subvolumes.append(subvolumes_)
+                else:                        
+                    # Get subvolumes from volumes and update the list
+                    sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
+                    gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.stride_size)
 
-                    # Measure positiveness based on the consensus GT
-                    if np.any(gt_subvolumes[i]):
-                        self.positive_indices.append(int(subject_no * len(sag_img_subvolumes) + i))
-                        num_positives += 1
-                    else:
-                        num_negatives += 1
+                    assert len(sag_img_subvolumes) == len(gt_subvolumes)
 
-        self.inbalance_factor = num_negatives // num_positives
-        print('Factor of overall inbalance is %d!' % self.inbalance_factor)
+                    for i in range(len(sag_img_subvolumes)):
+                        subvolumes_ = {
+                            'sag_img': sag_img_subvolumes[i],
+                            'gt': gt_subvolumes[i]}
+                        self.subvolumes.append(subvolumes_)
 
-        print('Extracted a total of %d subvolumes!' % len(self.subvolumes))
+                        # Measure positiveness based on the consensus GT
+                        if np.any(gt_subvolumes[i]):
+                            self.positive_indices.append(int(subject_no * len(sag_img_subvolumes) + i))
+                            num_positives += 1
+                        else:
+                            num_negatives += 1
+
+        # self.inbalance_factor = num_negatives // num_positives
+        # print('Factor of overall inbalance is %d!' % self.inbalance_factor)
+
+        print('Extracted a total of %d (sub)volumes!' % len(self.subvolumes))
 
     def __len__(self):
         return len(self.subvolumes)
@@ -183,25 +190,27 @@ class SCIZurichDataset(Dataset):
         if self.train:
             # Apply Affine Transformation with P=0.6 and Reverse with P=0.4
             if random.random() < 0.5:
-                random_affine = RandomAffine(degrees=10, translate=[0.05, 0.05, 0.05], scale=[0.1, 0.1, 0.1])
-                sag_img_subvolume, metadata = random_affine(sample=sag_img_subvolume, metadata={})
-                gt_subvolume, _ = random_affine(sample=gt_subvolume, metadata=metadata)
-                #  Elastic transform
-                elastic_transform = ElasticTransform(alpha_range=[25.0, 35.0], sigma_range=[3.5, 5.5], p=1.0)
-                sag_img_subvolume, metadata = elastic_transform(sample=sag_img_subvolume, metadata={})
-                gt_subvolume, _ = elastic_transform(sample=gt_subvolume, metadata=metadata)
-            else:
-                # # Random Gamma transform
-                # random_gamma = RandomGamma(log_gamma_range=[-3.0, 3.0], p=1.0)
-                # sag_img_subvolume, metadata = random_gamma(sample=sag_img_subvolume, metadata={})
-                # ax_img_subvolume, metadata = random_gamma(sample=ax_img_subvolume, metadata={})                
                 # Random Reverse transform
                 random_reverse = RandomReverse()
                 sag_img_subvolume, metadata = random_reverse(sample=sag_img_subvolume, metadata={})
                 gt_subvolume, _ = random_reverse(sample=gt_subvolume, metadata=metadata)
-                # Random Blur
-                random_blur = RandomBlur(sigma_range=[0.0, 2.0], p=1.0)
-                sag_img_subvolume, metadata = random_blur(sample=sag_img_subvolume, metadata={})
+            if random.random() < 0.5:
+                random_affine = RandomAffine(degrees=10, translate=[0.1, 0.1, 0.1], scale=[0.3, 0.3, 0.3])
+                sag_img_subvolume, metadata = random_affine(sample=sag_img_subvolume, metadata={})
+                gt_subvolume, _ = random_affine(sample=gt_subvolume, metadata=metadata)
+            if random.random() < 0.5:
+                #  Elastic transform
+                elastic_transform = ElasticTransform(alpha_range=[25.0, 35.0], sigma_range=[3.5, 5.5], p=1.0)
+                sag_img_subvolume, metadata = elastic_transform(sample=sag_img_subvolume, metadata={})
+                gt_subvolume, _ = elastic_transform(sample=gt_subvolume, metadata=metadata)
+            if random.random() < 0.5:
+                # Random Gamma transform
+                random_gamma = RandomGamma(log_gamma_range=[-3.0, 3.0], p=1.0)
+                sag_img_subvolume, metadata = random_gamma(sample=sag_img_subvolume, metadata={})
+                ax_img_subvolume, metadata = random_gamma(sample=ax_img_subvolume, metadata={})                
+                # # Random Blur
+                # random_blur = RandomBlur(sigma_range=[0.0, 2.0], p=1.0)
+                # sag_img_subvolume, metadata = random_blur(sample=sag_img_subvolume, metadata={})
 
         # check whether img and gt sizes are altered by any chance
         sag_img_subvolume.shape == gt_subvolume.shape == self.subvolume_size
@@ -218,7 +227,7 @@ class SCIZurichDataset(Dataset):
         seg_y = torch.tensor(gt_subvolume, dtype=torch.float)
         # clf_y = torch.tensor(int(np.any(gt_subvolume)), dtype=torch.long)
 
-        return index, x1, seg_y # , clf_y    
+        return index, x1, seg_y
 
     def test(self, model):
         """Implements the test phase via animaSegPerfAnalyzer"""
@@ -242,10 +251,6 @@ class SCIZurichDataset(Dataset):
         if adjusted_center_crop_size != self.center_crop_size:
             print('[WARNING] Adjusted Center-Crop Size: ', adjusted_center_crop_size)
 
-        # # Compute num. subvolumes per dim and total for a quick check later on
-        # num_subvolumes_per_dim = [adjusted_center_crop_size[i] // self.subvolume_size[i] for i in range(3)]
-        # num_subvolumes = np.prod(num_subvolumes_per_dim)        
-
         for subject_no, subject in enumerate(tqdm(self.subjects_hold_out, desc='Loading Volumes')):
 
             # Another for loop for going through sessions
@@ -266,7 +271,6 @@ class SCIZurichDataset(Dataset):
 
                 # Check if image sizes and resolutions match
                 assert sag_img.shape == gt.shape
-                # assert sag_img.header['pixdim'].tolist() == ax_img.header['pixdim'].tolist() == gt.header['pixdim'].tolist()
 
                 # Convert to Numpy
                 sag_img, gt = sag_img.get_fdata(), gt.get_fdata()
@@ -276,16 +280,7 @@ class SCIZurichDataset(Dataset):
                 sag_img = center_crop(sample=sag_img, metadata={'crop_params': {}})[0]
                 gt = center_crop(sample=gt, metadata={'crop_params': {}})[0]
 
-                # Get subvolumes from volumes
-                # NOTE: We use subvolume size for the stride size to get non-overlapping test subvolumes
-                sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
-                gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
-                assert len(sag_img_subvolumes) == len(gt_subvolumes)
-
-                # Collect individual subvolume predictions for full volume segmentation (i.e. full scan for one subject)
-                pred_subvolumes = []
-                for i in range(len(sag_img_subvolumes)):
-                    sag_img_subvolume, gt_subvolume = sag_img_subvolumes[i], gt_subvolumes[i]
+                if self.center_crop_size == self.subvolume_size:    # Move on to the prediction
                     # Normalize images to zero mean and unit variance
                     normalize_instance = NormalizeInstance()
                     if sag_img_subvolume.std() < 1e-5:
@@ -295,15 +290,39 @@ class SCIZurichDataset(Dataset):
                         sag_img_subvolume, _ = normalize_instance(sample=sag_img_subvolume, metadata={})
                     # twice unsqueezed such that batch_size=1 and num_channels=1
                     x1 = torch.tensor(sag_img_subvolume, dtype=torch.float).view(1, 1, *sag_img_subvolume.shape)
-
                     # Get the standard subvolume prediction
-                    seg_y_hat = model(x1).squeeze().detach().cpu().numpy()
+                    pred = model(x1).squeeze().detach().cpu().numpy()
+                    assert pred.shape == gt.shape
+                
+                else:
+                    # Get subvolumes from volumes
+                    # NOTE: We use subvolume size for the stride size to get non-overlapping test subvolumes
+                    sag_img_subvolumes = volume2subvolumes(volume=sag_img, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
+                    gt_subvolumes = volume2subvolumes(volume=gt, subvolume_size=self.subvolume_size, stride_size=self.subvolume_size)
+                    assert len(sag_img_subvolumes) == len(gt_subvolumes)
 
-                    pred_subvolumes.append(seg_y_hat)
+                    # Collect individual subvolume predictions for full volume segmentation (i.e. full scan for one subject)
+                    pred_subvolumes = []
+                    for i in range(len(sag_img_subvolumes)):
+                        sag_img_subvolume, gt_subvolume = sag_img_subvolumes[i], gt_subvolumes[i]
+                        # Normalize images to zero mean and unit variance
+                        normalize_instance = NormalizeInstance()
+                        if sag_img_subvolume.std() < 1e-5:
+                            # If subvolumes uniform: do mean-subtraction
+                            sag_img_subvolume = sag_img_subvolume - sag_img_subvolume.mean()
+                        else:
+                            sag_img_subvolume, _ = normalize_instance(sample=sag_img_subvolume, metadata={})
+                        # twice unsqueezed such that batch_size=1 and num_channels=1
+                        x1 = torch.tensor(sag_img_subvolume, dtype=torch.float).view(1, 1, *sag_img_subvolume.shape)
 
-                # Convert the list of subvolume predictions to a single volume segmentation / prediction
-                pred = subvolumes2volume(subvolumes=pred_subvolumes, volume_size=adjusted_center_crop_size)
-                assert pred.shape == gt.shape
+                        # Get the standard subvolume prediction
+                        seg_y_hat = model(x1).squeeze().detach().cpu().numpy()
+
+                        pred_subvolumes.append(seg_y_hat)
+
+                    # Convert the list of subvolume predictions to a single volume segmentation / prediction
+                    pred = subvolumes2volume(subvolumes=pred_subvolumes, volume_size=adjusted_center_crop_size)
+                    assert pred.shape == gt.shape
 
                 # Apply the original center-crop size in case it was adjusted before
                 if pred.shape != self.center_crop_size:
