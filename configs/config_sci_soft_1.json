@@ -1,0 +1,114 @@
+{
+    "command": "train",
+    "gpu_ids": [2],
+    "path_output": "outputs/sciLesions_exp12",
+    "model_name": "Unet3d_singleContrast",
+    "debugging": true,
+    "object_detection_params": {
+        "object_detection_path": null,
+        "safety_factor": [1.0, 1.0, 1.0]
+    },
+    "loader_parameters": {
+        "path_data": ["/home/GRAMES.POLYMTL.CA/u114716/duke/temp/muena/sci-zurich_preprocessed_no-json"],
+        "subject_selection": {"n": [], "metadata": []},
+        "target_suffix": ["_lesion-manual"],
+        "extensions": [".nii.gz"],
+        "roi_params": {
+            "suffix": null,
+            "slice_filter_roi": null
+        },
+        "contrast_params": {
+            "training_validation": ["T2w"],
+            "testing": ["T2w"],
+            "balance": {}
+        },
+        "slice_filter_params": {
+            "filter_empty_mask": false,
+            "filter_empty_input": true
+        },
+        "slice_axis": "sagittal",
+        "multichannel": false,
+        "soft_gt": true
+    },
+    "split_dataset": {
+        "fname_split": null,
+        "random_seed": 1313,
+        "split_method" : "participant_id",
+        "data_testing": {"data_type": null, "data_value":[]},
+        "balance": null,
+        "train_fraction": 0.6,
+        "test_fraction": 0.2
+    },
+    "training_parameters": {
+        "batch_size": 8,
+        "loss": {
+            "name": "DiceLoss"
+        },
+        "training_time": {
+            "num_epochs": 200,
+            "early_stopping_patience": 100,
+            "early_stopping_epsilon": 0.001
+        },
+        "scheduler": {
+            "initial_lr": 5e-5,
+            "lr_scheduler": {
+                "name": "CosineAnnealingLR",
+                "base_lr": 1e-5,
+                "max_lr": 1e-2
+            }
+        },
+        "balance_samples": {"applied": false, "type": "gt"}
+    },
+    "default_model": {
+        "name": "Unet",
+        "dropout_rate": 0.3,
+        "bn_momentum": 0.9,
+        "final_activation": "relu",
+	"is_2d": false,
+        "depth": 3
+    },
+    "Modified3DUNet": {
+        "applied": true,
+        "length_3D": [384, 96, 32],
+        "stride_3D": [384, 96, 32],
+        "attention": false,
+        "n_filters": 8
+    },
+    "uncertainty": {
+        "epistemic": false,
+        "aleatoric": false,
+        "n_it": 0
+    },
+    "postprocessing": {
+        "binarize_prediction": {"thr": -1},
+        "uncertainty": {"thr": -1, "suffix": "_unc-vox.nii.gz"}
+    },
+    "evaluation_parameters": {},
+    "transformation": {
+	"Resample": {
+            "wspace": 1.0,
+            "hspace": 1.0,
+            "dspace": 2.0,
+            "preprocessing": true
+        },
+        "CenterCrop": {
+            "size": [384, 96, 32],
+            "preprocessing": true
+        },
+        "RandomAffine": {
+            "degrees": 20,
+            "scale": [0.1, 0.1, 0.1],
+            "translate": [0.03, 0.03, 0.03],
+            "applied_to": ["im", "gt"],
+            "dataset_type": ["training"]
+        },
+        "RandomReverse": {
+            "applied_to": ["im", "gt"],
+            "dataset_type": ["training"]
+        },
+        "NumpyToTensor": {
+            "applied_to": ["im", "gt"]
+        },
+        "NormalizeInstance": {"applied_to": ["im"]}
+    }
+}
