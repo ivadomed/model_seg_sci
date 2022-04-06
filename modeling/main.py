@@ -5,7 +5,7 @@ import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
-timestamp = f'{datetime.now():%Y%m%d-%H%M%S}'
+timestamp = f'{datetime.now():%Y%m%d-%H%M}'
 
 # machine learning packages
 import wandb
@@ -37,7 +37,7 @@ parser.add_argument('-dr', '--dataset_root',
                     help='Root path to the BIDS- and ivadomed-compatible dataset')
 parser.add_argument('-fd', '--fraction_data', default=1.0, type=float, help='Fraction of data to use. Helps with debugging.')
 parser.add_argument('-fho', '--fraction_hold_out', default=0.2, type=float, help='Fraction of data to hold-out of for the test phase')
-parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.6, 0.2], 
+parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.75, 0.2], 
                     help="Train and validation split. Should sum to (fraction_data - fraction_hold_out)")
 # model 
 parser.add_argument('-t', '--task', choices=['sc', 'mc'], default='sc', type=str, help="Single-channel or Multi-channel model ")
@@ -49,12 +49,12 @@ parser.add_argument('-srs', '--stride_size', nargs='+', default=[128, 256, 96], 
 # optimizations
 parser.add_argument('-p', '--precision', default=32, type=int, help='Precision for training')
 parser.add_argument('-ne', '--num_epochs', default=500, type=int, help='Number of epochs for the training process')
-parser.add_argument('-bs', '--batch_size', default=8, type=int, help='Batch size of the training and validation processes')
+parser.add_argument('-bs', '--batch_size', default=2, type=int, help='Batch size of the training and validation processes')
 parser.add_argument('-nw', '--num_workers', default=4, type=int, help='Number of workers for the dataloaders')
-parser.add_argument('-lr', '--learning_rate', default=1e-3, type=float, help='Learning rate for training the model')
+parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='Learning rate for training the model')
 parser.add_argument('-wd', '--weight_decay', type=float, default=0.01, help='Weight decay (i.e. regularization) value in AdamW')
-parser.add_argument('-pat', '--patience', default=100, type=int, help='number of validation steps (val_every_n_iters) to wait before early stopping')
-parser.add_argument('--T_0', default=500, type=int, help='number of steps in each cosine cycle')
+parser.add_argument('-pat', '--patience', default=250, type=int, help='number of validation steps (val_every_n_iters) to wait before early stopping')
+parser.add_argument('--T_0', default=200, type=int, help='number of steps in each cosine cycle')
 parser.add_argument('-epb', '--enable_progress_bar', default=False, type=bool, help='by default is disabled since it doesnt work in colab')
 # parser.add_argument('--val_every_n_iters', default='100', type=int, help='num of iterations before validation')
 parser.add_argument('-gpus', '--num_gpus', default=1, type=int, help="Number of GPUs to use")
@@ -128,8 +128,7 @@ class SCISegModel(pl.LightningModule):
         self.train_dataset, self.valid_dataset = random_split(dataset, lengths=[train_size, valid_size])
 
         # Define loss function
-        # self.seg_criterion = DiceLoss(smooth=1.0)
-        self.seg_criterion = FocalLoss()
+        self.seg_criterion = DiceLoss(smooth=1.0)
 
         # for logging/visualizing
         self.loss_visualization_step = 0.05
