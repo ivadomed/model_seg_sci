@@ -22,7 +22,9 @@ from datasets_sc import SCIZurichDataset
 from unet3d import ModifiedUNet3D
 from simple_unet3d import UNet3D
 from ivadomed.losses import DiceLoss, FocalLoss, TverskyLoss
-from utils import save_wandb_img
+from ivadomed.metrics import dice_score, hausdorff_score, intersection_over_union, \
+    precision_score, recall_score, specificity_score, numeric_score
+from utils import save_wandb_img, MetricManager
 
 # grp_name = 'multichannel-training'
 grp_name = 'singlechannel-training'
@@ -37,7 +39,7 @@ parser.add_argument('-dr', '--dataset_root',
                     help='Root path to the BIDS- and ivadomed-compatible dataset')
 parser.add_argument('-fd', '--fraction_data', default=1.0, type=float, help='Fraction of data to use. Helps with debugging.')
 parser.add_argument('-fho', '--fraction_hold_out', default=0.2, type=float, help='Fraction of data to hold-out of for the test phase')
-parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.75, 0.2], 
+parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.65, 0.15], 
                     help="Train and validation split. Should sum to (fraction_data - fraction_hold_out)")
 # model 
 parser.add_argument('-t', '--task', choices=['sc', 'mc'], default='sc', type=str, help="Single-channel or Multi-channel model ")
@@ -54,7 +56,7 @@ parser.add_argument('-nw', '--num_workers', default=4, type=int, help='Number of
 parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='Learning rate for training the model')
 parser.add_argument('-wd', '--weight_decay', type=float, default=0.01, help='Weight decay (i.e. regularization) value in AdamW')
 parser.add_argument('-pat', '--patience', default=250, type=int, help='number of validation steps (val_every_n_iters) to wait before early stopping')
-parser.add_argument('--T_0', default=200, type=int, help='number of steps in each cosine cycle')
+parser.add_argument('--T_0', default=100, type=int, help='number of steps in each cosine cycle')
 parser.add_argument('-epb', '--enable_progress_bar', default=False, type=bool, help='by default is disabled since it doesnt work in colab')
 # parser.add_argument('--val_every_n_iters', default='100', type=int, help='num of iterations before validation')
 parser.add_argument('-gpus', '--num_gpus', default=1, type=int, help="Number of GPUs to use")
@@ -97,12 +99,10 @@ class SCISegModel(pl.LightningModule):
         self.save_hyperparameters()
         self.init_timestamp = f'{datetime.now(): %Y%m%d-%H%M%S}'
 
-        # model_id = '%s-t=%s <-%s' % (self.cfg.model_id, self.cfg.task, self.init_timestamp)
-        # model_id = '%s-t=%s-ccs=%d-svs=%d-srs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d' % \
-        #     (cfg.model_name, cfg.task, cfg.center_crop_size[1], cfg.subvolume_size[1], cfg.stride_size[1],
-        #      cfg.batch_size, str(cfg.learning_rate), cfg.num_epochs, cfg.base_n_filter, cfg.seed)
-        # print('MODEL ID: %s' % self.model_id)
-
+        # variables for calculating the test metrics
+        metric_fns = [dice_score, hausdorff_score, intersection_over_union, 
+                            recall_score, specificity_score, precision_score, numeric_score ]
+        self.metric_mgr = MetricManager(metric_fns)
         # Configure saved models directory
         if not os.path.isdir(self.cfg.save):
             os.makedirs(self.cfg.save)
@@ -121,7 +121,6 @@ class SCISegModel(pl.LightningModule):
             self.net = UNet3D(n_channels=1 if self.cfg.task == 'sc' else 2, 
                                 init_filters=self.cfg.base_n_filter, n_classes=1, depth=self.cfg.depth)
             
-        
         # Data split for train and validation phases
         train_size = int(self.cfg.fraction_train_val[0] * len(dataset)) 
         valid_size = len(dataset) - train_size
@@ -131,10 +130,10 @@ class SCISegModel(pl.LightningModule):
         self.seg_criterion = DiceLoss(smooth=1.0)
 
         # for logging/visualizing
-        self.loss_visualization_step = 0.05
+        self.loss_visualization_step = 0.5
         self.best_valid_loss, self.best_train_loss = 1.0, 1.0
         self.train_losses, self.valid_losses = [], []
-        self.num_iters_per_epoch = int(np.ceil(len(self.train_dataset) / self.cfg.batch_size))
+        # self.num_iters_per_epoch = int(np.ceil(len(self.train_dataset) / self.cfg.batch_size))
 
     def forward(self, x):
         pass
@@ -151,6 +150,9 @@ class SCISegModel(pl.LightningModule):
             seg_y_hat = self.net(x)            
         
         seg_loss = self.seg_criterion(seg_y_hat, seg_y)
+        # ivadomed's dice returns -dice_coeff, make it positive, so that loss goes from 1 --> 0
+        seg_loss = 1.0 - torch.abs(seg_loss)
+        
         return seg_y_hat, seg_loss
 
     def training_step(self, batch, batch_idx):
@@ -162,7 +164,7 @@ class SCISegModel(pl.LightningModule):
         preds, loss = self.compute_loss(batch)
         self.train_losses += [loss.item()] * len(img1)
 
-        if loss < self.best_train_loss - self.loss_visualization_step and batch_idx==0:
+        if loss.item() < (self.best_train_loss - self.loss_visualization_step) and batch_idx==0:
           self.best_train_loss = loss.item()
           save_wandb_img("Training", img1.unsqueeze(1), gts.unsqueeze(1), preds.unsqueeze(1))
 
@@ -177,8 +179,12 @@ class SCISegModel(pl.LightningModule):
         preds, loss = self.compute_loss(batch)
         self.valid_losses += [loss.item()] * len(img1)
 
-        # qualitative results on wandb when first batch dice improves by 5%
-        if loss < self.best_valid_loss - self.loss_visualization_step and batch_idx==0:
+        # compute metrics for validation set
+        preds_npy, gts_npy = preds.cpu().numpy(), gts.cpu().numpy()
+        self.metric_mgr(preds_npy, gts_npy)
+
+        # qualitative results on wandb 
+        if loss.item() < (self.best_valid_loss - self.loss_visualization_step) and batch_idx==0:
           self.best_valid_loss = loss.item()
           save_wandb_img("Validation", img1.unsqueeze(1), gts.unsqueeze(1), preds.unsqueeze(1))
             
@@ -191,9 +197,14 @@ class SCISegModel(pl.LightningModule):
         valid_loss = np.mean(self.valid_losses)
         self.log('valid_loss', valid_loss)
         self.valid_losses = []
-
+        # get metrics for the current epoch
+        metrics_dict = self.metric_mgr.get_results()
+        self.log('valid_metrics', metrics_dict)
+        self.metric_mgr.reset()
+    
     def configure_optimizers(self):
-        optimizer = optim.AdamW(params=self.parameters(), lr=self.cfg.learning_rate, weight_decay=self.cfg.weight_decay)
+        # optimizer = optim.AdamW(params=self.parameters(), lr=self.cfg.learning_rate, weight_decay=self.cfg.weight_decay)
+        optimizer = optim.Adam(params=self.parameters(), lr=self.cfg.learning_rate)
         scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=self.cfg.T_0, eta_min=1e-5)
         
         return [optimizer], [scheduler]
@@ -239,7 +250,7 @@ def main(cfg):
             # check_val_every_n_epoch=(cfg.val_every_n_iters//model.num_iters_per_epoch))
 
         # log gradients, parameter histogram and model topology
-        wandb_logger.watch(model)
+        # wandb_logger.watch(model)
     
         trainer.fit(model)
         print("------- Training Done! -------")

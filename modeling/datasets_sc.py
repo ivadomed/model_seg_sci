@@ -44,17 +44,15 @@ class SCIZurichDataset(Dataset):
                  visualize_test_preds=True, seed=42):
         super(SCIZurichDataset).__init__()
 
-        if only_eval and os.path.exists(results_dir):
-            print('WARNING: results_dir=%s already exists! Files might be overwritten...' % results_dir)
-        else:
+        # Set / create the results path for the test phase
+        if only_eval:
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir)
+            else:
+                print('WARNING: results_dir=%s already exists! Files might be overwritten...' % results_dir)
+        
+        if not os.path.exists(results_dir):
             os.makedirs(results_dir)
-
-        # # Set / create the results path for the test phase
-        # if only_eval:
-        #     if not os.path.exists(results_dir):
-        #         os.makedirs(results_dir)
-        #     else:
-        #         print('WARNING: results_dir=%s already exists! Files might be overwritten...' % results_dir)
         self.results_dir = results_dir
         self.visualize_test_preds = visualize_test_preds
         # variables for calculating the test metrics
@@ -150,6 +148,7 @@ class SCIZurichDataset(Dataset):
 
                 if center_crop_size == subvolume_size:
                     # directly store the whole volume and save the subvolumes computation
+                    # Note: still named as subvolumes_ (even though its volumes now) to keep the code unchanged
                     subvolumes_ = {
                         'sag_img': sag_img,
                         'gt': gt}
@@ -188,17 +187,17 @@ class SCIZurichDataset(Dataset):
         
         # Apply training augmentations
         if self.train:
-            # Apply Affine Transformation with P=0.6 and Reverse with P=0.4
-            if random.random() < 0.5:
+            if random.random() < 0.75:
                 # Random Reverse transform
                 random_reverse = RandomReverse()
                 sag_img_subvolume, metadata = random_reverse(sample=sag_img_subvolume, metadata={})
                 gt_subvolume, _ = random_reverse(sample=gt_subvolume, metadata=metadata)
-            if random.random() < 0.5:
+            # Apply Affine Transformation with P=0.6 and Elastic with P=0.4
+            if random.random() < 0.6:
                 random_affine = RandomAffine(degrees=10, translate=[0.1, 0.1, 0.1], scale=[0.3, 0.3, 0.3])
                 sag_img_subvolume, metadata = random_affine(sample=sag_img_subvolume, metadata={})
                 gt_subvolume, _ = random_affine(sample=gt_subvolume, metadata=metadata)
-            if random.random() < 0.5:
+            else:
                 #  Elastic transform
                 elastic_transform = ElasticTransform(alpha_range=[25.0, 35.0], sigma_range=[3.5, 5.5], p=1.0)
                 sag_img_subvolume, metadata = elastic_transform(sample=sag_img_subvolume, metadata={})
@@ -207,7 +206,6 @@ class SCIZurichDataset(Dataset):
                 # Random Gamma transform
                 random_gamma = RandomGamma(log_gamma_range=[-3.0, 3.0], p=1.0)
                 sag_img_subvolume, metadata = random_gamma(sample=sag_img_subvolume, metadata={})
-                ax_img_subvolume, metadata = random_gamma(sample=ax_img_subvolume, metadata={})                
                 # # Random Blur
                 # random_blur = RandomBlur(sigma_range=[0.0, 2.0], p=1.0)
                 # sag_img_subvolume, metadata = random_blur(sample=sag_img_subvolume, metadata={})
