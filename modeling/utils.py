@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torchvision.utils as vutils
 import wandb
+from collections import defaultdict
 
 def volume2subvolumes(volume, subvolume_size, stride_size):
     """Converts 3D volumes into 3D subvolumes; works with PyTorch tensors."""
@@ -98,3 +99,40 @@ def save_wandb_img(dataset_type, input_samples, gt_samples, preds):
 
         grid_img = vutils.make_grid(torch.transpose(convert_labels_to_RGB(gt_samples), 2, 3), normalize=True, scale_each=True)
         wandb.log({dataset_type+"/Ground-Truth": wandb.Image(grid_img)})
+
+
+class MetricManager(object):
+    """Computes specified metrics and stores them in a dictionary.
+    Args:
+        metric_fns (list): List of metric functions.
+    Attributes:
+        metric_fns (list): List of metric functions.
+        result_dict (dict): Dictionary storing metrics.
+        num_samples (int): Number of samples.
+    """
+
+    def __init__(self, metric_fns):
+        self.metric_fns = metric_fns
+        self.num_samples = 0
+        self.result_dict = defaultdict(list)
+
+    def __call__(self, prediction, ground_truth):
+        self.num_samples += len(prediction)
+        for metric_fn in self.metric_fns:
+            for p, gt in zip(prediction, ground_truth):
+                res = metric_fn(p, gt)
+                dict_key = metric_fn.__name__
+                self.result_dict[dict_key].append(res)
+
+    def get_results(self):
+        res_dict = {}
+        for key, val in self.result_dict.items():
+            if np.all(np.isnan(val)):  # if all values are np.nan
+                res_dict[key] = None
+            else:
+                res_dict[key] = np.nanmean(val)
+        return res_dict
+
+    def reset(self):
+        self.num_samples = 0
+        self.result_dict = defaultdict(list)    
