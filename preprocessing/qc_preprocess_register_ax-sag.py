@@ -1,7 +1,7 @@
 """
 Quality control for preprocessing step.
 See `preprocess_data.sh` for the preprocessing pipeline.
-Adapted for longitudinal data from: 
+Adapted to process longitudinal data from: 
 https://github.com/ivadomed/model_seg_ms_mp2rage/blob/main/preprocessing/qc_preprocess.py
 """
 
@@ -32,7 +32,7 @@ subjects_df = pd.read_csv(os.path.join(args.sct_output_path, 'data_processed', '
 subjects = subjects_df['participant_id'].values.tolist()
 
 # Log resolutions and sizes for data exploration
-resolutions, sizes, crop_sizes = [], [], []
+resolutions, sizes, crop_sizes, axial_crop_sizes = [], [], [], []
 
 # Log problematic subjects for QC
 failed_crop_subjects, shape_mismatch_subjects, left_out_lesion_subjects = [], [], []
@@ -52,41 +52,50 @@ for subject in tqdm(subjects, desc='Iterating over Subjects'):
 
         # Read original and cropped subject image (i.e. 3D volume) to be used for training
         img_path = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session))
-        img_crop_fpath = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w_crop.nii.gz' % (subject, session))
-        if not os.path.exists(img_crop_fpath):
+        img_crop_res_fpath = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w_crop_res.nii.gz' % (subject, session))
+        ax_img_reg_fpath = os.path.join(subject_images_path, '%s_%s_acq-ax_T2w_reg.nii.gz' % (subject, session))
+        if not os.path.exists(img_crop_res_fpath):
             failed_crop_subjects.append([subject, session])
             continue
         img = nib.load(img_path)
-        img_crop = nib.load(img_crop_fpath)
+        img_crop_res = nib.load(img_crop_res_fpath)
+        ax_img_reg = nib.load(ax_img_reg_fpath)
 
         # Get and log size and resolution for each subject image
         size = img.get_fdata().shape
-        crop_size = img_crop.get_fdata().shape
-        resolution = tuple(img_crop.header['pixdim'].tolist()[1:4])
+        crop_size = img_crop_res.get_fdata().shape
+        ax_crop_size = ax_img_reg.get_fdata().shape
+        resolution = tuple(img_crop_res.header['pixdim'].tolist()[1:4])
         resolution = tuple([np.round(r, 1) for r in list(resolution)])
         sizes.append(size)
         crop_sizes.append(crop_size)
+        axial_crop_sizes.append(ax_crop_size)
         resolutions.append(resolution)
 
         # Read original and cropped subject ground-truths (GT)
         gt_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session))
         gt_crop_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual_crop.nii.gz' % (subject, session))
+        gt_crop_res_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual_crop_res.nii.gz' % (subject, session))
 
         gt = nib.load(gt_fpath)
         gt_crop = nib.load(gt_crop_fpath)
+        gt_crop_res = nib.load(gt_crop_res_fpath)
 
         # Basic shape checks
-        if not img_crop.shape == gt_crop.shape:
+        if not img_crop_res.shape == gt_crop_res.shape:
             shape_mismatch_subjects.append([subject, session])
             continue
 
         # Check if the dilated SC mask leaves out any lesions from GTs
+        # comparing the original and (only) the cropped GT because the subsequent resampling will not crop lesions
         if not (np.allclose(np.sum(gt.get_fdata()), np.sum(gt_crop.get_fdata()))):
             left_out_lesion_subjects.append([subject, session])
 
-print('RESOLUTIONS: ', Counter(resolutions))
-print('SIZES: ', Counter(sizes))
-print('CROP SIZES: ', Counter(crop_sizes))
+print('RESOLUTIONS: ', Counter(resolutions), "\n")
+print('SIZES: ', Counter(sizes), "\n")
+print('CROP SIZES: ', Counter(crop_sizes), "\n")
+print('AXIAL CROP SIZES: ', Counter(axial_crop_sizes), "\n")
+
 
 print('Could not find cropped image for the following subjects: ', failed_crop_subjects)
 print('Found shape mismatch in images and GTs for the following subjects: ', shape_mismatch_subjects)
