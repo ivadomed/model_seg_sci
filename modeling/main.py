@@ -19,27 +19,26 @@ import torchvision.transforms as transforms
 
 # dataloaders and segmentation models
 from datasets_sc import SCIZurichDataset
-from unet3d import ModifiedUNet3D
+from unet3d import ModifiedUNet3DEncoder, ModifiedUNet3DDecoder
 from simple_unet3d import UNet3D
 from ivadomed.losses import DiceLoss, FocalLoss, TverskyLoss
 from ivadomed.metrics import dice_score, hausdorff_score, intersection_over_union, \
     precision_score, recall_score, specificity_score, numeric_score
 from utils import save_wandb_img, MetricManager
 
-# grp_name = 'multichannel-training'
-grp_name = 'singlechannel-training'
 
 parser = argparse.ArgumentParser(description='Script for training custom models for SCI Lesion Segmentation.')
 # Arguments for model, data, and training and saving
 parser.add_argument('-e', '--only_eval', default=False, action='store_true', help='Only do evaluation, i.e. skip training!')
+parser.add_argument('-ft', '--finetune', default=False, action='store_true', help='Finetuning based on pre-trained weights')
 parser.add_argument('-m', '--model_type', choices=['unet'], default='unet', type=str, help='Model type to be used')
 # dataset
 parser.add_argument('-dr', '--dataset_root', 
                     default='/home/GRAMES.POLYMTL.CA/u114716/duke/temp/muena/sci-zurich_preprocessed', type=str,
                     help='Root path to the BIDS- and ivadomed-compatible dataset')
 parser.add_argument('-fd', '--fraction_data', default=1.0, type=float, help='Fraction of data to use. Helps with debugging.')
-parser.add_argument('-fho', '--fraction_hold_out', default=0.2, type=float, help='Fraction of data to hold-out of for the test phase')
-parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.65, 0.15], 
+parser.add_argument('-fho', '--fraction_hold_out', default=0.1, type=float, help='Fraction of data to hold-out of for the test phase')
+parser.add_argument('-ftv', '--fraction_train_val', nargs='+', default=[0.75, 0.15], 
                     help="Train and validation split. Should sum to (fraction_data - fraction_hold_out)")
 # model 
 parser.add_argument('-t', '--task', choices=['sc', 'mc'], default='sc', type=str, help="Single-channel or Multi-channel model ")
@@ -73,11 +72,27 @@ parser.add_argument('-se', '--seed', default=42, type=int, help='Set seeds for r
 parser.add_argument('-v', '--visualize_test_preds', default=False, action='store_true',
                     help='Enable to save subvolume predictions during the test phase for visual assessment')
 
+# grp_name = 'multichannel-training'
+grp_name = 'singlechannel-training'
+
 cfg = parser.parse_args()
-model_id = '%s-t=%s-ccs=%d-svs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d' % \
+if not cfg.finetune:
+    model_id = '%s-t=%s-ccs=%d-svs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d' % \
             (cfg.model_name, cfg.task, cfg.center_crop_size[1], cfg.subvolume_size[1],
-            cfg.batch_size, str(cfg.learning_rate), cfg.num_epochs, cfg.base_n_filter, cfg.seed)
+            cfg.batch_size, str(cfg.learning_rate), cfg.num_epochs, cfg.base_n_filter, cfg.seed)   
+    run_name = '%s-t=%s<-%s' % (cfg.model_name, cfg.task, timestamp)    # run name for wandb dashboard
+else:
+    model_id = '%s-t=%s-ccs=%d-svs=%d-bs=%d-lr=%s-epch=%d-bnf=%d-se=%d-ft' % \
+        (cfg.model_name, cfg.task, cfg.center_crop_size[1], cfg.subvolume_size[1],
+        cfg.batch_size, str(cfg.learning_rate), cfg.num_epochs, cfg.base_n_filter, cfg.seed)    
+    run_name = '%s-t=%s-ftd<-%s' % (cfg.model_name, cfg.task, timestamp)    # run name for wandb dashboard
+
 print('MODEL ID: %s' % model_id)
+
+
+# load path for pretrained model
+root_path = "/home/GRAMES.POLYMTL.CA/u114716/sci-zurich_project/ae_pretraining/"
+load_path =  root_path + "saved_enc_models/" + "best_" + cfg.model_name + "encoder" + "_adamw" + ".pt"
 
 # define the dataset
 dataset = SCIZurichDataset(
@@ -114,12 +129,33 @@ class SCISegModel(pl.LightningModule):
         #     print('Running Evaluation: (1) Loss metrics on validation set, and (2) ANIMA metrics on test set')
         #     self.cfg.continue_from_checkpoint = True
 
-        # instantiate model and datasets
-        if self.cfg.model_name == 'unet3d':
-            self.net = ModifiedUNet3D(cfg=self.cfg)
-        elif self.cfg.model_name == 'simple-unet3d':
-            self.net = UNet3D(n_channels=1 if self.cfg.task == 'sc' else 2, 
-                                init_filters=self.cfg.base_n_filter, n_classes=1, depth=self.cfg.depth)
+        # do finetuning based on pretrained weights
+        if self.cfg.finetune:
+            print("---------------------------------------")
+            print("FINETUNING BASED ON PRETRAINED WEIGHTS!")
+            print("---------------------------------------")
+            self.encoder_net = ModifiedUNet3DEncoder(cfg=self.cfg, in_channels=1, base_n_filter=self.cfg.base_n_filter, flatten=False)
+            self.encoder_net.load_state_dict(torch.load(load_path))
+            self.encoder_net.eval()
+            # # There are two ways of finetuning: 
+            # # (1) finetune the entire network after network, (2) freeze the encoder and only train the decoder
+            # # option (2) is more suited for transfer learning where only the classification layers are trained
+            # # but if that's also to be tried, uncomment the two lines below (that is basically freezer the encoder)
+            # Also, REMEMBER to not update the encoder weights in this case, go to the optimizers
+            # for params in self.encoder_net.parameters():
+            #     params.requires_grad = False
+            self.decoder_net = ModifiedUNet3DDecoder(cfg=self.cfg, n_classes=1, base_n_filter=self.cfg.base_n_filter)
+        else:
+            print("-----------------------------------")
+            print("INITIALIZING MODELS FROM SCRATCH!")
+            print("-----------------------------------")
+            # instantiate model and datasets
+            if self.cfg.model_name == 'unet3d':
+                self.encoder_net = ModifiedUNet3DEncoder(cfg=self.cfg)
+                self.decoder_net = ModifiedUNet3DDecoder(cfg=self.cfg)
+            elif self.cfg.model_name == 'simple-unet3d':
+                self.net = UNet3D(n_channels=1 if self.cfg.task == 'sc' else 2, 
+                                    init_filters=self.cfg.base_n_filter, n_classes=1, depth=self.cfg.depth)
             
         # Data split for train and validation phases
         train_size = int(self.cfg.fraction_train_val[0] * len(dataset)) 
@@ -147,7 +183,8 @@ class SCISegModel(pl.LightningModule):
         elif self.cfg.task == 'sc':     # single-channel model
             dataset_indices, x, seg_y = batch
             x = x.unsqueeze(1)
-            seg_y_hat = self.net(x)            
+            x_latent, context_features = self.encoder_net(x)
+            seg_y_hat = self.decoder_net(x_latent, context_features)     
         
         seg_loss = self.seg_criterion(seg_y_hat, seg_y)
         # ivadomed's dice returns -dice_coeff, make it positive, so that loss goes from 1 --> 0
@@ -157,18 +194,24 @@ class SCISegModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         dataset.train = True
-        if self.cfg.task == 'mc':       # multi-channel model
-            _, img1, img2, gts = batch
-        elif self.cfg.task == 'sc':
-            _, img1, gts = batch
+        # if self.cfg.task == 'mc':       # multi-channel model
+        #     _, img1, img2, gts = batch
+        # elif self.cfg.task == 'sc':
+        #     _, img1, gts = batch
         preds, loss = self.compute_loss(batch)
-        self.train_losses += [loss.item()] * len(img1)
+        self.train_losses.append(loss.item())
 
-        if loss.item() < (self.best_train_loss - self.loss_visualization_step) and batch_idx==0:
-          self.best_train_loss = loss.item()
-          save_wandb_img("Training", img1.unsqueeze(1), gts.unsqueeze(1), preds.unsqueeze(1))
+        # if loss.item() < (self.best_train_loss - self.loss_visualization_step) and batch_idx==0:
+        #   self.best_train_loss = loss.item()
+        #   save_wandb_img("Training", img1.unsqueeze(1), gts.unsqueeze(1), preds.unsqueeze(1))
 
         return loss
+
+    def training_epoch_end(self, outputs):
+        train_loss = np.mean(self.train_losses)
+        # self.log('train_loss', avg_train_loss, on_step=False, on_epoch=True)
+        self.log('train_loss', train_loss, on_step=False, on_epoch=True)
+        self.train_losses = []
 
     def validation_step(self, batch, batch_idx):
         dataset.train = False
@@ -177,10 +220,10 @@ class SCISegModel(pl.LightningModule):
         elif self.cfg.task == 'sc':
             _, img1, gts = batch
         preds, loss = self.compute_loss(batch)
-        self.valid_losses += [loss.item()] * len(img1)
+        self.valid_losses.append(loss.item())
 
         # compute metrics for validation set
-        preds_npy, gts_npy = preds.cpu().numpy(), gts.cpu().numpy()
+        preds_npy, gts_npy = preds.squeeze().cpu().numpy(), gts.squeeze().cpu().numpy()
         self.metric_mgr(preds_npy, gts_npy)
 
         # qualitative results on wandb 
@@ -188,14 +231,9 @@ class SCISegModel(pl.LightningModule):
           self.best_valid_loss = loss.item()
           save_wandb_img("Validation", img1.unsqueeze(1), gts.unsqueeze(1), preds.unsqueeze(1))
             
-    def on_train_epoch_end(self):
-        train_loss = np.mean(self.train_losses)
-        self.log('train_loss', train_loss)
-        self.train_losses = []
-
-    def on_validation_epoch_end(self):
+    def validation_epoch_end(self, outputs):
         valid_loss = np.mean(self.valid_losses)
-        self.log('valid_loss', valid_loss)
+        self.log('valid_loss', valid_loss, on_step=False, on_epoch=True)
         self.valid_losses = []
         # get metrics for the current epoch
         metrics_dict = self.metric_mgr.get_results()
@@ -205,9 +243,16 @@ class SCISegModel(pl.LightningModule):
     def configure_optimizers(self):
         # optimizer = optim.AdamW(params=self.parameters(), lr=self.cfg.learning_rate, weight_decay=self.cfg.weight_decay)
         optimizer = optim.Adam(params=self.parameters(), lr=self.cfg.learning_rate)
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=self.cfg.T_0, eta_min=1e-5)
+        # # if freezing the encoder net then only update the decoder, uncomment below
+        # optimizer = optim.Adam(params=self.decoder_net.parameters(), lr=self.cfg.learning_rate)
+
+        # scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=self.cfg.T_0, eta_min=1e-5)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='min', factor=0.2, patience=self.cfg.patience, min_lr=1e-5)
         
-        return [optimizer], [scheduler]
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "valid_loss"}
+        # return [optimizer], [scheduler]
+        
     
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size = self.cfg.batch_size, pin_memory=True,
@@ -221,7 +266,7 @@ class SCISegModel(pl.LightningModule):
 def main(cfg):
     # experiment tracker (you need to sign in with your account)
     wandb_logger = pl.loggers.WandbLogger(
-                            name='%s-t=%s<-%s' % (cfg.model_name, cfg.task, timestamp), 
+                            name='%s'%(run_name),
                             group= '%s'%(grp_name), 
                             log_model=True, # save best model using checkpoint callback
                             project='sci-zurich',
@@ -231,7 +276,7 @@ def main(cfg):
     checkpoint = pl.callbacks.ModelCheckpoint(
         dirpath=cfg.save,
         filename=model_id, 
-        monitor=None, save_top_k=1, mode="min", save_last=False)
+        monitor='valid_loss', save_top_k=1, mode="min", save_last=False)
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     early_stop = pl.callbacks.EarlyStopping(monitor="valid_loss", min_delta=0.00, 
                                             patience=cfg.patience, verbose=False, mode="min")
