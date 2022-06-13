@@ -99,6 +99,9 @@ After running the preprocessing, it is recommended to check the QC report under 
 TODO: add further details on manual corrections.
 TODO: add training details
 
-## Literature
+### Literature
 
 [Here](https://intranet.neuro.polymtl.ca/bibliography/spinal-cord-injury.html#) is a list of relevant articles in relation to this project.
+
+### Things To-Do
+1. Current preprocessing deals with multiple sessions within the subjects _independently_ (for simplicity), implying that the sessions are not co-registered and treated as separate subjects. Future versions will incorporate the longitudinal aspect of this, meaning that the sessions will be co-registered with each other before feeding as inputs to the model.
