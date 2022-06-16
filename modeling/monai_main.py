@@ -20,7 +20,7 @@ from monai.data import (DataLoader, CacheDataset, load_decathlon_datalist, decol
 from monai.transforms import (AsDiscrete, AddChanneld, Compose, CropForegroundd, LoadImaged, Orientationd, RandFlipd, 
                     RandCropByPosNegLabeld, RandShiftIntensityd, ScaleIntensityRanged, Spacingd, RandRotate90d, ToTensord,
                     SpatialPadd, NormalizeIntensityd, EnsureType, RandScaleIntensityd, RandWeightedCropd, EnsureChannelFirstd,
-                    AsDiscreted, RandSpatialCropSamplesd)
+                    AsDiscreted, RandSpatialCropSamplesd, HistogramNormalized)
 
 
 # print_config()
@@ -96,7 +96,7 @@ class Model(pl.LightningModule):
         self.root = data_root
         self.lr = args.learning_rate
         self.net = net
-        self.criterion = loss_function
+        self.loss_function = loss_function
         self.optimizer_class = optimizer_class
 
         self.best_val_dice, self.best_val_epoch = 0, 0
@@ -136,7 +136,7 @@ class Model(pl.LightningModule):
             # AsDiscreted(keys=["label"], threshold=0.3),     # zurich labels are soft, need to convert to binary for PosNegCropping
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"],pixdim=(0.75, 0.75, 0.75), mode=("bilinear", "nearest"),),
-            SpatialPadd(keys=["image", "label"], spatial_size=self.spatial_padding_size),
+            SpatialPadd(keys=["image", "label"], spatial_size=self.spatial_padding_size, mode="minimum"),
             # CropForegroundd(keys=["image", "label"], source_key="image"),     # crops >0 values with a bounding box
             # RandCropByPosNegLabeld(
             #     keys=["image", "label"], label_key="label", 
@@ -151,8 +151,9 @@ class Model(pl.LightningModule):
             RandFlipd(keys=["image", "label"],spatial_axis=[2],prob=0.50,),
             RandRotate90d(keys=["image", "label"], prob=0.10, max_k=3,),
             NormalizeIntensityd(keys="image", nonzero=False, channel_wise=True),
-            RandShiftIntensityd(keys=["image"], offsets=0.10, prob=1.0,),
-            RandScaleIntensityd(keys="image", factors=0.1, prob=1.0),
+            # RandShiftIntensityd(keys=["image"], offsets=0.10, prob=1.0,),
+            # RandScaleIntensityd(keys="image", factors=0.1, prob=1.0),
+            HistogramNormalized(keys="image", mask=None),
             ToTensord(keys=["image", "label"]), 
         ])
 
@@ -161,17 +162,21 @@ class Model(pl.LightningModule):
             AddChanneld(keys=["image", "label"]),
             Orientationd(keys=["image", "label"], axcodes="RAS"),
             Spacingd(keys=["image", "label"],pixdim=(0.75, 0.75, 0.75), mode=("bilinear", "nearest"),),
-            SpatialPadd(keys=["image", "label"], spatial_size=self.spatial_padding_size),
+            SpatialPadd(keys=["image", "label"], spatial_size=self.spatial_padding_size, mode="minimum"),
             # ScaleIntensityRanged(keys=["image"], a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             # CropForegroundd(keys=["image", "label"], source_key="image"),
             NormalizeIntensityd(keys="image", nonzero=False, channel_wise=True),
+            HistogramNormalized(keys="image", mask=None),
             ToTensord(keys=["image", "label"]),
         ])
+
+        # TODO: define test_transforms
 
         # define training and validation dataloaders
         self.train_ds = CacheDataset(data=datalist, transform=train_transforms, cache_rate=1.0, num_workers=8)
         self.val_ds = CacheDataset(data=val_files, transform=val_transforms, cache_num=12, cache_rate=1.0, num_workers=4)
         # print(len(train_loader))
+        # TODO: define test cache dataset
 
 
     def train_dataloader(self):
@@ -187,11 +192,34 @@ class Model(pl.LightningModule):
         # TODO: add lr_scheduler
         return optimizer
 
-    
+    def _compute_loss(self, preds, labels):
+
+        if self.args.dataset == 'zurich':
+            # convert labels to binary masks to calculate the weights for CELoss
+            # and to convert to one-hot encoding for DiceLoss
+            labels = (labels > 0.3).long()
+        # print(f"labels binary: {labels}")
+
+        # define loss functions
+        if self.loss_function == 'dice':
+            criterion = DiceLoss(to_onehot_y=True, softmax=True)
+        elif self.loss_function == 'dice_ce':                
+            # compute weights for cross entropy loss
+            labels_b = labels[0]
+            normalized_ce_weights = get_ce_weights(labels_b.detach().cpu())
+            # print(f"normed ce weights: {normalized_ce_weights}")
+            criterion = DiceCELoss(to_onehot_y=True, softmax=True, ce_weight=normalized_ce_weights)
+
+        loss = criterion(preds, labels)
+
+        return loss
+
     def training_step(self, batch, batch_idx):
         inputs, labels = (batch["image"], batch["label"])
         output = self.forward(inputs)
-        loss = self.criterion(output, labels)
+
+        # calculate training loss
+        loss = self._compute_loss(output, labels)
         
         return {"loss": loss}
 
@@ -206,14 +234,15 @@ class Model(pl.LightningModule):
         images, labels = batch["image"], batch["label"]
         inference_roi_size = self.inference_roi_size
         sw_batch_size = 4
-        outputs = sliding_window_inference(images, inference_roi_size, sw_batch_size, self.forward)
+        outputs = sliding_window_inference(images, inference_roi_size, sw_batch_size, 
+                                            self.forward, padding_mode="reflect")
         
         # calculate validation loss
-        loss = self.criterion(outputs, labels)
+        loss = self._compute_loss(outputs, labels)
 
         # qualitative results on wandb
         if self.current_epoch % self.args.check_val_every_n_epochs == 0:
-            fig = visualize(preds=outputs, imgs=images, gts=labels, num_slices=5)
+            fig = visualize(preds=outputs, imgs=images, gts=labels, num_slices=7)
             wandb.log({"Validation Output Visualizations": fig})
             plt.close()
         
@@ -245,7 +274,8 @@ class Model(pl.LightningModule):
         print(
             f"Current epoch: {self.current_epoch}"
             f"\nCurrent Mean Dice: {mean_val_dice:.4f}"
-            f"\nBest Mean Dice: {self.best_val_dice:.4f} at Epoch: {self.best_val_epoch}")
+            f"\nBest Mean Dice: {self.best_val_dice:.4f} at Epoch: {self.best_val_epoch}"
+            f"\n----------------------------------------------------")
         
         self.metric_values.append(mean_val_dice)
 
@@ -343,11 +373,11 @@ def main(args):
         exp_id =f"{args.dataset}_{args.model}_{args.loss_func}_{args.optimizer}_lr={args.learning_rate}" \
                 f"_fs={args.feature_size}_hs={args.hidden_size}_mlpd={args.mlp_dim}_nh={args.num_heads}"
 
-    # Define the loss function and the optimizer
-    if args.loss_func == "dice_ce":
-        loss_function = DiceCELoss(to_onehot_y=True, softmax=True)
-    elif args.loss_func == "dice":
-        loss_function = DiceLoss(to_onehot_y=True, softmax=True)    # because there are 2 classes (bg=0 and fg=1)
+    # # Define the loss function and the optimizer
+    # if args.loss_func == "dice_ce":
+    #     loss_function = DiceCELoss(to_onehot_y=True, softmax=True)
+    # elif args.loss_func == "dice":
+    #     loss_function = DiceLoss(to_onehot_y=True, softmax=True)    # because there are 2 classes (bg=0 and fg=1)
     # loss_function = MaskedDiceLoss(to_onehot_y=True, softmax=True)
 
     if args.optimizer in ["adamw", "AdamW", "Adamw"]:
@@ -356,7 +386,7 @@ def main(args):
         optimizer_class = torch.optim.SGD
 
     # instantiate the PL model
-    pl_model = Model(args, data_root=dataset_root, net=net, loss_function=loss_function, optimizer_class=optimizer_class)
+    pl_model = Model(args, data_root=dataset_root, net=net, loss_function=args.loss_func, optimizer_class=optimizer_class)
 
     wandb_logger = pl.loggers.WandbLogger(
                         name=exp_id,
@@ -400,6 +430,26 @@ def main(args):
         # TODO: a way to test the model
 
 
+def get_ce_weights(label):    
+    '''
+    label/target: shape - [C, D, H, W]  
+    '''
+    if label.shape[0] > 1:
+        label = label[1:]  # for One-Hot format data, remove the background channel
+    
+    label_flat = torch.ravel(torch.any(label,0))  # in case label has multiple dimensions
+    num_fg_indices = torch.nonzero(label_flat).shape[0]
+    num_bg_indices = torch.nonzero(~label_flat).shape[0]
+
+    counts = torch.FloatTensor([num_bg_indices, num_fg_indices])
+    if num_fg_indices == 0:
+        counts[1] = 1e-5    # to prevent division by zero
+        # and discard the loss coming only from the bg_indices
+    
+    ce_weights = 1.0/counts
+    norm_ce_weights = ce_weights/ce_weights.sum()
+
+    return norm_ce_weights.cuda()
 
 def visualize(preds, imgs, gts, num_slices=10):
     # getting ready for post processing
@@ -408,7 +458,7 @@ def visualize(preds, imgs, gts, num_slices=10):
     gts = gts.squeeze(dim=1)
     preds = torch.argmax(preds, dim=1).detach().cpu()
 
-    fig, axs = plt.subplots(3, num_slices, figsize=(9, 3))
+    fig, axs = plt.subplots(3, num_slices, figsize=(12, 3))
     fig.suptitle('Original --> Ground Truth --> Prediction')
     mid_sag_slice = imgs.shape[1]//2
     slice_nums = np.arange(-mid_sag_slice, mid_sag_slice+1)
@@ -416,7 +466,7 @@ def visualize(preds, imgs, gts, num_slices=10):
     for i in range(num_slices):
         axs[0, i].imshow(imgs[0, slice_nums[i], :, :], cmap='gray'); axs[0, i].axis('off') 
         axs[1, i].imshow(gts[0, slice_nums[i], :, :]); axs[1, i].axis('off')    
-        axs[2, i].imshow(preds[0, slice_nums[i], :, :]); axs[2, i].axis('off')
+        axs[2, i].imshow(preds[0, slice_nums[i], :, :]); # axs[2, i].axis('off')
     
     plt.tight_layout()
     fig.show()
