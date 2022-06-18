@@ -1,0 +1,22 @@
+program: monai_main.py
+entity: naga-karthik
+project: sci-zurich
+method: random
+metric:
+  name: 'val_dice'
+  goal: maximize
+parameters:
+  check_val_every_n_epochs:
+    value: 40
+  max_epochs:
+    value: 800
+  model: 
+    values: ['unet', 'segresnet']
+  init_filters:
+    values: [8, 16, 32]
+  loss_func:
+    values: ['dice_ce', 'dice_ce_sq', 'dice']
+  batch_size:
+    values: [2, 8, 16]
+  learning_rate:
+    values: [1e-3, 1e-4, 1e-5]
