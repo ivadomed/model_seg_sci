@@ -13,7 +13,7 @@ import pytorch_lightning as pl
 
 from monai.config import print_config
 from monai.metrics import DiceMetric
-from monai.losses import DiceCELoss, DiceLoss, MaskedDiceLoss
+from monai.losses import DiceCELoss, DiceLoss, MaskedDiceLoss, FocalLoss
 from monai.inferers import sliding_window_inference
 from monai.networks.nets import UNet, DynUNet, BasicUNet, SegResNet, UNETR
 from monai.data import (DataLoader, CacheDataset, load_decathlon_datalist, decollate_batch, list_data_collate)
@@ -200,17 +200,21 @@ class Model(pl.LightningModule):
             labels = (labels > 0.3).long()
         # print(f"labels binary: {labels}")
 
-        # define loss functions
-        if self.loss_function == 'dice':
-            criterion = DiceLoss(to_onehot_y=True, softmax=True)
-        elif self.loss_function == 'dice_ce':                
-            # compute weights for cross entropy loss
-            labels_b = labels[0]
-            normalized_ce_weights = get_ce_weights(labels_b.detach().cpu())
-            # print(f"normed ce weights: {normalized_ce_weights}")
-            criterion = DiceCELoss(to_onehot_y=True, softmax=True, ce_weight=normalized_ce_weights)
-
-        loss = criterion(preds, labels)
+        # # define loss functions
+        # if self.loss_function == 'dice':
+        #     criterion = DiceLoss(to_onehot_y=True, softmax=True)
+        # elif self.loss_function in ['dice_ce', 'dice_ce_sq']:                
+        #     # compute weights for cross entropy loss
+        #     labels_b = labels[0]
+        #     normalized_ce_weights = get_ce_weights(labels_b.detach().cpu())
+        #     # print(f"normed ce weights: {normalized_ce_weights}")
+        #     if self.loss_function == 'dice_ce':
+        #         criterion = DiceCELoss(to_onehot_y=True, softmax=True, ce_weight=normalized_ce_weights)
+        #     else:
+        #         criterion = DiceCELoss(to_onehot_y=True, softmax=True, squared_pred=True, ce_weight=normalized_ce_weights)
+        # loss = criterion(preds, labels)
+        
+        loss = self.loss_function(preds, labels)
 
         return loss
 
@@ -239,19 +243,19 @@ class Model(pl.LightningModule):
         
         # calculate validation loss
         loss = self._compute_loss(outputs, labels)
-
-        # qualitative results on wandb
-        if self.current_epoch % self.args.check_val_every_n_epochs == 0:
-            fig = visualize(preds=outputs, imgs=images, gts=labels, num_slices=7)
-            wandb.log({"Validation Output Visualizations": fig})
-            plt.close()
         
         # post-process for calculating the evaluation metric
-        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
-        labels = [self.post_label(i) for i in decollate_batch(labels)]
-        self.dice_metric(y_pred=outputs, y=labels)
+        post_outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+        post_labels = [self.post_label(i) for i in decollate_batch(labels)]
+        self.dice_metric(y_pred=post_outputs, y=post_labels)
         
-        return {"val_loss": loss, "val_number": len(outputs)}
+        return {
+            "val_loss": loss, 
+            "val_number": len(post_outputs),
+            "preds": outputs,
+            "images": images,
+            "labels": labels
+        }
 
     def validation_epoch_end(self, outputs):
         val_loss, num_val_items = 0, 0
@@ -270,7 +274,13 @@ class Model(pl.LightningModule):
         if mean_val_dice > self.best_val_dice:
             self.best_val_dice = mean_val_dice
             self.best_val_epoch = self.current_epoch
-        
+
+        # qualitative results on wandb
+        for output in outputs:
+            fig = visualize(preds=output["preds"], imgs=output["images"], gts=output["labels"], num_slices=7)
+            wandb.log({"Validation Output Visualizations": fig})
+            plt.close()
+
         print(
             f"Current epoch: {self.current_epoch}"
             f"\nCurrent Mean Dice: {mean_val_dice:.4f}"
@@ -372,12 +382,25 @@ def main(args):
             res_block=True, dropout_rate=0.0,)
         exp_id =f"{args.dataset}_{args.model}_{args.loss_func}_{args.optimizer}_lr={args.learning_rate}" \
                 f"_fs={args.feature_size}_hs={args.hidden_size}_mlpd={args.mlp_dim}_nh={args.num_heads}"
+    elif args.model in ["segresnet", "SegResNet"]:
+        net = SegResNet(
+            in_channels=1, out_channels=2,
+            init_filters=16,
+            blocks_down=[1, 2, 2, 4],
+            blocks_up=[1, 1, 1],
+            dropout_prob=0.2,)
+        exp_id =f"{args.dataset}_{args.model}_{args.loss_func}_{args.optimizer}_lr={args.learning_rate}"
 
-    # # Define the loss function and the optimizer
-    # if args.loss_func == "dice_ce":
-    #     loss_function = DiceCELoss(to_onehot_y=True, softmax=True)
-    # elif args.loss_func == "dice":
-    #     loss_function = DiceLoss(to_onehot_y=True, softmax=True)    # because there are 2 classes (bg=0 and fg=1)
+    # Define the loss function and the optimizer
+    ce_weights = torch.FloatTensor([0.001, 0.999])  # for bg, fg
+    if args.loss_func == "dice_ce":
+        loss_function = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, ce_weight=ce_weights)
+    elif args.loss_func == "dice_ce_sq":
+        loss_function = DiceCELoss(include_background=False, to_onehot_y=True, softmax=True, ce_weight=ce_weights, squared_pred=True)
+    elif args.loss_func == "dice":
+        loss_function = DiceLoss(include_background=False, to_onehot_y=True, softmax=True)    # because there are 2 classes (bg=0 and fg=1)
+    else:
+        loss_function = FocalLoss(include_background=False, to_onehot_y=True, gamma=2.0)
     # loss_function = MaskedDiceLoss(to_onehot_y=True, softmax=True)
 
     if args.optimizer in ["adamw", "AdamW", "Adamw"]:
@@ -386,7 +409,7 @@ def main(args):
         optimizer_class = torch.optim.SGD
 
     # instantiate the PL model
-    pl_model = Model(args, data_root=dataset_root, net=net, loss_function=args.loss_func, optimizer_class=optimizer_class)
+    pl_model = Model(args, data_root=dataset_root, net=net, loss_function=loss_function, optimizer_class=optimizer_class)
 
     wandb_logger = pl.loggers.WandbLogger(
                         name=exp_id,
@@ -399,13 +422,13 @@ def main(args):
     # to save the best model on validation
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=save_path, filename=exp_id,   
-        monitor='val_loss', save_top_k=1, mode="min", save_last=False)
+        monitor='val_dice', save_top_k=1, mode="max", save_last=False)
     
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     
     early_stopping = pl.callbacks.EarlyStopping(
-        monitor="val_loss", min_delta=0.00,
-        patience=args.patience, verbose=False, mode="min")
+        monitor="val_dice", min_delta=0.00,
+        patience=args.patience, verbose=False, mode="max")
 
     if not args.only_eval:
         # initialise Lightning's trainer.
@@ -421,6 +444,10 @@ def main(args):
         # Train!
         trainer.fit(pl_model)
         print("------- Training Done! -------")
+
+        print("------- Printing the Best Model Path! ------")     # the PyTorch Lightning way
+        # print best checkpoint after training
+        print(trainer.checkpoint_callback.best_model_path)
     
     else:
         print("------- Loading the Best Model! ------")     # the PyTorch Lightning way
