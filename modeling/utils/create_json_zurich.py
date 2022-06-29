@@ -65,6 +65,7 @@ for fold in range(num_cv_folds):
     test_subjects_dict =  {"test": test_subjects}
 
     # run loop for training and validation subjects
+    temp_shapes_list = []
     for name, subs_list in train_val_subjects_dict.items():
 
         temp_list = []
@@ -84,6 +85,9 @@ for fold in range(num_cv_folds):
                 subject_image_file = os.path.join(subject_images_path, '%s_%s_acq-sag_T2w.nii.gz' % (subject, session))
                 subject_label_file = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session))
 
+                # get shapes of each subject to calculate median later
+                temp_shapes_list.append(np.shape(nib.load(subject_image_file).get_fdata()))
+
                 # load GT mask
                 gt_label = nib.load(subject_label_file).get_fdata()
                 bbox_coords = get_bounding_boxes(mask=gt_label)
@@ -96,6 +100,10 @@ for fold in range(num_cv_folds):
                 temp_list.append(temp_data)
         
         params[name] = temp_list
+
+        # print(temp_shapes_list)
+        # calculate the median shapes along each axis
+        params["train_val_median_shape"] = np.median(temp_shapes_list, axis=0).tolist()
 
     # run separate loop for testing 
     for name, subs_list in test_subjects_dict.items():
