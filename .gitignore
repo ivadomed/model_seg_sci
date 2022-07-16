@@ -1,0 +1,10 @@
+# Ignore Intermediate/Temp files
+ce_weights.py
+modeling/monai_main_colorado.py
+
+# Ignore output folders
+sci_col_outputs/
+sci_zurich_outputs/
+
+# Ignore Mac system files
+.DS_store
