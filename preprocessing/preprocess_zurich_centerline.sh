@@ -142,13 +142,16 @@ file_centerline="${FILECENTERLINE}"
 sct_maths -i ${file_centerline}.nii.gz -dilate 15 -shape disk -dim 1 -o ${file_centerline}_dilate.nii.gz
 
 # Define the absolute path for dilated centerline mask because the directory is changed later
-file_centerline_dilate=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_centerline}_dilate
+fname_centerline_dilate=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_centerline}_dilate
 
 # Resample the image using linear interpolation
 sct_resample -i ${file}.nii.gz -mm 1x1x1 -x linear -o ${file}_resample.nii.gz
 
+# Resample the dilated centerline mask as well
+sct_resample -i ${fname_centerline_dilate}.nii.gz -mm 1x1x1 -x linear -o ${fname_centerline_dilate}_resample.nii.gz
+
 # Use dilated SC centerline mask to crop the resampled image
-sct_crop_image -i ${file}_resample.nii.gz -m ${file_centerline_dilate}.nii.gz -o ${file}_crop.nii.gz
+sct_crop_image -i ${file}_resample.nii.gz -m ${fname_centerline_dilate}_resample.nii.gz -o ${file}_crop.nii.gz
 
 # Go to subject folder for segmentation GTs
 cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
@@ -164,29 +167,29 @@ fi
 # Resample the GT using linear interpolation
 sct_resample -i ${file_gt}.nii.gz -mm 1x1x1 -x linear -o ${file_gt}_resample.nii.gz
 
-# Crop the GT image using dilated SC centerline mask
-sct_crop_image -i ${file_gt}_resample.nii.gz -m ${file_centerline_dilate}.nii.gz -o ${file_gt}_crop.nii.gz
+# Crop the GT image using resampled and dilated SC centerline mask
+sct_crop_image -i ${file_gt}_resample.nii.gz -m ${fname_centerline_dilate}_resample.nii.gz -o ${file_gt}_crop.nii.gz
 
-# # Go back to the root output path
-# cd $PATH_OUTPUT
+# Go back to the root output path
+cd $PATH_OUTPUT
 
-# # Create and populate clean data processed folder for training
-# PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
+# Create and populate clean data processed folder for training
+PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
 
-# # Copy over required BIDs files
-# mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
-# rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
-# rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
-# rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
-# rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/derivatives/
+# Copy over required BIDs files
+mkdir -p $PATH_DATA_PROCESSED_CLEAN $PATH_DATA_PROCESSED_CLEAN/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat
+rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/
+rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
+rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
+rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_CLEAN/derivatives/
 
-# # For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
-# # NOTE: we are not cropping the .json files as they are corrupted, thereby resulting in errors while using ivadomed
-# rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
-# # rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
-# mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-# rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.nii.gz
-# # rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.json
+# For lesion segmentation task, copy SC crops as inputs and lesion annotations as targets
+# NOTE: we are not cropping the .json files as they are corrupted, thereby resulting in errors while using ivadomed
+rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.nii.gz
+# rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}.json
+mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
+rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}_crop.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.nii.gz
+# rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.json
 
 
 # Display useful info for the log
