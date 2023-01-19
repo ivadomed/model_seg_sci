@@ -44,7 +44,7 @@ for subject in tqdm(subjects, desc='Iterating over Subjects'):
     temp_subject_path = os.path.join(args.sct_output_path, 'data_processed', subject)
     num_sessions_per_subject = sum(os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in os.listdir(temp_subject_path))
     
-    for ses_idx in tqdm(range(1, num_sessions_per_subject+1), desc="Iterating over Sessions"):
+    for ses_idx in range(1, num_sessions_per_subject+1):
         # Get paths with session numbers
         session = 'ses-0' + str(ses_idx)
         subject_images_path = os.path.join(args.sct_output_path, 'data_processed', subject, session, 'anat')
@@ -69,7 +69,7 @@ for subject in tqdm(subjects, desc='Iterating over Subjects'):
         resolutions.append(resolution)
 
         # Read original and cropped subject ground-truths (GT)
-        gt_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual.nii.gz' % (subject, session))
+        gt_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual_resample.nii.gz' % (subject, session))
         gt_crop_fpath = os.path.join(subject_labels_path, '%s_%s_acq-sag_T2w_lesion-manual_crop.nii.gz' % (subject, session))
 
         gt = nib.load(gt_fpath)

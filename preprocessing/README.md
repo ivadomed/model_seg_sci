@@ -1,4 +1,4 @@
-This folder contains the files required for preprocessing the data. The preprocessing script (using `Spinal Cord Toolbox v5.4`) `preprocess_zurich_centerline.sh` along with the procedure for quality control (QC) will be explained below. The file `exclude.yml` contains the list of subjects excluded from the dataset along with the reason for doing so. 
+This folder contains the files required for preprocessing the data. The preprocessing script (using `Spinal Cord Toolbox master-version`) `preprocess_zurich_centerline.sh` along with the procedure for two types of quality control (QC) will be explained below. 
 
 ## Preprocessing Steps
 
@@ -25,7 +25,7 @@ sct_run_batch -script preprocess_data.sh -path-data PATH_DATA -path-output PATH_
 ```
 where `PATH_DATA` is the path to the BIDS dataset folder, and `PATH_OUT` is where the output of preprocessing will be saved to. `PATH_OUT` will contain the folders `data_processed/` and `qc/` among others after a successful run.
 
-### Performing QC for Centerline Extraction
+### Performing Manual QC for Centerline Extraction
 To ensure that the extracted centerline is correct/meaningful, a QC has to be performed by going over all the subjects in the `index.html` file inside the `qc/` folder. The instructions for navigating `index.html` are provided on the page itself. For each subject, two outputs are generated: (1) the extracted centerline as seen on the axial slices and (2) the centerline as seen on the sagittal plane. The QC procedure is as follows:
 1. Look at both the outputs and make sure that the centerline is overlayed on the SC itself and does not erroneously lie outside the SC.
 2. Identify all the subjects where the automatic centerline detection fails (usually occurs in lumbar images) and download the QC fails. This should download a `.yml` file containing list of subjects required manual correction. 
@@ -34,20 +34,16 @@ To ensure that the extracted centerline is correct/meaningful, a QC has to be pe
     2. Note that the `output_path` should be: `derivatives/labels/sub-zhXX/ses-XX/anat/`. That is, the manually corrected SC centerline should exist as a derivative file. 
 
 
-TODO: The rest of the README
-
-### Running the QC Script
-After a successful preprocessing run, the next step is to do the QC to check for errors:
+### Performing Automatic QC for Preprocessed Output
+After a successful preprocessing run, the next step is to do the automatic QC to check for errors:
 ```
-python qc_preprocess.py -s PATH_OUT
+python qc_preprocess_sci-zurich.py -s PATH_OUT
 ```
-The `PATH_OUT` is the same output path used while running `sct_run_batch`.
+The `PATH_OUT` is the same output path used while running `sct_run_batch`. This folder should contain `data_processed` folder.'
 
 This QC script checks whether:
 
 1. the resolutions match between the two original sessions,
 2. the image and GT sizes are equivalent for each subject,
 3. the isotropic-resampling worked as expected,
-4. and most importantly, whether cropping of the original image with the SC mask erroneously crops out any SC lesions.
-
-NOTE: A mistake in the annotation process can result in lesions appearing _outside_ the SC. In such cases, those subjects were excluded from the dataset. More information on those subjects can be found in the `exclude.yml` file.
+4. and _most importantly_, whether cropping of the resampled image with the SC centerline mask erroneously crops out any lesions from the label masks.
