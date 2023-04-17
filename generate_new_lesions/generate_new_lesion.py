@@ -57,15 +57,15 @@ def copy_head_and_right_xyz(data, spacing, direction, origin):
 def generate_new_sample(image_a, image_b, mask_a, mask_b, label_a, label_b):
     spacing, direction, origin = get_head(image_a)
 
-    target_a = nib.load(image_a).get_fdata()
-    target_b = nib.load(image_b).get_fdata()
+    image_a = nib.load(image_a).get_fdata()
+    image_b = nib.load(image_b).get_fdata()
     mask_a = nib.load(mask_a).get_fdata()
     mask_b = nib.load(mask_b).get_fdata()
     label_a = nib.load(label_a).get_fdata()
     label_b = nib.load(label_b).get_fdata()
 
     # Initialize new_target and new_label with the same shape as target_a
-    new_target = np.copy(target_a)
+    new_target = np.copy(image_a)
     new_label = np.copy(label_a)
 
     # Create 3D bounding box around non-zero pixels in label_b
@@ -85,7 +85,7 @@ def generate_new_sample(image_a, image_b, mask_a, mask_b, label_a, label_b):
             for z_step, z_cor in enumerate(range(z0, z1)):
                 # Insert only voxels corresponding to the lesion mask
                 if label_b[x_cor, y_cor, z_cor] > 0:
-                    new_target[x + x_step, y + y_step, z + z_step] = target_b[x_cor, y_cor, z_cor]
+                    new_target[x + x_step, y + y_step, z + z_step] = image_b[x_cor, y_cor, z_cor]
                     new_label[x + x_step, y + y_step, z + z_step] = label_b[x_cor, y_cor, z_cor]
 
     # Copy header information from target_a to new_target and new_label
