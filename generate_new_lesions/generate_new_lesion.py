@@ -143,7 +143,7 @@ def main():
         f.write('id,mixid1,mixid2,lam\n')
 
     """
-    Start generating CarveMix samples
+    Start generating new samples
     """
     for i in tqdm(range(args.generate_number), desc="mixing:"):
         rand_index_a = random.randint(0, len(Cases) - 1)
