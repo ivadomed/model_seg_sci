@@ -54,6 +54,77 @@ def copy_head_and_right_xyz(data, spacing, direction, origin):
     return TrainData_new
 
 
+def pad(image, pad_size):
+    """Pad the input image to the specified spatial size."""
+    pad_width = []
+    for i, sp_i in enumerate(pad_size):
+        width = max(sp_i - image.shape[i], 0)
+        pad_width.append((int(width // 2), int(width - (width // 2))))
+    
+    to_pad = tuple(pad_width)
+    image_padd = np.pad(image, to_pad, mode='constant',)
+    
+    return image_padd
+
+
+def pad_or_crop(target_a, target_b, label_a, label_b):
+
+    # size to match after padding
+    if target_a.shape > target_b.shape:
+        spatial_size = target_a.shape
+        # print("padding image_b to match the dimensions of image_a")
+
+        # the pad function automatically pads the image to the largest dimensions 
+        # between the two images. This might result in shape mismatch hence the next step
+        # is to crop the padded image to match the size of the other image
+        target_b = pad(target_b, spatial_size)
+        label_b = pad(label_b, spatial_size)
+        # print("paddded image_b: ", target_b.shape)
+
+        if target_b.shape != target_a.shape:
+            # crop the padded image until it matches the size of the other image
+            if target_b.shape[0] > target_a.shape[0]:
+                target_b = target_b[0:target_a.shape[0], :, :]
+                label_b = label_b[0:label_a.shape[0], :, :]
+            
+            if target_b.shape[1] > target_a.shape[1]:
+                target_b = target_b[:, 0:target_a.shape[1], :]
+                label_b = label_b[:, 0:label_a.shape[1], :]
+            
+            if target_b.shape[2] > target_a.shape[2]:
+                target_b = target_b[:, :,  0:target_a.shape[2]]
+                label_b = label_b[:, :, 0:label_a.shape[2]]
+            
+            # print("padded and cropped image_b: ", target_b.shape)
+
+    else:
+        spatial_size = target_b.shape
+        # print("padding image_a to match the dimensions of image_b")
+
+        target_a = pad(target_a, spatial_size)
+        label_a = pad(label_a, spatial_size)
+        # print("paddded image_a: ", target_a.shape)
+
+        if target_b.shape != target_a.shape:
+            # crop the padded image until it matches the size of the other image
+            if target_a.shape[0] > target_b.shape[0]:
+                target_a = target_a[0:target_b.shape[0], :, :]
+                label_a = label_a[0:label_b.shape[0], :, :]
+            
+            if target_a.shape[1] > target_b.shape[1]:
+                target_a = target_a[:, 0:target_b.shape[1], :]
+                label_a = label_a[:, 0:label_b.shape[1], :]
+            
+            if target_a.shape[2] > target_b.shape[2]:
+                target_a = target_a[:, :,  0:target_b.shape[2]]
+                label_a = label_a[:, :, 0:label_b.shape[2]]
+            
+            # print("padded and cropped image_a: ", target_a.shape)
+
+    return target_a, target_b, label_a, label_b
+
+
+
 def generate_new_sample(image_a, image_b, mask_a, mask_b, label_a, label_b):
     spacing, direction, origin = get_head(image_a)
 
@@ -63,6 +134,13 @@ def generate_new_sample(image_a, image_b, mask_a, mask_b, label_a, label_b):
     mask_b = nib.load(mask_b).get_fdata()
     label_a = nib.load(label_a).get_fdata()
     label_b = nib.load(label_b).get_fdata()
+
+    # pad and/or crop images and labels so that they have the same shape
+    image_a, image_b, label_a, label_b = pad_or_crop(image_a, image_b, label_a, label_b)
+
+    # normalize images
+    image_a = (image_a - np.mean(image_a)) / np.std(image_a)
+    image_b = (image_b - np.mean(image_b)) / np.std(image_b)
 
     # Initialize new_target and new_label with the same shape as target_a
     new_target = np.copy(image_a)
