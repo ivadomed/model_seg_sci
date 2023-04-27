@@ -270,17 +270,12 @@ def main():
                                                     path_label_patho=lbl_patho,
                                                     path_mask_sc_patho=msk_sc_patho,
                                                     path_image_healthy=img_healthy,
-                                                    path_mask_sc=msk_sc_healthy)
+                                                    path_mask_sc_healthy=msk_sc_healthy)
 
         s = str(i)
         sitk.WriteImage(new_target, os.path.join(args.dir_healthy, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '_0000.nii.gz'))
         sitk.WriteImage(new_label, os.path.join(args.dir_save, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz'))
         print('Saving new sample: ', cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz\n')
-
-        # reoriented_img, reoriented_lbl = generate_new_sample(path_image_patho=img_patho, path_label_patho=lbl_patho,
-        #                                  path_image_healthy=img_healthy, path_mask_sc=msk_sc_healthy,)
-        # sitk.WriteImage(reoriented_img, os.path.join(args.dir_save, prefix_healthy + '_SimpleMix_img.nii.gz'))
-        # sitk.WriteImage(reoriented_lbl, os.path.join(args.dir_save, prefix_healthy + '_SimpleMix_lbl.nii.gz'))
 
 
 if __name__ == '__main__':
