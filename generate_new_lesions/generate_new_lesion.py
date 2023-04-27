@@ -138,7 +138,11 @@ def pad_or_crop(img_healthy, mask_sc, img_patho, label_patho):
     return img_healthy, mask_sc, img_patho, label_patho
 
 
-def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, path_image_healthy, path_mask_sc):
+def coefficient_of_variation(masked_image):
+    return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
+
+
+def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, path_image_healthy, path_mask_sc_healthy):
 
     # this is copying lesion from image_patho to image_healthy (and saving a new label (with lesion) in label_healthy)
     # image_a = healthy image
@@ -158,9 +162,8 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     label_patho = nib.load(path_label_patho).get_fdata()
     mask_sc_patho = nib.load(path_mask_sc_patho).get_fdata()
 
-    # # pad and/or crop images and labels so that they have the same shape
-    # image_healthy, mask_sc, image_patho, label_patho = pad_or_crop(image_healthy, mask_sc, 
-    #                                                                image_patho_reoriented, label_patho_reoriented)
+    # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
+    intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / coefficient_of_variation(image_patho[mask_sc_patho > 0])
 
     # Get intensity ratio between lesion (label_patho_nib) and SC (mask_sc_patho_nib)
     intensity_ratio = np.mean(image_patho_nib[label_patho_nib > 0]) / np.mean(image_patho_nib[mask_sc_patho_nib > 0])
