@@ -20,18 +20,19 @@ import os
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--generate_number", "-num", default=5, type=int,
-                        help="Number of samples you want to crete: ")
+    parser.add_argument("-num", default=5, type=int, help="Number of samples you want to crete.")
     
-    parser.add_argument("--dir_pathology", "-dir-patho", default="imagesTr", type=str,
+    parser.add_argument("-dir-pathology", default="imagesTr", type=str,
                         help="Path to raw images from pathology dataset (i.e. SCI-Zurich)")
-    parser.add_argument("--dir_healthy", "-dir-health", default="imagesTr", type=str,
-                        help="Path to raw images from the healthy dataset (i.e. Spine Generic Multi)")
-    parser.add_argument("--dir_lesions", "-dir-lesion", default="labelsTr", type=str,
+    parser.add_argument("-dir-lesions", default="labelsTr", type=str,
                         help="Path to lesion labels from pathology dataset (i.e. SCI-Zurich)")
-    parser.add_argument("--dir_masks", "-dir-mask", default="masksTr", type=str,
+    parser.add_argument("-dir-masks-pathology", default="masksTr", type=str,
+                        help="Path to SC masks from pathology dataset (i.e. SCI-Zurich)")
+    parser.add_argument("-dir-healthy", default="imagesTr", type=str,
+                        help="Path to raw images from the healthy dataset (i.e. Spine Generic Multi)")
+    parser.add_argument("-dir-masks-healthy", default="masksTr", type=str,
                         help="Path to SC masks from healthy dataset (i.e. Spine Generic Multi)")
-    parser.add_argument("--dir_save", "-dir-save", default="labelsTr", type=str,
+    parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
