@@ -153,10 +153,10 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     image_healthy = nib.load(path_image_healthy).get_fdata()
     mask_sc = nib.load(path_mask_sc_healthy).get_fdata()
 
-    # Load image_patho, label_patho, and mask_sc_patho using nibabel (sitk.GetArrayFromImage for mask_sc_patho_reoriented takes a long time)
-    image_patho_nib = nib.load(path_image_patho).get_fdata()
-    label_patho_nib = nib.load(path_label_patho).get_fdata()
-    mask_sc_patho_nib = nib.load(path_mask_sc_patho).get_fdata()
+    # Load image_patho, label_patho, and mask_sc_patho
+    image_patho = nib.load(path_image_patho).get_fdata()
+    label_patho = nib.load(path_label_patho).get_fdata()
+    mask_sc_patho = nib.load(path_mask_sc_patho).get_fdata()
 
     # # pad and/or crop images and labels so that they have the same shape
     # image_healthy, mask_sc, image_patho, label_patho = pad_or_crop(image_healthy, mask_sc, 
