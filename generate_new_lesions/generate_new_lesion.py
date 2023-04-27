@@ -145,8 +145,7 @@ def pad_or_crop(img_healthy, mask_sc, img_patho, label_patho):
     return img_healthy, mask_sc, img_patho, label_patho
 
 
-
-def generate_new_sample(path_image_patho, path_image_healthy, path_mask_sc, path_label_patho):
+def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, path_image_healthy, path_mask_sc):
 
     # this is copying lesion from image_patho to image_healthy (and saving a new label (with lesion) in label_healthy)
     # image_a = healthy image
@@ -161,23 +160,29 @@ def generate_new_sample(path_image_patho, path_image_healthy, path_mask_sc, path
     # this changes the "world" orientation of XYZ
     image_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_image_patho), "RAS")
     label_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_label_patho), "RAS")
+    #mask_sc_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_mask_sc_patho), "RAS")
     # this changes the "voxel" orientation of XYZ
     image_patho_reoriented = set_orientation(image_patho_temp, spacing, direction, origin)
     label_patho_reoriented = set_orientation(label_patho_temp, spacing, direction, origin)
-    
-    # return image_patho_reoriented, label_patho_reoriented
- 
+    #mask_sc_patho_reoriented = set_orientation(mask_sc_patho_temp, spacing, direction, origin)
+
     image_healthy = nib.load(path_image_healthy).get_fdata()
     mask_sc = nib.load(path_mask_sc).get_fdata()
     image_patho = sitk.GetArrayFromImage(image_patho_reoriented).transpose(2, 1, 0)
     label_patho = sitk.GetArrayFromImage(label_patho_reoriented).transpose(2, 1, 0)
+    #mask_sc_patho = sitk.GetImageFromArray(mask_sc_patho_reoriented).transpose(2, 1, 0)
+
+    # Load image_patho, label_patho, and mask_sc_patho using nibabel (sitk.GetArrayFromImage for mask_sc_patho_reoriented takes a long time)
+    image_patho_nib = nib.load(path_image_patho).get_fdata()
+    label_patho_nib = nib.load(path_label_patho).get_fdata()
+    mask_sc_patho_nib = nib.load(path_mask_sc_patho).get_fdata()
 
     # # pad and/or crop images and labels so that they have the same shape
     # image_healthy, mask_sc, image_patho, label_patho = pad_or_crop(image_healthy, mask_sc, 
     #                                                                image_patho_reoriented, label_patho_reoriented)
 
-    # TODO: Need the SC mask for the pathlogy image to calculate the ratio of intensities of the 
-    # SC and the lesion. 
+    # Get intensity ratio between lesion (label_patho_nib) and SC (mask_sc_patho_nib)
+    intensity_ratio = np.mean(image_patho_nib[label_patho_nib > 0]) / np.mean(image_patho_nib[mask_sc_patho_nib > 0])
 
     # normalize images
     image_healthy = (image_healthy - np.mean(image_healthy)) / np.std(image_healthy)
@@ -211,7 +216,7 @@ def generate_new_sample(path_image_patho, path_image_healthy, path_mask_sc, path
                     if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
                         continue
                     else:
-                        new_target[x + x_step, y + y_step, z + z_step] = image_patho[x_cor, y_cor, z_cor]
+                        new_target[x + x_step, y + y_step, z + z_step] = image_patho[x_cor, y_cor, z_cor] * intensity_ratio
                         new_label[x + x_step, y + y_step, z + z_step] = label_patho[x_cor, y_cor, z_cor]
 
     # Copy header information from target_a to new_target and new_label
@@ -287,16 +292,21 @@ def main():
 
         img_patho = os.path.join(args.dir_pathology, cases_patho[rand_index_patho] + '_0000.nii.gz')
         lbl_patho = os.path.join(args.dir_lesions, cases_patho[rand_index_patho] + '.nii.gz')
-        
+        msk_sc_patho = os.path.join(args.dir_masks_pathology, cases_patho[rand_index_patho] + '.nii.gz')
+
         img_healthy = os.path.join(args.dir_healthy, cases_healthy[rand_index_healthy] + '_0000.nii.gz')
-        msk_sc_healthy = os.path.join(args.dir_masks, cases_healthy[rand_index_healthy] + '.nii.gz')
+        msk_sc_healthy = os.path.join(args.dir_masks_healthy, cases_healthy[rand_index_healthy] + '.nii.gz')
         
-        new_target, new_label = generate_new_sample(path_image_patho=img_patho, path_label_patho=lbl_patho,
-                                         path_image_healthy=img_healthy, path_mask_sc=msk_sc_healthy,)
+        new_target, new_label = generate_new_sample(path_image_patho=img_patho,
+                                                    path_label_patho=lbl_patho,
+                                                    path_mask_sc_patho=msk_sc_patho,
+                                                    path_image_healthy=img_healthy,
+                                                    path_mask_sc=msk_sc_healthy)
 
         s = str(i)
-        sitk.WriteImage(new_target, os.path.join(args.dir_healthy, prefix_healthy + '_SimpleMix_' + s + '_0000.nii.gz'))
-        sitk.WriteImage(new_label, os.path.join(args.dir_save, prefix_healthy + '_SimpleMix_' + s + '.nii.gz'))
+        sitk.WriteImage(new_target, os.path.join(args.dir_healthy, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '_0000.nii.gz'))
+        sitk.WriteImage(new_label, os.path.join(args.dir_save, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz'))
+        print('Saving new sample: ', cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz\n')
 
         # reoriented_img, reoriented_lbl = generate_new_sample(path_image_patho=img_patho, path_label_patho=lbl_patho,
         #                                  path_image_healthy=img_healthy, path_mask_sc=msk_sc_healthy,)
