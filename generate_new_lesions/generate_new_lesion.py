@@ -18,6 +18,7 @@ import os
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
+
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-num", default=5, type=int, help="Number of samples you want to crete.")
@@ -48,6 +49,7 @@ def get_head(img_path):
 
     return spacing, direction, origin
 
+
 def set_orientation(img, spacing, direction, origin):
     
     # temp = sitk.ReadImage(img_path)
@@ -56,6 +58,7 @@ def set_orientation(img, spacing, direction, origin):
     img.SetOrigin(origin)
 
     return img
+
 
 def copy_head_and_right_xyz(data, spacing, direction, origin):
     TrainData_new = data.astype('float32')
@@ -235,6 +238,7 @@ def main():
     #     os.makedirs(args.mask_check_path, exist_ok=True)
 
     # get all pathology cases
+    # TODO - maybe could be changed to args.dir_pathology
     cases_patho = os.listdir(args.dir_lesions)
     # remove '.DS_Store' from Cases list
     if '.DS_Store' in cases_patho:
@@ -244,13 +248,13 @@ def main():
     prefix_patho = cases_patho[0].split('_')[0]
 
     # get all healthy cases
-    cases_healthy = os.listdir(args.dir_masks)
+    # TODO - maybe could be changed to args.dir_healthy
+    cases_healthy = os.listdir(args.dir_masks_healthy)
     # remove '.DS_Store' from Cases list
     if '.DS_Store' in cases_healthy:
         cases_healthy.remove('.DS_Store')
     simple_cases_healthy = [case.split('.')[0] for i, case in enumerate(cases_healthy) if 'Mix' not in case]
     cases_healthy = simple_cases_healthy[1:]
-    prefix_healthy = cases_healthy[0].split('_')[0]
 
 
     """
@@ -283,7 +287,7 @@ def main():
     """
     Start generating new samples
     """
-    for i in tqdm(range(args.generate_number), desc="mixing:"):
+    for i in tqdm(range(args.num), desc="mixing:"):
 
         rand_index_patho = random.randint(0, len(cases_patho) - 1)
         rand_index_healthy = random.randint(0, len(cases_healthy) - 1)
@@ -312,7 +316,6 @@ def main():
         #                                  path_image_healthy=img_healthy, path_mask_sc=msk_sc_healthy,)
         # sitk.WriteImage(reoriented_img, os.path.join(args.dir_save, prefix_healthy + '_SimpleMix_img.nii.gz'))
         # sitk.WriteImage(reoriented_lbl, os.path.join(args.dir_save, prefix_healthy + '_SimpleMix_lbl.nii.gz'))
-
 
 
 if __name__ == '__main__':
