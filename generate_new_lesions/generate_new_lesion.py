@@ -165,12 +165,9 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
     intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / coefficient_of_variation(image_patho[mask_sc_patho > 0])
 
-    # Get intensity ratio between lesion (label_patho_nib) and SC (mask_sc_patho_nib)
-    intensity_ratio = np.mean(image_patho_nib[label_patho_nib > 0]) / np.mean(image_patho_nib[mask_sc_patho_nib > 0])
-
-    # normalize images
-    image_healthy = (image_healthy - np.mean(image_healthy)) / np.std(image_healthy)
-    image_patho = (image_patho - np.mean(image_patho)) / np.std(image_patho)
+    # normalize images to range 0 and 1
+    image_healthy = (image_healthy - np.min(image_healthy)) / (np.max(image_healthy) - np.min(image_healthy))
+    image_patho = (image_patho - np.min(image_patho)) / (np.max(image_patho) - np.min(image_patho))
 
     # Initialize new_target and new_label with the same shape as target_a
     new_target = np.copy(image_healthy)
