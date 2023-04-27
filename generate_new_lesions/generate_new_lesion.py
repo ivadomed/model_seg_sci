@@ -222,8 +222,7 @@ def main():
     if '.DS_Store' in cases_patho:
         cases_patho.remove('.DS_Store')
     simple_cases_patho = [case.split('.')[0] for i, case in enumerate(cases_patho) if 'Mix' not in case]
-    cases_patho = simple_cases_patho[1:]
-    prefix_patho = cases_patho[0].split('_')[0]
+    cases_patho = simple_cases_patho
 
     # get all healthy cases
     # TODO - maybe could be changed to args.dir_healthy
@@ -241,34 +240,22 @@ def main():
     independently in nnunet.training.network_training.nnUNetTrainerV2.do_split 
     when using nnUNet framework
     """
-    # num = len(Cases)
-    # print('all_set_size: ', num)
-    # Cases.sort()
-    # start = 1
-    # val_num = int(num * 0.2)
-    # random.seed(985)
-    # val_id = random.sample(range(1, num - 1), val_num)
-    # val_id.sort()
-    # val_set = [Cases[i - start] for i in val_id]
-    # print('val_set:', val_set)
-    # print('We use 20% num of imagesTr for validation,\n \
-    #     if you are using demo data file, it will be null')
-    # tr_set = list(set(Cases) - set(val_set))
-    # Cases = tr_set
-    # print('====================================')
-    # print('=Only select train_set for CarveMix=')
-    # print('============val_set_not=============')
-    # print('==========tr_set_size:%d============' % len(Cases))
-    # print('====================================')
-    print(args)
+
+    # Get random indices for pathology and healthy subjects
+    patho_random_list = np.random.choice(len(cases_patho), args.num)
+    healthy_random_list = np.random.choice(len(cases_healthy), args.num)
+    # Combine both lists
+    rand_index = np.vstack((patho_random_list, healthy_random_list))
+    # Keep only unique combinations (to avoid mixing the same subjects)
+    rand_index = np.unique(rand_index, axis=1)
 
     """
     Start generating new samples
     """
     for i in tqdm(range(args.num), desc="mixing:"):
 
-        rand_index_patho = random.randint(0, len(cases_patho) - 1)
-        rand_index_healthy = random.randint(0, len(cases_healthy) - 1)
+        rand_index_patho = rand_index[0][i]
+        rand_index_healthy = rand_index[1][i]
 
         print("Patho subject: ", cases_patho[rand_index_patho], '\t', "Healthy subject: ", cases_healthy[rand_index_healthy])
 
