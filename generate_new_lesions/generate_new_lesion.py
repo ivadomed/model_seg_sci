@@ -50,16 +50,6 @@ def get_head(img_path):
     return spacing, direction, origin
 
 
-def set_orientation(img, spacing, direction, origin):
-    
-    # temp = sitk.ReadImage(img_path)
-    img.SetSpacing(spacing)
-    img.SetDirection(direction)
-    img.SetOrigin(origin)
-
-    return img
-
-
 def copy_head_and_right_xyz(data, spacing, direction, origin):
     TrainData_new = data.astype('float32')
     TrainData_new = TrainData_new.transpose(2, 1, 0)
@@ -159,21 +149,9 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     # get the header of the healthy image
     spacing, direction, origin = get_head(path_image_healthy)
 
-    # use the healthy header info to change the orientation of the patho image
-    # this changes the "world" orientation of XYZ
-    image_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_image_patho), "RAS")
-    label_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_label_patho), "RAS")
-    #mask_sc_patho_temp = sitk.DICOMOrient(sitk.ReadImage(path_mask_sc_patho), "RAS")
-    # this changes the "voxel" orientation of XYZ
-    image_patho_reoriented = set_orientation(image_patho_temp, spacing, direction, origin)
-    label_patho_reoriented = set_orientation(label_patho_temp, spacing, direction, origin)
-    #mask_sc_patho_reoriented = set_orientation(mask_sc_patho_temp, spacing, direction, origin)
-
+    # Load image_healthy and mask_sc
     image_healthy = nib.load(path_image_healthy).get_fdata()
-    mask_sc = nib.load(path_mask_sc).get_fdata()
-    image_patho = sitk.GetArrayFromImage(image_patho_reoriented).transpose(2, 1, 0)
-    label_patho = sitk.GetArrayFromImage(label_patho_reoriented).transpose(2, 1, 0)
-    #mask_sc_patho = sitk.GetImageFromArray(mask_sc_patho_reoriented).transpose(2, 1, 0)
+    mask_sc = nib.load(path_mask_sc_healthy).get_fdata()
 
     # Load image_patho, label_patho, and mask_sc_patho using nibabel (sitk.GetArrayFromImage for mask_sc_patho_reoriented takes a long time)
     image_patho_nib = nib.load(path_image_patho).get_fdata()
