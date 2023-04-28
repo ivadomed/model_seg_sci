@@ -18,6 +18,9 @@ import os
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
+# TODO: Consider moving the script to SCT --> use RPI reorientation function, potentially use angle correction to
+#  rotate lesions along the SC
+
 
 def get_parser():
     parser = argparse.ArgumentParser()
