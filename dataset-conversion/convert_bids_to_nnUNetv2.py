@@ -53,8 +53,11 @@ path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
 path_out_imagesTs = Path(os.path.join(path_out, 'imagesTs'))
 path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
 path_out_labelsTs = Path(os.path.join(path_out, 'labelsTs'))
+# create masks directories with SC masks
+path_out_masksTr = Path(os.path.join(path_out, 'masksTr'))
+path_out_masksTs = Path(os.path.join(path_out, 'masksTs'))
 
-train_images, train_labels, test_images, test_labels = [], [], [], []
+train_images, train_labels, train_masks, test_images, test_labels, test_masks = [], [], [], [], [], []
 
 
 def binarize_label(subject_path, label_path):
@@ -75,6 +78,8 @@ if __name__ == '__main__':
     pathlib.Path(path_out_imagesTs).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_labelsTs).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(path_out_masksTr).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(path_out_masksTs).mkdir(parents=True, exist_ok=True)
 
     # set the random number generator seed
     rng = np.random.default_rng(args.seed)
@@ -109,26 +114,32 @@ if __name__ == '__main__':
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
+                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
 
                 # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
                 # nnunet convention names
 
                 # create the new convention names for nnunet
                 sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + str(Path(subject_image_file).name).split('_')[1]
-                subject_image_file_nnunet = os.path.join(path_out_imagesTr,f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
-                subject_label_file_nnunet = os.path.join(path_out_labelsTr,f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                subject_image_file_nnunet = os.path.join(path_out_imagesTr,
+                                                         f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
+                subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                         f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                subject_mask_file_nnunet = os.path.join(path_out_masksTr,
+                                                        f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
                 
                 train_images.append(subject_image_file_nnunet)
                 train_labels.append(subject_label_file_nnunet)
+                train_masks.append(subject_mask_file_nnunet)
 
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
+                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
 
                 # binarize the label file
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
-        
         elif subject in test_subjects:
 
             # Another for loop for going through sessions
@@ -141,25 +152,32 @@ if __name__ == '__main__':
                 session = 'ses-0' + str(ses_idx)
 
                 subject_images_path = os.path.join(root, subject, session, 'anat')
-                subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, session, 'anat')                    
+                subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, session, 'anat')
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
+                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
 
                 # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
                 # nnunet convention names
 
                 # create the new convention names for nnunet
                 sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + str(Path(subject_image_file).name).split('_')[1]
-                subject_image_file_nnunet = os.path.join(path_out_imagesTs,f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
-                subject_label_file_nnunet = os.path.join(path_out_labelsTs,f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
+                subject_image_file_nnunet = os.path.join(path_out_imagesTs,
+                                                         f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
+                subject_label_file_nnunet = os.path.join(path_out_labelsTs,
+                                                         f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
+                subject_mask_file_nnunet = os.path.join(path_out_masksTs,
+                                                        f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
                 
                 test_images.append(subject_image_file_nnunet)
                 test_labels.append(subject_label_file_nnunet)
+                test_masks.append(subject_mask_file_nnunet)
 
                 # copy the files to new structure using symbolic links
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
+                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
                 # shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
