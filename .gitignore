@@ -1,2 +1,11 @@
 .DS_Store
 .vscode/
+.idea
+*__pycache__/
+venv/
+
+# Environments
+.env
+.venv
+env/
+venv/
