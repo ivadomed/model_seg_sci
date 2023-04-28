@@ -20,7 +20,7 @@ import os
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
 # TODO: Consider moving the script to SCT --> use RPI reorientation function, potentially use angle correction to
-#  rotate lesions along the SC
+#  rotate lesions along the SC, and eventually also SCT QC function to check if the generated lesions
 
 
 def get_parser():
