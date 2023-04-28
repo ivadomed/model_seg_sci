@@ -276,9 +276,13 @@ def main():
                                                     path_mask_sc_healthy=msk_sc_healthy)
 
         s = str(i)
-        sitk.WriteImage(new_target, os.path.join(args.dir_healthy, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '_0000.nii.gz'))
-        sitk.WriteImage(new_label, os.path.join(args.dir_save, cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz'))
-        print('Saving new sample: ', cases_healthy[rand_index_healthy].split('_')[0] + '_SimpleMix_' + s + '.nii.gz\n')
+        subject_mame_out = cases_healthy[rand_index_healthy].split('_')[0] + '_' + \
+                           cases_patho[rand_index_patho].split('_')[0] + '_' + s
+        sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
+        print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
+        sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
+        print('Saving new sample: ', subject_mame_out + '.nii.gz')
+        print('')
 
 
 if __name__ == '__main__':
