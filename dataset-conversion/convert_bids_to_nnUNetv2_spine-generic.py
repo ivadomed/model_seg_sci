@@ -30,8 +30,8 @@ import numpy as np
 parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
 parser.add_argument('--path-data', help='Path to BIDS dataset.', required=True)
 parser.add_argument('--path-out', help='Path to output directory.', required=True)
-parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
-                    help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus', )
+parser.add_argument('--dataset-name', '-dname', default='SpineGenericMutliSubject', type=str,
+                    help='Specify the task name.')
 parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                     help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
 
