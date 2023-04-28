@@ -288,9 +288,13 @@ def main():
                                                     path_image_healthy=img_healthy,
                                                     path_mask_sc_healthy=msk_sc_healthy)
 
+        # Convert i to string and add 3 leading zeros
         s = str(i)
+        s = s.zfill(3)
+
         subject_mame_out = cases_healthy[rand_index_healthy].split('_')[0] + '_' + \
-                           cases_patho[rand_index_patho].split('_')[0] + '_' + s
+                           cases_patho[rand_index_patho].split('_')[0] + '_' + \
+                           cases_patho[rand_index_patho].split('_')[1] + '_' + s
         sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
         print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
         sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
