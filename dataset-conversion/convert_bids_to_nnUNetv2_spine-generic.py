@@ -9,7 +9,7 @@ Currently only supports the conversion of a single contrast. In case of multiple
 modified to include those as well.
 
 Usage example:
-    python convert_bids_to_nnUNetv2.py --path-data ~/datasets/data-multi-subject --path-out ~/datasets/data-multi-subject-nnunet
+    python convert_bids_to_nnUNetv2_spine-generic.py --path-data ~/datasets/data-multi-subject --path-out ~/datasets/data-multi-subject-nnunet
                     --dataset-name SpineGenericMutliSubject --dataset-number 526 --split 0.8 0.2 --seed 42
 """
 
