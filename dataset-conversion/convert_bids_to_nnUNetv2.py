@@ -10,7 +10,7 @@ modified to include those as well.
 
 Usage example:
     python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --task-name tSCILesionsZurich --task-number 525 --split 0.8 0.2 --seed 42
+                    --dataset-name tSCILesionsZurich --dataset-number 525 --split 0.8 0.2 --seed 42
 """
 
 import argparse
