@@ -285,7 +285,7 @@ def main():
         sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
         print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
         sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
-        print('Saving new sample: ', subject_mame_out + '.nii.gz')
+        print('Saving new sample: ', os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
         print('')
 
 
