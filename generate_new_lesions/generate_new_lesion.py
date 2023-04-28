@@ -186,6 +186,10 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     new_target = np.copy(image_healthy)
     new_label = np.zeros_like(mask_sc)  # because we're creating a new label
 
+    # Check if label_patho has non-zero pixels (ie. there is no lesion in the image)
+    if np.count_nonzero(label_patho) == 0:
+        print("label_patho has no non-zero pixels")
+        return
     # Create 3D bounding box around non-zero pixels in label_patho
     coords = np.argwhere(label_patho > 0)
     x0, y0, z0 = coords.min(axis=0)
