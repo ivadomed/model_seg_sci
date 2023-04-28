@@ -146,13 +146,15 @@ def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
 
 
-def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, path_image_healthy, path_mask_sc_healthy):
+def generate_new_sample(sub_healthy, sub_patho, args, index):
 
-    # this is copying lesion from image_patho to image_healthy (and saving a new label (with lesion) in label_healthy)
-    # image_a = healthy image
-    # image_b = patho image
-    # label_a = sc_mask
-    # label_b = label_patho
+    # Construct paths
+    path_image_healthy = os.path.join(args.dir_healthy, sub_healthy + '_0000.nii.gz')
+    path_mask_sc_healthy = os.path.join(args.dir_masks_healthy, sub_healthy + '.nii.gz')
+
+    path_image_patho = os.path.join(args.dir_pathology, sub_patho + '_0000.nii.gz')
+    path_label_patho = os.path.join(args.dir_lesions, sub_patho + '.nii.gz')
+    path_mask_sc_patho = os.path.join(args.dir_masks_pathology, sub_patho + '.nii.gz')
 
     # get the header of the healthy image
     spacing, direction, origin = get_head(path_image_healthy)
@@ -221,7 +223,19 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     new_target = copy_head_and_right_xyz(new_target, spacing, direction, origin)
     new_label = copy_head_and_right_xyz(new_label, spacing, direction, origin)
 
-    return new_target, new_label
+    # Convert i to string and add 3 leading zeros
+    s = str(index)
+    s = s.zfill(3)
+
+    # Save new_target and new_label
+    subject_mame_out = sub_healthy.split('_')[0] + '_' + \
+                       sub_patho.split('_')[0] + '_' + \
+                       sub_patho.split('_')[1] + '_' + s
+    sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
+    print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
+    sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
+    print('Saving new sample: ', os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
+    print('')
 
 
 def main():
@@ -279,33 +293,10 @@ def main():
 
         print("\nPatho subject: ", cases_patho[rand_index_patho], '\t', "Healthy subject: ", cases_healthy[rand_index_healthy])
 
-        img_patho = os.path.join(args.dir_pathology, cases_patho[rand_index_patho] + '_0000.nii.gz')
-        lbl_patho = os.path.join(args.dir_lesions, cases_patho[rand_index_patho] + '.nii.gz')
-        msk_sc_patho = os.path.join(args.dir_masks_pathology, cases_patho[rand_index_patho] + '.nii.gz')
+        sub_patho = cases_patho[rand_index_patho]
+        sub_healthy = cases_healthy[rand_index_healthy]
 
-        img_healthy = os.path.join(args.dir_healthy, cases_healthy[rand_index_healthy] + '_0000.nii.gz')
-        msk_sc_healthy = os.path.join(args.dir_masks_healthy, cases_healthy[rand_index_healthy] + '.nii.gz')
-        
-        new_target, new_label = generate_new_sample(path_image_patho=img_patho,
-                                                    path_label_patho=lbl_patho,
-                                                    path_mask_sc_patho=msk_sc_patho,
-                                                    path_image_healthy=img_healthy,
-                                                    path_mask_sc_healthy=msk_sc_healthy)
-
-        # Check if new_target is not None
-        if new_target is not None:
-            # Convert i to string and add 3 leading zeros
-            s = str(i)
-            s = s.zfill(3)
-
-            subject_mame_out = cases_healthy[rand_index_healthy].split('_')[0] + '_' + \
-                               cases_patho[rand_index_patho].split('_')[0] + '_' + \
-                               cases_patho[rand_index_patho].split('_')[1] + '_' + s
-            sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
-            print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
-            sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
-            print('Saving new sample: ', os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
-            print('')
+        generate_new_sample(sub_healthy=sub_healthy, sub_patho=sub_patho, args=args, index=i)
 
 
 if __name__ == '__main__':
