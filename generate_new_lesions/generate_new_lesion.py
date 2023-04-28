@@ -166,6 +166,15 @@ def generate_new_sample(path_image_patho, path_label_patho, path_mask_sc_patho, 
     label_patho = nib.load(path_label_patho).get_fdata()
     mask_sc_patho = nib.load(path_mask_sc_patho).get_fdata()
 
+    # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
+    if image_healthy.shape != mask_sc.shape:
+        print("image_healthy and mask_sc have different shapes")
+        return
+    # Check if image_patho and label_patho have the same shape, if not, skip this subject
+    if image_patho.shape != mask_sc_patho.shape:
+        print("image_patho and label_patho have different shapes")
+        return
+
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
     intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / coefficient_of_variation(image_patho[mask_sc_patho > 0])
 
