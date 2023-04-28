@@ -113,9 +113,9 @@ if __name__ == '__main__':
             # create the new convention names for nnunet
             sub_name = str(Path(subject_image_file).name).split('_')[0]
             subject_image_file_nnunet = os.path.join(path_out_imagesTr,
-                                                     f"{args.dataset_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
+                                                     f"{sub_name}_{train_ctr:03d}_0000.nii.gz")
             subject_mask_file_nnunet = os.path.join(path_out_masksTr,
-                                                    f"{args.dataset_name}_{sub_name}_{train_ctr:03d}.nii.gz")
+                                                    f"{sub_name}_{train_ctr:03d}.nii.gz")
 
             train_images.append(subject_image_file_nnunet)
             train_masks.append(subject_mask_file_nnunet)
@@ -140,9 +140,9 @@ if __name__ == '__main__':
             # create the new convention names for nnunet
             sub_name = str(Path(subject_image_file).name).split('_')[0]
             subject_image_file_nnunet = os.path.join(path_out_imagesTs,
-                                                     f"{args.dataset_name}_{sub_name}_{test_ctr:03d}_0000.nii.gz")
+                                                     f"{sub_name}_{test_ctr:03d}_0000.nii.gz")
             subject_mask_file_nnunet = os.path.join(path_out_masksTs,
-                                                    f"{args.dataset_name}_{sub_name}_{test_ctr:03d}.nii.gz")
+                                                    f"{sub_name}_{test_ctr:03d}.nii.gz")
 
             test_images.append(subject_image_file_nnunet)
             test_masks.append(subject_mask_file_nnunet)
