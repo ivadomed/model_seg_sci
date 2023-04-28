@@ -99,81 +99,64 @@ if __name__ == '__main__':
 
         if subject in train_subjects:
 
-            # Another for loop for going through sessions
-            temp_subject_path = os.path.join(root, subject)
-            num_sessions_per_subject = sum(
-                os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in os.listdir(temp_subject_path))
+            train_ctr += 1
 
-            for ses_idx in range(1, num_sessions_per_subject + 1):
-                train_ctr += 1
+            subject_images_path = os.path.join(root, subject, 'anat')
+            subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, 'anat')
 
-                subject_images_path = os.path.join(root, subject, 'anat')
-                subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, 'anat')
+            subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
+            subject_mask_file = os.path.join(subject_labels_path, f"{subject}_T2w_seg-manual.nii.gz")
 
-                subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
-                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_T2w_seg-manual.nii.gz")
+            # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding
+            # nnunet convention names
 
-                # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding
-                # nnunet convention names
+            # create the new convention names for nnunet
+            sub_name = str(Path(subject_image_file).name).split('_')[0]
+            subject_image_file_nnunet = os.path.join(path_out_imagesTr,
+                                                     f"{args.dataset_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
+            subject_mask_file_nnunet = os.path.join(path_out_masksTr,
+                                                    f"{args.dataset_name}_{sub_name}_{train_ctr:03d}.nii.gz")
 
-                # create the new convention names for nnunet
-                sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + \
-                               str(Path(subject_image_file).name).split('_')[1]
-                subject_image_file_nnunet = os.path.join(path_out_imagesTr,
-                                                         f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
-                subject_mask_file_nnunet = os.path.join(path_out_masksTr,
-                                                        f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+            train_images.append(subject_image_file_nnunet)
+            train_masks.append(subject_mask_file_nnunet)
 
-                train_images.append(subject_image_file_nnunet)
-                train_masks.append(subject_mask_file_nnunet)
-
-                # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
-                os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
-                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
+            # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
+            os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
+            os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
 
         elif subject in test_subjects:
 
-            # Another for loop for going through sessions
-            temp_subject_path = os.path.join(root, subject)
-            num_sessions_per_subject = sum(
-                os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in os.listdir(temp_subject_path))
+            test_ctr += 1
 
-            for ses_idx in range(1, num_sessions_per_subject + 1):
-                test_ctr += 1
-                # Get paths with session numbers
-                session = 'ses-0' + str(ses_idx)
+            subject_images_path = os.path.join(root, subject, 'anat')
+            subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, 'anat')
 
-                subject_images_path = os.path.join(root, subject, 'anat')
-                subject_labels_path = os.path.join(root, 'derivatives', 'labels', subject, 'anat')
+            subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
+            subject_mask_file = os.path.join(subject_labels_path, f"{subject}_T2w_seg-manual.nii.gz")
 
-                subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
-                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_T2w_seg-manual.nii.gz")
+            # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding
+            # nnunet convention names
 
-                # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding
-                # nnunet convention names
+            # create the new convention names for nnunet
+            sub_name = str(Path(subject_image_file).name).split('_')[0]
+            subject_image_file_nnunet = os.path.join(path_out_imagesTs,
+                                                     f"{args.dataset_name}_{sub_name}_{test_ctr:03d}_0000.nii.gz")
+            subject_mask_file_nnunet = os.path.join(path_out_masksTs,
+                                                    f"{args.dataset_name}_{sub_name}_{test_ctr:03d}.nii.gz")
 
-                # create the new convention names for nnunet
-                sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + \
-                               str(Path(subject_image_file).name).split('_')[1]
-                subject_image_file_nnunet = os.path.join(path_out_imagesTs,
-                                                         f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
-                subject_mask_file_nnunet = os.path.join(path_out_masksTs,
-                                                        f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
+            test_images.append(subject_image_file_nnunet)
+            test_masks.append(subject_mask_file_nnunet)
 
-                test_images.append(subject_image_file_nnunet)
-                test_masks.append(subject_mask_file_nnunet)
-
-                # copy the files to new structure using symbolic links
-                os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
-                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
-                # shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+            # copy the files to new structure using symbolic links
+            os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
+            os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
+            # shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+            # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
         else:
             print("Skipping file, could not be located in the Train or Test splits split.", subject)
 
     logger.info(f"Number of training and validation subjects (including sessions): {train_ctr}")
-    logger.info(f"Number of test subjects (including sessions): {test_ctr}")
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
 
