@@ -8,6 +8,7 @@ nnUNet data structure is required.
 TODO: switch to BIDS?
 """
 
+import time
 import numpy as np
 import random
 import SimpleITK as sitk
@@ -255,12 +256,15 @@ def main():
     """
     Start generating new samples
     """
-    for i in tqdm(range(args.num), desc="mixing:"):
+    for i in tqdm(range(len(rand_index[0])), desc="mixing:"):
+
+        # wait 0.1 seconds to avoid print overlapping with tqdm progress bar
+        time.sleep(0.1)
 
         rand_index_patho = rand_index[0][i]
         rand_index_healthy = rand_index[1][i]
 
-        print("Patho subject: ", cases_patho[rand_index_patho], '\t', "Healthy subject: ", cases_healthy[rand_index_healthy])
+        print("\nPatho subject: ", cases_patho[rand_index_patho], '\t', "Healthy subject: ", cases_healthy[rand_index_healthy])
 
         img_patho = os.path.join(args.dir_pathology, cases_patho[rand_index_patho] + '_0000.nii.gz')
         lbl_patho = os.path.join(args.dir_lesions, cases_patho[rand_index_patho] + '.nii.gz')
