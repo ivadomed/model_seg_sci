@@ -59,7 +59,11 @@ train_images, train_labels, test_images, test_labels = [], [], [], []
 
 def binarize_label(subject_path, label_path):
     label_npy = nib.load(label_path).get_fdata()
-    threshold = 1e-8
+    # NOTE: using a very small threshold (<<< 0) to binarize the label leads to more 
+    # more volume of the label being retained. For e.g. due to PVE, the voxels which have 
+    # value of 0.0001 in the label file will still be retained in the binarized label as 1.
+    # Since this is not a correct representation of the label, we use a threshold of 0.5.
+    threshold = 0.5
     label_npy = np.where(label_npy > threshold, 1, 0)
     ref = nib.load(subject_path)
     label_bin = nib.Nifti1Image(label_npy, ref.affine, ref.header)
