@@ -273,13 +273,8 @@ def main():
     independently in nnunet.training.network_training.nnUNetTrainerV2.do_split 
     when using nnUNet framework
     """
-    if args.num > len(cases_patho) or args.num > len(cases_healthy):
-        print(f"Number of samples to be generated is larger than the number of available cases. Number of patho cases: "
-              f"{len(cases_patho)}, number of healthy cases: {len(cases_healthy)}. Use the smaller of these numbers "
-              f"for '-num' argument ")
-        exit(1)
     # Get random indices for pathology and healthy subjects
-    patho_random_list = np.random.choice(len(cases_patho), args.num, replace=False)
+    patho_random_list = np.random.choice(len(cases_patho), args.num)
     healthy_random_list = np.random.choice(len(cases_healthy), args.num, replace=False)
     # Combine both lists
     rand_index = np.vstack((patho_random_list, healthy_random_list))
