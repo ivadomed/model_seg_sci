@@ -36,7 +36,7 @@ def get_parser():
                         help='Specify the task name.')
     parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
-    parser.add_argument('--seed', default=42, type=int,
+    parser.add_argument('--seed', default=99, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     # argument that accepts a list of floats as train val test splits
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
