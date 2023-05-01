@@ -27,37 +27,24 @@ import nibabel as nib
 import numpy as np
 
 
-# parse command line arguments
-parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
-parser.add_argument('--path-data', help='Path to BIDS dataset.', required=True)
-parser.add_argument('--path-out', help='Path to output directory.', required=True)
-parser.add_argument('--dataset-name', '-dname', default='tSCILesionsZurich', type=str,
-                    help='Specify the task name.')
-parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
-                    help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser.add_argument('--path-data', help='Path to BIDS dataset.', required=True)
+    parser.add_argument('--path-out', help='Path to output directory.', required=True)
+    parser.add_argument('--dataset-name', '-dname', default='tSCILesionsZurich', type=str,
+                        help='Specify the task name.')
+    parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
+                        help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+    parser.add_argument('--seed', default=42, type=int,
+                        help='Seed to be used for the random number generator split into training and test sets.')
+    # argument that accepts a list of floats as train val test splits
+    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+    parser.add_argument('--include-masks_folders', action='store_true', default=False,
+                        help='Include masks folders (with SC segmentations) in the output dataset. Default: False')
 
-parser.add_argument('--seed', default=42, type=int, 
-                    help='Seed to be used for the random number generator split into training and test sets.')
-# argument that accepts a list of floats as train val test splits
-parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                    help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
-
-args = parser.parse_args()
-
-root = Path(args.path_data)
-train_ratio, test_ratio = args.split
-path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
-
-# create individual directories for train and test images and labels
-path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
-path_out_imagesTs = Path(os.path.join(path_out, 'imagesTs'))
-path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
-path_out_labelsTs = Path(os.path.join(path_out, 'labelsTs'))
-# create masks directories with SC masks
-path_out_masksTr = Path(os.path.join(path_out, 'masksTr'))
-path_out_masksTs = Path(os.path.join(path_out, 'masksTs'))
-
-train_images, train_labels, train_masks, test_images, test_labels, test_masks = [], [], [], [], [], []
+    return parser
 
 
 def binarize_label(subject_path, label_path):
@@ -74,7 +61,23 @@ def binarize_label(subject_path, label_path):
     nib.save(label_bin, label_path)
 
 
-if __name__ == '__main__':
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
+
+    root = Path(os.path.abspath(os.path.expanduser(args.path_data)))
+    train_ratio, test_ratio = args.split
+    path_out = Path(os.path.join(os.path.abspath(os.path.expanduser(args.path_out)),
+                                 f'Dataset{args.dataset_number}_{args.dataset_name}'))
+
+    # create individual directories for train and test images and labels
+    path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
+    path_out_imagesTs = Path(os.path.join(path_out, 'imagesTs'))
+    path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+    path_out_labelsTs = Path(os.path.join(path_out, 'labelsTs'))
+
+    train_images, train_labels, train_masks, test_images, test_labels, test_masks = [], [], [], [], [], []
 
     # make the directories
     pathlib.Path(path_out).mkdir(parents=True, exist_ok=True)
@@ -259,3 +262,7 @@ if __name__ == '__main__':
     dataset_dict_name = f"dataset.json"
     with open(os.path.join(path_out, dataset_dict_name), "w") as outfile:
         outfile.write(json_object)
+
+
+if __name__ == '__main__':
+    main()
