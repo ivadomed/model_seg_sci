@@ -264,8 +264,7 @@ def main():
     if '.DS_Store' in cases_healthy:
         cases_healthy.remove('.DS_Store')
     simple_cases_healthy = [case.split('.')[0] for i, case in enumerate(cases_healthy) if 'Mix' not in case]
-    cases_healthy = simple_cases_healthy[1:]
-
+    cases_healthy = simple_cases_healthy
 
     """
     Prepare data split, note that validation sets do not participate in 
