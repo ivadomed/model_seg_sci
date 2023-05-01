@@ -105,7 +105,8 @@ def main():
     logger.info(f"Total number of subjects in the dataset: {len(subjects)}")
 
     if args.create_dummy_dataset:
-        assert len(args.split) == 3, 'The split argument must have 3 values for train, val and test splits. E.g. [0.6 0.2 0.2]'
+        assert len(args.split) == 3, 'The split argument must have 3 values for train, val and test splits. E.g. ' \
+                                     '[0.6 0.2 0.2]'
         train_ratio, val_ratio, test_ratio = args.split
         # Get the training and test splits
         train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
@@ -114,7 +115,9 @@ def main():
                                                         random_state=args.seed)
         logger.info(f"Creating a dummy dataset with {len(train_subjects)} training subjects only.")
     else:
-        assert len(args.split) == 2, 'The split argument must have 2 values for train and test splits. E.g. [0.8 0.2]'
+        assert len(args.split) == 2, 'The split argument must have 2 values for train and test splits. E.g. ' \
+                                     '[0.8 0.2]. If you indeed want to use 3 values, use also the ' \
+                                     '--create-dummy-dataset flag.'
 
         train_ratio, test_ratio = args.split
         # Get the training and test splits
