@@ -10,7 +10,7 @@ modified to include those as well.
 
 Usage example:
     python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --dataset-name tSCILesionsZurich --dataset-number 525 --split 0.8 0.2 --seed 42
+                    --dataset-name tSCILesionsZurich --dataset-number 501 --split 0.6 0.2 0.2 --seed 99
 """
 
 import argparse
@@ -39,10 +39,14 @@ def get_parser():
     parser.add_argument('--seed', default=99, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     # argument that accepts a list of floats as train val test splits
-    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.6, 0.2, 0.2],
+                        help='Ratios of training/validation/test splits lying between 0-1. Use 3 values if creating'
+                             'a dummy dataset (Example: --split 0.6 0.2 0.2). Else use only train/test split '
+                             '(Example: --split 0.8 0.2)')
     parser.add_argument('--include-masks_folders', action='store_true', default=False,
                         help='Include masks folders (with SC segmentations) in the output dataset. Default: False')
+    parser.add_argument('--create-dummy-dataset', '-dummy', action='store_true', default=False,
+                        help='Create a dummy dataset with training subjects only. Default: False')
 
     return parser
 
@@ -67,7 +71,6 @@ def main():
     args = parser.parse_args()
 
     root = Path(os.path.abspath(os.path.expanduser(args.path_data)))
-    train_ratio, test_ratio = args.split
     path_out = Path(os.path.join(os.path.abspath(os.path.expanduser(args.path_out)),
                                  f'Dataset{args.dataset_number}_{args.dataset_name}'))
 
@@ -101,9 +104,23 @@ def main():
     subjects = subjects_df['participant_id'].values.tolist()
     logger.info(f"Total number of subjects in the dataset: {len(subjects)}")
 
-    # Get the training and test splits
-    train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
-    rng.shuffle(train_subjects)
+    if args.create_dummy_dataset:
+        assert len(args.split) == 3, 'The split argument must have 3 values for train, val and test splits. E.g. [0.6 0.2 0.2]'
+        train_ratio, val_ratio, test_ratio = args.split
+        # Get the training and test splits
+        train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
+        # Use the training split to further split into training and validation splits
+        train_subjects, val_subjects = train_test_split(train_subjects, test_size=val_ratio / (train_ratio + val_ratio),
+                                                        random_state=args.seed)
+        logger.info(f"Creating a dummy dataset with {len(train_subjects)} training subjects only.")
+    else:
+        assert len(args.split) == 2, 'The split argument must have 2 values for train and test splits. E.g. [0.8 0.2]'
+
+        train_ratio, test_ratio = args.split
+        # Get the training and test splits
+        train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
+        logger.info(f"Creating a dataset with {len(train_subjects)} training subjects and {len(test_subjects)} test subjects.")
+
 
     # print(train_subjects[:4])
 
@@ -145,7 +162,7 @@ def main():
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
 
                 # binarize the label file
-                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+                #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
                     subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
@@ -170,7 +187,7 @@ def main():
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
-                # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
+                # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding
                 # nnunet convention names
 
                 # create the new convention names for nnunet
@@ -179,7 +196,7 @@ def main():
                                                          f"{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
                 subject_label_file_nnunet = os.path.join(path_out_labelsTs,
                                                          f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
-                
+
                 test_images.append(subject_image_file_nnunet)
                 test_labels.append(subject_label_file_nnunet)
 
@@ -190,7 +207,7 @@ def main():
                 # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                 # binarize the label file
-                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+                #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
                     subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
@@ -199,7 +216,10 @@ def main():
                     os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
         
         else:
-            print("Skipping file, could not be located in the Train or Test splits split.", subject)
+            if args.create_dummy_dataset:
+                print("Skipping file, as it is in the validation split.", subject)
+            else:
+                print("Skipping file, could not be located in the Train or Test splits split.", subject)
 
     logger.info(f"Number of training and validation subjects (including sessions): {train_ctr}")
     logger.info(f"Number of test subjects (including sessions): {test_ctr}")
