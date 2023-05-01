@@ -25,7 +25,7 @@ import os
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-num", default=5, type=int, help="Number of samples you want to crete.")
+    parser.add_argument("-num", default=100, type=int, help="Total number of newly generated subjects.")
     
     parser.add_argument("-dir-pathology", default="imagesTr", type=str,
                         help="Path to raw images from pathology dataset (i.e. SCI-Zurich)")
