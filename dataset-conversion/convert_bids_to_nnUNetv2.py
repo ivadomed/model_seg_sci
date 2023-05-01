@@ -85,8 +85,13 @@ def main():
     pathlib.Path(path_out_imagesTs).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_labelsTs).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(path_out_masksTr).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(path_out_masksTs).mkdir(parents=True, exist_ok=True)
+
+    if args.include_masks_folders:
+        # create masks directories with SC masks
+        path_out_masksTr = Path(os.path.join(path_out, 'masksTr'))
+        path_out_masksTs = Path(os.path.join(path_out, 'masksTs'))
+        pathlib.Path(path_out_masksTr).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path_out_masksTs).mkdir(parents=True, exist_ok=True)
 
     # set the random number generator seed
     rng = np.random.default_rng(args.seed)
@@ -121,7 +126,6 @@ def main():
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
-                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
 
                 # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
                 # nnunet convention names
@@ -132,20 +136,22 @@ def main():
                                                          f"{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
                 subject_label_file_nnunet = os.path.join(path_out_labelsTr,
                                                          f"{sub_ses_name}_{train_ctr:03d}.nii.gz")
-                subject_mask_file_nnunet = os.path.join(path_out_masksTr,
-                                                        f"{sub_ses_name}_{train_ctr:03d}.nii.gz")
                 
                 train_images.append(subject_image_file_nnunet)
                 train_labels.append(subject_label_file_nnunet)
-                train_masks.append(subject_mask_file_nnunet)
 
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
-                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
 
                 # binarize the label file
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+                if args.include_masks_folders:
+                    subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
+                    subject_mask_file_nnunet = os.path.join(path_out_masksTr, f"{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                    train_masks.append(subject_mask_file_nnunet)
+                    os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
 
         elif subject in test_subjects:
 
@@ -163,7 +169,6 @@ def main():
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
-                subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
 
                 # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
                 # nnunet convention names
@@ -174,22 +179,24 @@ def main():
                                                          f"{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
                 subject_label_file_nnunet = os.path.join(path_out_labelsTs,
                                                          f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
-                subject_mask_file_nnunet = os.path.join(path_out_masksTs,
-                                                        f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
                 
                 test_images.append(subject_image_file_nnunet)
                 test_labels.append(subject_label_file_nnunet)
-                test_masks.append(subject_mask_file_nnunet)
 
                 # copy the files to new structure using symbolic links
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
-                os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
                 # shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                 # binarize the label file
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+                if args.include_masks_folders:
+                    subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
+                    subject_mask_file_nnunet = os.path.join(path_out_masksTs, f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
+                    test_masks.append(subject_mask_file_nnunet)
+                    os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
         
         else:
             print("Skipping file, could not be located in the Train or Test splits split.", subject)
