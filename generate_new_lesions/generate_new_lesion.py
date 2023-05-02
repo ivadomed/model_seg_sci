@@ -196,6 +196,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     if np.count_nonzero(label_patho) == 0:
         print("label_patho has no non-zero pixels")
         return
+    # TODO: create an empty lession mask in such case?
+
     # Create 3D bounding box around non-zero pixels in label_patho
     coords = np.argwhere(label_patho > 0)
     x0, y0, z0 = coords.min(axis=0)
