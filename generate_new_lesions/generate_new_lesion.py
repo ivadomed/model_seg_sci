@@ -178,7 +178,11 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         return
 
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
-    intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / coefficient_of_variation(image_patho[mask_sc_patho > 0])
+    intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / \
+                      coefficient_of_variation(image_patho[mask_sc_patho > 0])
+    # Make sure the intensity ratio is always > 1 (i.e. the lesion is always brighter than the healthy SC)
+    if intensity_ratio < 1:
+        intensity_ratio = 1 / intensity_ratio
 
     # normalize images to range 0 and 1
     image_healthy = (image_healthy - np.min(image_healthy)) / (np.max(image_healthy) - np.min(image_healthy))
