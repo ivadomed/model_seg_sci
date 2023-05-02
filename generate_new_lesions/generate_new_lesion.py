@@ -10,7 +10,6 @@ TODO: switch to BIDS?
 
 import time
 import numpy as np
-import random
 import SimpleITK as sitk
 import nibabel as nib
 from tqdm import tqdm
@@ -39,6 +38,7 @@ def get_parser():
                         help="Path to SC masks from healthy dataset (i.e. Spine Generic Multi)")
     parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
+    parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing.")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
@@ -210,7 +210,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_coords = new_coords[new_coords[:, 2] < int(new_coords[:, 2].max() * 0.9)]
 
     # Select random coordinate in new_target where SC mask is 1
-    x, y, z = new_coords[random.randint(0, len(new_coords) - 1)]
+    rng = np.random.default_rng(args.seed)
+    x, y, z = new_coords[rng.integers(0, len(new_coords) - 1)]
+    #print("x, y, z: ", x, y, z)
 
     # Insert lesion from the bounding box to the new_target
     for x_step, x_cor in enumerate(range(x0, x1)):
@@ -276,9 +278,11 @@ def main():
     independently in nnunet.training.network_training.nnUNetTrainerV2.do_split 
     when using nnUNet framework
     """
+    print("Random seed: ", args.seed)
+    rng = np.random.default_rng(args.seed)
     # Get random indices for pathology and healthy subjects
-    patho_random_list = np.random.choice(len(cases_patho), args.num)
-    healthy_random_list = np.random.choice(len(cases_healthy), args.num, replace=False)
+    patho_random_list = rng.choice(len(cases_patho), args.num)
+    healthy_random_list = rng.choice(len(cases_healthy), args.num, replace=False)
     # Combine both lists
     rand_index = np.vstack((patho_random_list, healthy_random_list))
     # Keep only unique combinations (to avoid mixing the same subjects)
