@@ -142,6 +142,16 @@ def pad_or_crop(img_healthy, mask_sc, img_patho, label_patho):
     return img_healthy, mask_sc, img_patho, label_patho
 
 
+def resample_volume(volume, interpolator = sitk.sitkLinear, new_spacing = [0.39, 0.39, 0.55]):
+    # volume = sitk.ReadImage(volume_path, sitk.sitkFloat32) # read and cast to float32
+    original_spacing = volume.GetSpacing()
+    original_size = volume.GetSize()
+    new_size = [int(round(osz*ospc/nspc)) for osz,ospc,nspc in zip(original_size, original_spacing, new_spacing)]
+    return sitk.Resample(volume, new_size, sitk.Transform(), interpolator,
+                         volume.GetOrigin(), new_spacing, volume.GetDirection(), 0,
+                         volume.GetPixelID())
+
+
 def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
 
@@ -157,7 +167,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     path_mask_sc_patho = os.path.join(args.dir_masks_pathology, sub_patho + '.nii.gz')
 
     # get the header of the healthy image
-    spacing, direction, origin = get_head(path_image_healthy)
+    spacing_healthy, direction_healthy, origin_healthy = get_head(path_image_healthy)
+    # get the header of the patho image
+    spacing_patho, direction_patho, origin_patho = get_head(path_image_patho)
 
     # Load image_healthy and mask_sc
     image_healthy = nib.load(path_image_healthy).get_fdata()
@@ -230,8 +242,12 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
                     new_label[x + x_step, y + y_step, z + z_step] = label_patho[x_cor, y_cor, z_cor]
 
     # Copy header information from target_a to new_target and new_label
-    new_target = copy_head_and_right_xyz(new_target, spacing, direction, origin)
-    new_label = copy_head_and_right_xyz(new_label, spacing, direction, origin)
+    new_target = copy_head_and_right_xyz(new_target, spacing_healthy, direction_healthy, origin_healthy)
+    new_label = copy_head_and_right_xyz(new_label, spacing_healthy, direction_healthy, origin_healthy)
+
+    # Resample new_target and new_label to the spacing of pathogology subject
+    new_target = resample_volume(new_target, new_spacing=spacing_patho)
+    new_label = resample_volume(new_label, new_spacing=spacing_patho)
 
     # Convert i to string and add 3 leading zeros
     s = str(index)
