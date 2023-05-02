@@ -65,7 +65,14 @@ def copy_head_and_right_xyz(data, spacing, direction, origin):
     return TrainData_new
 
 
-def resample_volume(volume, interpolator = sitk.sitkLinear, new_spacing = [0.39, 0.39, 0.55]):
+def resample_volume(volume, new_spacing, interpolator=sitk.sitkLinear):
+    """
+    Resample volume to new spacing
+    :param volume: volume to be resampled
+    :param new_spacing: new spacing
+    :param interpolator:
+    :return:
+    """
     # volume = sitk.ReadImage(volume_path, sitk.sitkFloat32) # read and cast to float32
     original_spacing = volume.GetSpacing()
     original_size = volume.GetSize()
