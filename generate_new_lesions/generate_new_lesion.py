@@ -76,7 +76,7 @@ def resample_volume(volume, new_spacing, interpolator=sitk.sitkLinear):
     # volume = sitk.ReadImage(volume_path, sitk.sitkFloat32) # read and cast to float32
     original_spacing = volume.GetSpacing()
     original_size = volume.GetSize()
-    new_size = [int(round(osz*ospc/nspc)) for osz,ospc,nspc in zip(original_size, original_spacing, new_spacing)]
+    new_size = [int(round(osz*ospc/nspc)) for osz, ospc, nspc in zip(original_size, original_spacing, new_spacing)]
     return sitk.Resample(volume, new_size, sitk.Transform(), interpolator,
                          volume.GetOrigin(), new_spacing, volume.GetDirection(), 0,
                          volume.GetPixelID())
@@ -175,7 +175,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_target = copy_head_and_right_xyz(new_target, spacing_healthy, direction_healthy, origin_healthy)
     new_label = copy_head_and_right_xyz(new_label, spacing_healthy, direction_healthy, origin_healthy)
 
-    # Resample new_target and new_label to the spacing of pathogology subject
+    # Resample new_target and new_label to the spacing of pathology subject
     new_target = resample_volume(new_target, new_spacing=spacing_patho)
     new_label = resample_volume(new_label, new_spacing=spacing_patho)
 
