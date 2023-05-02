@@ -65,83 +65,6 @@ def copy_head_and_right_xyz(data, spacing, direction, origin):
     return TrainData_new
 
 
-def pad(image, pad_size):
-    """Pad the input image to the specified spatial size."""
-    pad_width = []
-    for i, sp_i in enumerate(pad_size):
-        width = max(sp_i - image.shape[i], 0)
-        pad_width.append((int(width // 2), int(width - (width // 2))))
-    
-    to_pad = tuple(pad_width)
-    image_padd = np.pad(image, to_pad, mode='constant',)
-    
-    return image_padd
-
-
-def pad_or_crop(img_healthy, mask_sc, img_patho, label_patho):
-
-    # size to match after padding
-    if img_healthy.shape > img_patho.shape:
-        spatial_size = img_healthy.shape
-        # print("padding image_b to match the dimensions of image_a")
-
-        # the pad function automatically pads the image to the largest dimensions 
-        # between the two images. This might result in shape mismatch hence the next step
-        # is to crop the padded image to match the size of the other image
-        img_patho = pad(img_patho, spatial_size)
-        label_patho = pad(label_patho, spatial_size)
-        # print("paddded image_b: ", target_b.shape)
-
-        # TODO: check if this is necessary
-        if img_patho.shape != img_healthy.shape:
-            # crop the padded image until it matches the size of the other image
-            if img_patho.shape[0] > img_healthy.shape[0]:
-                img_patho = img_patho[0:img_healthy.shape[0], :, :]
-                label_patho = label_patho[0:mask_sc.shape[0], :, :]
-            
-            if img_patho.shape[1] > img_healthy.shape[1]:
-                img_patho = img_patho[:, 0:img_healthy.shape[1], :]
-                label_patho = label_patho[:, 0:mask_sc.shape[1], :]
-
-            if img_patho.shape[2] > img_healthy.shape[2]:
-                img_patho = img_patho[:, :,  0:img_healthy.shape[2]]
-                label_patho = label_patho[:, :, 0:mask_sc.shape[2]]
-            
-            # print("padded and cropped image_b: ", target_b.shape)
-
-    else:
-        spatial_size = img_patho.shape
-        # print("padding image_a to match the dimensions of image_b")
-
-        img_healthy = pad(img_healthy, spatial_size)
-        mask_sc = pad(mask_sc, spatial_size)
-        # print("paddded image_a: ", target_a.shape)
-
-        # TODO: check if this is necessary
-        if img_patho.shape != img_healthy.shape:
-            # crop the padded image until it matches the size of the other image
-
-            if img_healthy.shape[0] > img_patho.shape[0]:
-                img_healthy = img_healthy[0:img_patho.shape[0], :, :]
-                mask_sc = mask_sc[0:label_patho.shape[0], :, :]
-
-            if img_healthy.shape[1] > img_patho.shape[1]:
-                img_healthy = img_healthy[:, 0:img_patho.shape[1], :]
-                mask_sc = mask_sc[:, 0:label_patho.shape[1], :]
-
-            if img_healthy.shape[2] > img_patho.shape[2]:
-                img_healthy = img_healthy[:, :,  0:img_patho.shape[2]]
-                mask_sc = mask_sc[:, :, 0:label_patho.shape[2]]
-
-            # print("padded and cropped image_a: ", target_a.shape)
-
-    # check whether the padded images, label and sc_mask have the same shape
-    assert img_healthy.shape == img_patho.shape, "image_a and image_b have different shapes"
-    assert mask_sc.shape == label_patho.shape, "mask_sc and label have different shapes"
-
-    return img_healthy, mask_sc, img_patho, label_patho
-
-
 def resample_volume(volume, interpolator = sitk.sitkLinear, new_spacing = [0.39, 0.39, 0.55]):
     # volume = sitk.ReadImage(volume_path, sitk.sitkFloat32) # read and cast to float32
     original_spacing = volume.GetSpacing()
@@ -254,13 +177,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     s = s.zfill(3)
 
     # Save new_target and new_label
-    subject_mame_out = sub_healthy.split('_')[0] + '_' + \
+    subject_name_out = sub_healthy.split('_')[0] + '_' + \
                        sub_patho.split('_')[0] + '_' + \
                        sub_patho.split('_')[1] + '_' + s
-    sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
-    print('Saving new sample: ', os.path.join(args.dir_healthy, subject_mame_out + '_0000.nii.gz'))
-    sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
-    print('Saving new sample: ', os.path.join(args.dir_save, subject_mame_out + '.nii.gz'))
+    sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz'))
+    print('Saving new sample: ', os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz'))
+    sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_name_out + '.nii.gz'))
+    print('Saving new sample: ', os.path.join(args.dir_save, subject_name_out + '.nii.gz'))
     print('')
 
 
