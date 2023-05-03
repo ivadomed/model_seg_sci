@@ -67,7 +67,8 @@ def copy_head_and_right_xyz(data, spacing, direction, origin):
 
 def resample_volume(volume, new_spacing, interpolator=sitk.sitkLinear):
     """
-    Resample volume to new spacing
+    Resample volume to new spacing. Taken from:
+    https://discourse.itk.org/t/resample-volume-to-specific-voxel-spacing-simpleitk/3531/2
     :param volume: volume to be resampled
     :param new_spacing: new spacing
     :param interpolator:
