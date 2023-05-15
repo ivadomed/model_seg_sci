@@ -5,12 +5,12 @@ the format can be found here: https://github.com/MIC-DKFZ/nnUNet/blob/master/doc
 Note that the conversion from BIDS to nnUNet is done using symbolic links to avoid creating multiple copies of the
 (original) BIDS dataset.
 
-Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be
-modified to include those as well.
+NOTE: There is no split. We are using this script just to convert the dataset to the nnUNet format to do the lesion
+augmentation. The split is then done by another script.
 
 Usage example:
     python convert_bids_to_nnUNetv2_spine-generic.py --path-data ~/datasets/data-multi-subject --path-out ~/datasets/data-multi-subject-nnunet
-                    --dataset-name SpineGenericMutliSubject --dataset-number 526 --split 0.8 0.2 --seed 99
+                    --dataset-name SpineGenericMutliSubject --dataset-number 526 --seed 99
 """
 
 import argparse
@@ -27,7 +27,8 @@ import nibabel as nib
 import numpy as np
 
 # parse command line arguments
-parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format. No split is '
+                                             'done -- the whole dataset is used.')
 parser.add_argument('--path-data', help='Path to BIDS dataset.', required=True)
 parser.add_argument('--path-out', help='Path to output directory.', required=True)
 parser.add_argument('--dataset-name', '-dname', default='SpineGenericMutliSubject', type=str,
