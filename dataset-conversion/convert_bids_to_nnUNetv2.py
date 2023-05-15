@@ -168,11 +168,14 @@ def main():
                 #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
-                    subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
+                    subject_mask_file = os.path.join(subject_labels_path,
+                                                     f"{subject}_{session}_acq-sag_T2w_seg-manual.nii.gz")
                     subject_mask_file_nnunet = os.path.join(path_out_masksTr, f"{sub_ses_name}_{train_ctr:03d}.nii.gz")
                     train_masks.append(subject_mask_file_nnunet)
-                    os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
-
+                    if os.path.isfile(subject_mask_file):
+                        os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
+                    else:
+                        print(f"Mask file {subject_mask_file} not found. Skipping this subject.")
         elif subject in test_subjects:
 
             # Another for loop for going through sessions
@@ -213,11 +216,14 @@ def main():
                 #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
-                    subject_mask_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_seg.nii.gz")
+                    subject_mask_file = os.path.join(subject_labels_path,
+                                                     f"{subject}_{session}_acq-sag_T2w_seg-manual.nii.gz")
                     subject_mask_file_nnunet = os.path.join(path_out_masksTs, f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
                     test_masks.append(subject_mask_file_nnunet)
-                    os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
-        
+                    if os.path.isfile(subject_mask_file):
+                        os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
+                    else:
+                        print(f"Mask file {subject_mask_file} not found. Skipping this subject.")
         else:
             if args.create_dummy_dataset:
                 print("Skipping file, as it is in the validation split.", subject)
