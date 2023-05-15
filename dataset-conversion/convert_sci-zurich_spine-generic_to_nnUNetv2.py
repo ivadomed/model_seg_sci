@@ -18,8 +18,9 @@ Currently only supports the conversion of a single contrast. In case of multiple
 modified to include those as well. 
 
 Usage example:
-    python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --task-name tSCILesionsZurich --task-number 525 --split 0.8 0.2 --seed 42
+    python convert_sci-zurich_spine-generic_to_nnUNetv2.py --path-data ~/datasets/sci-zurich ~/datasets/spine-generic
+                    --path-out ~/datasets/sci-zurich-spine-generic-nnunet --dataset-name tSCIZurichSpineGeneric 
+                    --dataset-number 521 --split 0.6 0.2 0.2 --seed 99
 """
 
 import argparse
