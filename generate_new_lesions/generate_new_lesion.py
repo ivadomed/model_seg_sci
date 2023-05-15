@@ -24,8 +24,7 @@ import os
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-num", default=100, type=int, help="Total number of newly generated subjects.")
-    
+    parser.add_argument("-num", default=100, type=int, help="Total number of newly generated subjects. Default: 100")
     parser.add_argument("-dir-pathology", default="imagesTr", type=str,
                         help="Path to raw images from pathology dataset (i.e. SCI-Zurich)")
     parser.add_argument("-dir-lesions", default="labelsTr", type=str,
@@ -38,7 +37,7 @@ def get_parser():
                         help="Path to SC masks from healthy dataset (i.e. Spine Generic Multi)")
     parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
-    parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing.")
+    parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
