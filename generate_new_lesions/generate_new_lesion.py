@@ -164,7 +164,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Get random slice (z)
     _, _, z = new_coords[rng.integers(0, len(new_coords) - 1)]
     # Get the center of mass of the spinal cord for the selected random slice
-    x, y = ndimage.measurements.center_of_mass(mask_sc[:, :, z])
+    x, y = ndimage.center_of_mass(mask_sc[:, :, z])
     # Note: we have to round the coordinates because they are floats
     x, y = round(x), round(y)
 
