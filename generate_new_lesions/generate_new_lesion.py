@@ -139,7 +139,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Check if label_patho has non-zero pixels (ie. there is no lesion in the image)
     if np.count_nonzero(label_patho) == 0:
-        print("label_patho has no non-zero pixels")
+        print(f"label_patho of subject {sub_patho} has no non-zero pixels (i.e. no lesion)")
         return
     # TODO: create an empty lession mask in such case?
 
