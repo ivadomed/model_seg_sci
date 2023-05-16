@@ -166,12 +166,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Note: we have to round the coordinates because they are floats
     x, y = round(x), round(y)
 
-    # Select random int from -3 to 3 to make offset for x and y
-    offset_x = rng.integers(-3, 3)
-    offset_y = rng.integers(-3, 3)
-
-    x = x + offset_x
-    y = y + offset_y
+    x = x - int((x1 - x0) / 2)
+    y = y - int((y1 - y0) / 2)
+    z = z - int((z1 - z0) / 2)
 
     # Insert lesion from the bounding box to the new_target
     for x_step, x_cor in enumerate(range(x0, x1)):
