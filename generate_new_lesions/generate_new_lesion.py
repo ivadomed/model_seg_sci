@@ -164,7 +164,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_coords = np.argwhere(mask_sc > 0)
 
     # make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    new_coords = new_coords[new_coords[:, 2] < int(new_coords[:, 2].max() * 0.9)]
+    new_coords = new_coords[int(new_coords[:, 2].max() * 0.1) < new_coords[:, 2] < int(new_coords[:, 2].max() * 0.9)]
 
     # Select random coordinate in new_target where SC mask is 1
     rng = np.random.default_rng(args.seed)
