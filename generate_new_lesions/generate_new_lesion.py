@@ -38,6 +38,8 @@ def get_parser():
     parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
     parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
+    parser.add_argument("-resample", default=False, type=bool, help="Resample the augmented images to the resolution "
+                                                                    "of pathological dataset. Default: False")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
@@ -175,9 +177,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_target = copy_head_and_right_xyz(new_target, spacing_healthy, direction_healthy, origin_healthy)
     new_label = copy_head_and_right_xyz(new_label, spacing_healthy, direction_healthy, origin_healthy)
 
-    # Resample new_target and new_label to the spacing of pathology subject
-    new_target = resample_volume(new_target, new_spacing=spacing_patho)
-    new_label = resample_volume(new_label, new_spacing=spacing_patho)
+    if args.resample:
+        # Resample new_target and new_label to the spacing of pathology subject
+        new_target = resample_volume(new_target, new_spacing=spacing_patho)
+        new_label = resample_volume(new_label, new_spacing=spacing_patho)
 
     # Convert i to string and add 3 leading zeros
     s = str(index)
