@@ -152,8 +152,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_coords = np.argwhere(mask_sc > 0)
 
     # make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    # TODO: this is basically just removing the top one slice, isnt it?
-    # TODO: I updated it to remove 10% of the top slices
     new_coords = new_coords[new_coords[:, 2] < int(new_coords[:, 2].max() * 0.9)]
 
     # Select random coordinate in new_target where SC mask is 1
