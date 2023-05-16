@@ -129,10 +129,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     label_patho = nib.load(path_label_patho).get_fdata()
     mask_sc_patho = nib.load(path_mask_sc_patho).get_fdata()
 
-    # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
-    if image_healthy.shape != mask_sc.shape:
-        print("image_healthy and mask_sc have different shapes")
-        return
     # Check if image_patho and label_patho have the same shape, if not, skip this subject
     if image_patho.shape != mask_sc_patho.shape:
         print("image_patho and label_patho have different shapes")
