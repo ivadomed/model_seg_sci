@@ -108,6 +108,22 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     image_healthy = nib.load(path_image_healthy).get_fdata()
     mask_sc = nib.load(path_mask_sc_healthy).get_fdata()
 
+    # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
+    if image_healthy.shape != mask_sc.shape:
+        print("image_healthy and mask_sc have different shapes")
+        return
+
+
+    # for each slice in the mask_sc, get the center coordinate of the y-axis
+    num_z_slices = mask_sc.shape[2]
+    centerline = list()
+    for z in range(num_z_slices):
+        x, y = ndimage.center_of_mass(mask_sc[:, :, z])
+        # check if not nan
+        if not np.isnan(x) and not np.isnan(y):
+            centerline.append((round(x), round(y), z))
+
+
     # Load image_patho, label_patho, and mask_sc_patho
     image_patho = nib.load(path_image_patho).get_fdata()
     label_patho = nib.load(path_label_patho).get_fdata()
