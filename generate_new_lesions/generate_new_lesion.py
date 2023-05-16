@@ -173,14 +173,16 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Get random slice (z)
     _, _, z = new_coords[rng.integers(0, len(new_coords) - 1)]
-    # Get the center of mass of the spinal cord for the selected random slice
-    x, y = ndimage.center_of_mass(mask_sc[:, :, z])
-    # Note: we have to round the coordinates because they are floats
-    x, y = round(x), round(y)
+    # # Get the center of mass of the spinal cord for the selected random slice
+    # x, y = ndimage.center_of_mass(mask_sc[:, :, z])
+    # # Note: we have to round the coordinates because they are floats
+    # x, y = round(x), round(y)
+    #
+    # x = x - int((x1 - x0) / 2)
+    # y = y - int((y1 - y0) / 2)
+    # z = z - int((z1 - z0) / 2)
 
-    x = x - int((x1 - x0) / 2)
-    y = y - int((y1 - y0) / 2)
-    z = z - int((z1 - z0) / 2)
+    # TODO - take angle of the centerline into account when projecting the lesion
 
     # Insert lesion from the bounding box to the new_target
     for x_step, x_cor in enumerate(range(x0, x1)):
