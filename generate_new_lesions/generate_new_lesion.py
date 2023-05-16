@@ -177,9 +177,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     for x_step, x_cor in enumerate(range(x0, x1)):
         for y_step, y_cor in enumerate(range(y0, y1)):
             for z_step, z_cor in enumerate(range(z0, z1)):
-                # Check that dimensions do not overflow
-                if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
-                    continue
+                # # Check that dimensions do not overflow
+                # if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
+                #     continue
                 # Insert only voxels corresponding to the lesion mask (label_b)
                 # Also make sure that the new lesion is not projected outside of the SC
                 if label_patho[x_cor, y_cor, z_cor] > 0 and mask_sc[x + x_step, y + y_step, z + z_step] > 0:
