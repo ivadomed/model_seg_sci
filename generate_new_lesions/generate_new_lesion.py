@@ -159,30 +159,20 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     coords = np.argwhere(label_patho > 0)
     x0, y0, z0 = coords.min(axis=0)
     x1, y1, z1 = coords.max(axis=0) + 1  # slices are exclusive at the top
-    
-    # get the set of all coordinates where SC mask is 1
-    new_coords = np.argwhere(mask_sc > 0)
 
     # make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    new_coords = new_coords[int(new_coords[:, 2].max() * 0.1) < new_coords[:, 2] < int(new_coords[:, 2].max() * 0.9)]
+    centerline_cropped = centerline[round(len(centerline)*0.1):round(len(centerline)*0.9)]
 
-    # Select random coordinate in new_target where SC mask is 1
-    rng = np.random.default_rng(args.seed)
-    #x, y, z = new_coords[rng.integers(0, len(new_coords) - 1)]
-    #print("x, y, z: ", x, y, z)
-
-    # Get random slice (z)
-    _, _, z = new_coords[rng.integers(0, len(new_coords) - 1)]
-    # # Get the center of mass of the spinal cord for the selected random slice
-    # x, y = ndimage.center_of_mass(mask_sc[:, :, z])
-    # # Note: we have to round the coordinates because they are floats
-    # x, y = round(x), round(y)
-    #
-    # x = x - int((x1 - x0) / 2)
-    # y = y - int((y1 - y0) / 2)
-    # z = z - int((z1 - z0) / 2)
+    # Select random coordinate on the centerline
+    # index is used to have different seed for every subject to have different lesion positions across different
+    # subjects
+    rng = np.random.default_rng(args.seed + index)
+    # New position for the lesion
+    x, y, z = centerline_cropped[rng.integers(0, len(centerline_cropped) - 1)]
 
     # TODO - take angle of the centerline into account when projecting the lesion
+
+    # TODO for Nathan - rewrite this without 3 loops
 
     # Insert lesion from the bounding box to the new_target
     for x_step, x_cor in enumerate(range(x0, x1)):
