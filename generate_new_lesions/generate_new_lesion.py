@@ -17,6 +17,8 @@ from tqdm import tqdm
 import argparse
 import os
 
+from spinalcordtoolbox.image import Image
+
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
 # TODO: Consider moving the script to SCT --> use RPI reorientation function, potentially use angle correction to
@@ -105,14 +107,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     spacing_patho, direction_patho, origin_patho = get_head(path_image_patho)
 
     # Load image_healthy and mask_sc
-    image_healthy = nib.load(path_image_healthy).get_fdata()
-    mask_sc = nib.load(path_mask_sc_healthy).get_fdata()
+    image_healthy = Image(path_image_healthy).change_orientation("RPI").data
+    mask_sc = Image(path_mask_sc_healthy).change_orientation("RPI").data
 
     # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
     if image_healthy.shape != mask_sc.shape:
         print("image_healthy and mask_sc have different shapes")
         return
-
 
     # for each slice in the mask_sc, get the center coordinate of the y-axis
     num_z_slices = mask_sc.shape[2]
@@ -123,11 +124,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         if not np.isnan(x) and not np.isnan(y):
             centerline.append((round(x), round(y), z))
 
-
     # Load image_patho, label_patho, and mask_sc_patho
-    image_patho = nib.load(path_image_patho).get_fdata()
-    label_patho = nib.load(path_label_patho).get_fdata()
-    mask_sc_patho = nib.load(path_mask_sc_patho).get_fdata()
+    image_patho = Image(path_image_patho).change_orientation("RPI").data
+    label_patho = Image(path_label_patho).change_orientation("RPI").data
+    mask_sc_patho = Image(path_mask_sc_patho).change_orientation("RPI").data
 
     # Check if image_patho and label_patho have the same shape, if not, skip this subject
     if image_patho.shape != mask_sc_patho.shape:
