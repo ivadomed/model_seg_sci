@@ -1,6 +1,10 @@
 """
 Take lesion from subject_b and insert it into subject_a
 
+Activate SCT conda environment:
+    source ${SCT_DIR}/python/etc/profile.d/conda.sh
+    conda activate venv_sct
+
 Run:
     python generate_new_lesion.py
 
