@@ -47,9 +47,10 @@ SUBJECT=$1
 # get starting time:
 start=`date +%s`
 
-
+# ------------------------------------------------------------------------------
 # SCRIPT STARTS HERE
-# ==============================================================================
+# ------------------------------------------------------------------------------
+
 # Display useful info for the log, such as SCT version, RAM and CPU cores available
 sct_check_dependencies -short
 
@@ -85,6 +86,9 @@ cd ${SUBJECT}/anat
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
 file="${SUBJECT//[\/]/_}"
 
+# ------------------------------------------------------------------------------
+# T2w Sagittal
+# ------------------------------------------------------------------------------
 # Add suffix corresponding to contrast
 file=${file}_acq-sag_T2w
 
@@ -129,10 +133,9 @@ sct_crop_image -i ${file_gt}.nii.gz -m ${file_seg_dil}.nii.gz -o ${file_gt}_crop
 # Resample the manual seg to 0.75mm isotropic
 sct_resample -i ${file_gt}_crop.nii.gz -mm 0.75x0.75x0.75 -o ${file_gt}_crop_res.nii.gz
 
-# Go back to the root output path
-cd $PATH_OUTPUT
-
+# ------------------------------------------------------------------------------
 # Create and populate clean data processed folder for training
+# ------------------------------------------------------------------------------
 PATH_DATA_PROCESSED_CLEAN="${PATH_DATA_PROCESSED}_clean"
 
 # Copy over required BIDs files
@@ -149,6 +152,9 @@ mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/deriv
 rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}_crop_res.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.nii.gz
 rsync -avzh $PATH_DATA_PROCESSED/derivatives/labels/${SUBJECT}/anat/${file_gt}.json $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_gt}.json
 
+# ------------------------------------------------------------------------------
+# End
+# ------------------------------------------------------------------------------
 
 # Display useful info for the log
 end=`date +%s`
