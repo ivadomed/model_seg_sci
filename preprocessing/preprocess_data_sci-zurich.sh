@@ -23,9 +23,6 @@
 # PATH_LOG="~/log"
 # PATH_QC="~/qc"
 
-# Global variables
-CENTERLINE_METHOD="svm"  # method sct_deepseg_sc uses for centerline extraction: 'svm', 'cnn'
-
 
 # Uncomment for full verbose
 set -x
@@ -36,42 +33,13 @@ set -e -o pipefail
 # Exit if user presses CTRL+C (Linux) or CMD+C (OSX)
 trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
-
-# CONVENIENCE FUNCTIONS
-# ======================================================================================================================
-
-segment_if_does_not_exist() {
-  ###
-  #  This function checks if a manual spinal cord segmentation file already exists, then:
-  #    - If it does, copy it locally.
-  #    - If it doesn't, perform automatic spinal cord segmentation.
-  #  This allows you to add manual segmentations on a subject-by-subject basis without disrupting the pipeline.
-  ###
-  local file="$1"
-  local contrast="$2"
-  local centerline_method="$3"
-  # Update global variable with segmentation file name
-  FILESEG="${file}_seg"
-  FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${FILESEG}-manual.nii.gz"
-  echo
-  echo "Looking for manual segmentation: $FILESEGMANUAL"
-  if [[ -e $FILESEGMANUAL ]]; then
-    echo "Found! Using manual segmentation."
-    rsync -avzh $FILESEGMANUAL ${FILESEG}.nii.gz
-    sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
-  else
-    echo "Not found. Proceeding with automatic segmentation."
-    # Segment spinal cord based on the specified centerline method
-    if [[ $centerline_method == "cnn" ]]; then
-      sct_deepseg_sc -i ${file}.nii.gz -c $contrast -brain 1 -centerline cnn -qc ${PATH_QC} -qc-subject ${SUBJECT}
-    elif [[ $centerline_method == "svm" ]]; then
-      sct_deepseg_sc -i ${file}.nii.gz -c $contrast -centerline svm -qc ${PATH_QC} -qc-subject ${SUBJECT}
-    else
-      echo "Centerline extraction method = ${centerline_method} is not recognized!"
-      exit 1
-    fi
-  fi
-}
+# Print retrieved variables from the sct_run_batch script to the log (to allow easier debug)
+echo "Retrieved variables from from the caller sct_run_batch:"
+echo "PATH_DATA: ${PATH_DATA}"
+echo "PATH_DATA_PROCESSED: ${PATH_DATA_PROCESSED}"
+echo "PATH_RESULTS: ${PATH_RESULTS}"
+echo "PATH_LOG: ${PATH_LOG}"
+echo "PATH_QC: ${PATH_QC}"
 
 # Retrieve input params and other params
 SUBJECT=$1
@@ -120,9 +88,16 @@ file="${SUBJECT//[\/]/_}"
 # Add suffix corresponding to contrast
 file=${file}_acq-sag_T2w
 
-# Make sure the image metadata is a valid JSON object
-if [[ ! -s ${file}.json ]]; then
-  echo "{}" >> ${file}.json
+# Construct path to GT spinal cord (we manually corrected all cord segmentations and saved them under derivatives)
+file_seg_manual="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${FILESEG}-manual.nii.gz"
+file_seg="${file}_seg"
+if [[ -e $file_seg_manual ]]; then
+  echo "Copying manual segmentation."
+  rsync -avzh ${file_seg_manual} ${file_seg}.nii.gz
+else
+  echo "Manual segmentation not found."
+  echo "Manual segmentation not found." >> ${PATH_LOG}/missing_seg.txt
+  exit 1
 fi
 
 # Spinal cord segmentation using the T2w contrast
