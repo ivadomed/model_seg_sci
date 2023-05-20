@@ -93,8 +93,8 @@ file="${SUBJECT//[\/]/_}"
 file=${file}_acq-sag_T2w
 
 # Construct path to GT spinal cord (we manually corrected all cord segmentations and saved them under derivatives)
-file_seg_manual="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${FILESEG}-manual.nii.gz"
 file_seg="${file}_seg"
+file_seg_manual="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file_seg}-manual.nii.gz"
 if [[ -e $file_seg_manual ]]; then
   echo "Copying manual segmentation."
   rsync -avzh ${file_seg_manual} ${file_seg}.nii.gz
