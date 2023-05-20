@@ -95,6 +95,26 @@ def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
 
 
+def insert_lesion(new_target, new_label, image_patho, label_patho, mask_sc, x0, x1, y0, y1, z0, z1, x, y, z,
+                  intensity_ratio):
+    """"
+    Insert lesion from the bounding box to the new_target
+    """
+    for x_step, x_cor in enumerate(range(x0, x1)):
+        for y_step, y_cor in enumerate(range(y0, y1)):
+            for z_step, z_cor in enumerate(range(z0, z1)):
+                # Check that dimensions do not overflow
+                if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
+                    continue
+                # Insert only voxels corresponding to the lesion mask (label_b)
+                # Also make sure that the new lesion is not projected outside of the SC
+                if label_patho[x_cor, y_cor, z_cor] > 0 and mask_sc[x + x_step, y + y_step, z + z_step] > 0:
+                    new_target[x + x_step, y + y_step, z + z_step] = image_patho[x_cor, y_cor, z_cor] * intensity_ratio
+                    new_label[x + x_step, y + y_step, z + z_step] = label_patho[x_cor, y_cor, z_cor]
+
+    return new_target, new_label
+
+
 def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Construct paths
@@ -171,25 +191,21 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # index is used to have different seed for every subject to have different lesion positions across different
     # subjects
     rng = np.random.default_rng(args.seed + index)
-    # New position for the lesion
-    x, y, z = centerline_cropped[rng.integers(0, len(centerline_cropped) - 1)]
 
-    # TODO - take angle of the centerline into account when projecting the lesion
+    while True:
+        # New position for the lesion
+        x, y, z = centerline_cropped[rng.integers(0, len(centerline_cropped) - 1)]
 
-    # TODO for Nathan - rewrite this without 3 loops
+        # TODO - take angle of the centerline into account when projecting the lesion
+        # TODO for Nathan - rewrite this without 3 loops
 
-    # Insert lesion from the bounding box to the new_target
-    for x_step, x_cor in enumerate(range(x0, x1)):
-        for y_step, y_cor in enumerate(range(y0, y1)):
-            for z_step, z_cor in enumerate(range(z0, z1)):
-                # Check that dimensions do not overflow
-                if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
-                    continue
-                # Insert only voxels corresponding to the lesion mask (label_b)
-                # Also make sure that the new lesion is not projected outside of the SC
-                if label_patho[x_cor, y_cor, z_cor] > 0 and mask_sc[x + x_step, y + y_step, z + z_step] > 0:
-                    new_target[x + x_step, y + y_step, z + z_step] = image_patho[x_cor, y_cor, z_cor] * intensity_ratio
-                    new_label[x + x_step, y + y_step, z + z_step] = label_patho[x_cor, y_cor, z_cor]
+        # Insert lesion from the bounding box to the new_target
+        new_target, new_label = insert_lesion(new_target, new_label, image_patho, label_patho, mask_sc, x0, x1, y0, y1,
+                                              z0, z1, x, y, z, intensity_ratio)
+
+        # Check if new_label contains lesion (i.e., non-zero pixels)
+        if np.count_nonzero(new_label) > 0:
+            break
 
     # Copy header information from target_a to new_target and new_label
     new_target = copy_head_and_right_xyz(new_target, spacing_healthy, direction_healthy, origin_healthy)
