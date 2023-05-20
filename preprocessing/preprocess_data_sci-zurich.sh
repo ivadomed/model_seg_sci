@@ -107,9 +107,8 @@ fi
 # Dilate spinal cord mask
 sct_maths -i ${file_seg}.nii.gz -dilate 5 -shape ball -o ${file_seg}_dilate.nii.gz
 
-# Use dilated mask to crop the original image and manual MS segmentations
+# Use dilated mask to crop the original image
 sct_crop_image -i ${file}.nii.gz -m ${file_seg}_dilate.nii.gz -o ${file}_crop.nii.gz
-
 # Resample the cropped image to 0.75mm isotropic
 sct_resample -i ${file}_crop.nii.gz -mm 0.75x0.75x0.75 -o ${file}_crop_r.nii.gz
 
@@ -118,18 +117,10 @@ cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 
 # Define variables
 file_gt="${file}_lesion-manual"
-
 # Redefine variable for final SC segmentation mask as path changed
 file_seg_dil=${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file_seg}_dilate
-
-# Make sure the first rater metadata is a valid JSON object
-if [[ ! -s ${file_gt}.json ]]; then
-  echo "{}" >> ${file_gt}.json
-fi
-
 # Crop the manual seg
 sct_crop_image -i ${file_gt}.nii.gz -m ${file_seg_dil}.nii.gz -o ${file_gt}_crop.nii.gz
-
 # Resample the manual seg to 0.75mm isotropic
 sct_resample -i ${file_gt}_crop.nii.gz -mm 0.75x0.75x0.75 -o ${file_gt}_crop_r.nii.gz
 
