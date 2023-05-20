@@ -100,10 +100,6 @@ else
   exit 1
 fi
 
-# Spinal cord segmentation using the T2w contrast
-segment_if_does_not_exist ${file} t2 ${CENTERLINE_METHOD}
-file_seg="${FILESEG}"
-
 # Dilate spinal cord mask
 sct_maths -i ${file_seg}.nii.gz -dilate 5 -shape ball -o ${file_seg}_dilate.nii.gz
 
