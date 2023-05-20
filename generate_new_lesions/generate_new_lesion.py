@@ -195,6 +195,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     while True:
         # New position for the lesion
         x, y, z = centerline_cropped[rng.integers(0, len(centerline_cropped) - 1)]
+        print(f"Trying to insert lesion at ({x}, {y}, {z})")
 
         # TODO - take angle of the centerline into account when projecting the lesion
         # TODO for Nathan - rewrite this without 3 loops
