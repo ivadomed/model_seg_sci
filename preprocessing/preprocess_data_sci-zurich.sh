@@ -1,12 +1,17 @@
 #!/bin/bash
 #
-# Preprocess data.
+# Preprocess data for the sci-zurich dataset:
+#   1. Create mask around GT spinal cord
+#   2. Crop T2w sag image around the mask
+#   3. Resample cropped image to 0.75mm isotropic
+#   4. Crop GT lesion mask around the mask
+#   5. Resample cropped GT lesion mask to 0.75mm isotropic
 #
 # Dependencies (versions):
-# - SCT (5.4.0)
+# - SCT 5.8
 #
 # Usage:
-# sct_run_batch -script preprocess_data.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
+# sct_run_batch -script preprocess_data_sci-zurich.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
 
 # Manual segmentations or labels should be located under:
 # PATH_DATA/derivatives/labels/SUBJECT/ses-0X/anat/
