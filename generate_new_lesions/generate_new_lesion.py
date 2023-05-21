@@ -11,7 +11,7 @@ Run:
 nnUNet data structure is required.
 TODO: switch to BIDS?
 """
-
+import sys
 import time
 import numpy as np
 import SimpleITK as sitk
@@ -125,11 +125,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     path_label_patho = os.path.join(args.dir_lesions, sub_patho + '.nii.gz')
     path_mask_sc_patho = os.path.join(args.dir_masks_pathology, sub_patho + '.nii.gz')
 
-    # get the header of the healthy image
-    spacing_healthy, direction_healthy, origin_healthy = get_head(path_image_healthy)
-    # get the header of the patho image
-    spacing_patho, direction_patho, origin_patho = get_head(path_image_patho)
-
     # Load image_healthy and mask_sc
     image_healthy = Image(path_image_healthy).change_orientation("RPI").data
     mask_sc = Image(path_mask_sc_healthy).change_orientation("RPI").data
@@ -138,15 +133,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     if image_healthy.shape != mask_sc.shape:
         print("image_healthy and mask_sc have different shapes")
         return
-
-    # for each slice in the mask_sc, get the center coordinate of the y-axis
-    num_z_slices = mask_sc.shape[2]
-    centerline = list()
-    for z in range(num_z_slices):
-        x, y = ndimage.center_of_mass(mask_sc[:, :, z])
-        # check if not nan
-        if not np.isnan(x) and not np.isnan(y):
-            centerline.append((round(x), round(y), z))
 
     # Load image_patho, label_patho, and mask_sc_patho
     image_patho = Image(path_image_patho).change_orientation("RPI").data
@@ -157,6 +143,21 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     if image_patho.shape != mask_sc_patho.shape:
         print("image_patho and label_patho have different shapes")
         return
+
+    # get the header of the healthy image
+    spacing_healthy, direction_healthy, origin_healthy = get_head(path_image_healthy)
+    # get the header of the patho image
+    spacing_patho, direction_patho, origin_patho = get_head(path_image_patho)
+
+    # Get centerline of the healthy SC
+    # for each slice in the mask_sc, get the center coordinate of the z-axis
+    num_z_slices = mask_sc.shape[2]
+    centerline = list()
+    for z in range(num_z_slices):
+        x, y = ndimage.center_of_mass(mask_sc[:, :, z])
+        # check if not nan
+        if not np.isnan(x) and not np.isnan(y):
+            centerline.append((round(x), round(y), z))
 
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
     intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / \
