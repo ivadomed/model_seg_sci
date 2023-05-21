@@ -206,6 +206,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
         # Check if new_label contains lesion (i.e., non-zero pixels)
         if np.count_nonzero(new_label) > 0:
+            print(f"Lesion inserted at ({x}, {y}, {z})")
             break
 
     # Copy header information from target_a to new_target and new_label
@@ -214,6 +215,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     if args.resample:
         # Resample new_target and new_label to the spacing of pathology subject
+        print('Resampling new_target and new_label to the spacing of pathology subject')
         new_target = resample_volume(new_target, new_spacing=spacing_patho)
         new_label = resample_volume(new_label, new_spacing=spacing_patho)
 
