@@ -260,11 +260,14 @@ def main():
     simple_cases_healthy = [case.split('.')[0] for i, case in enumerate(cases_healthy) if 'Mix' not in case]
     cases_healthy = simple_cases_healthy
 
+    # Check if number of samples to generate is not larger than the number of available subjects
+    # Because we want to use each healthy subject only once
+    if args.num > len(cases_healthy):
+        sys.exit(f"Number of samples to generate ({args.num}) is larger than the number of available "
+                 f"subjects ({len(cases_patho)})")
+
     """
-    Prepare data split, note that validation sets do not participate in 
-    CarveMix, and remember to split training sets and validation sets 
-    independently in nnunet.training.network_training.nnUNetTrainerV2.do_split 
-    when using nnUNet framework
+    Mix pathology and healthy subjects
     """
     print("Random seed: ", args.seed)
     rng = np.random.default_rng(args.seed)
