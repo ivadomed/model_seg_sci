@@ -126,22 +126,26 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     path_mask_sc_patho = os.path.join(args.dir_masks_pathology, sub_patho + '.nii.gz')
 
     # Load image_healthy and mask_sc
+    image_healthy_orig_orientation = Image(path_image_healthy).orientation
+    print("image_healthy_orig_orientation: ", image_healthy_orig_orientation)
     image_healthy = Image(path_image_healthy).change_orientation("RPI").data
     mask_sc = Image(path_mask_sc_healthy).change_orientation("RPI").data
 
     # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
     if image_healthy.shape != mask_sc.shape:
-        print("image_healthy and mask_sc have different shapes")
+        print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
         return
 
     # Load image_patho, label_patho, and mask_sc_patho
+    image_patho_orig_orientation = Image(path_image_patho).orientation
+    print("image_patho_orig_orientation: ", image_patho_orig_orientation)
     image_patho = Image(path_image_patho).change_orientation("RPI").data
     label_patho = Image(path_label_patho).change_orientation("RPI").data
     mask_sc_patho = Image(path_mask_sc_patho).change_orientation("RPI").data
 
     # Check if image_patho and label_patho have the same shape, if not, skip this subject
     if image_patho.shape != mask_sc_patho.shape:
-        print("image_patho and label_patho have different shapes")
+        print("Warning: image_patho and label_patho have different shapes --> skipping subject")
         return
 
     # get the header of the healthy image
@@ -176,7 +180,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Check if label_patho has non-zero pixels (ie. there is no lesion in the image)
     if np.count_nonzero(label_patho) == 0:
-        print(f"label_patho of subject {sub_patho} has no non-zero pixels (i.e. no lesion)")
+        print(f"Warning: {label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject")
         return
     # TODO: create an empty lession mask in such case?
 
@@ -291,7 +295,7 @@ def main():
         rand_index_patho = rand_index[0][i]
         rand_index_healthy = rand_index[1][i]
 
-        print("\nPatho subject: ", cases_patho[rand_index_patho], '\t', "Healthy subject: ", cases_healthy[rand_index_healthy])
+        print(f"\nHealthy subject: {cases_healthy[rand_index_healthy]}, Patho subject: {cases_healthy[rand_index_healthy]}")
 
         sub_patho = cases_patho[rand_index_patho]
         sub_healthy = cases_healthy[rand_index_healthy]
