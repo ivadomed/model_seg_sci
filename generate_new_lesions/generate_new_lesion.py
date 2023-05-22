@@ -312,7 +312,7 @@ def main():
         rand_index_patho = rand_index[0][i]
         rand_index_healthy = rand_index[1][i]
 
-        print(f"\nHealthy subject: {cases_healthy[rand_index_healthy]}, Patho subject: {cases_healthy[rand_index_healthy]}")
+        print(f"\nHealthy subject: {cases_healthy[rand_index_healthy]}, Patho subject: {cases_patho[rand_index_healthy]}")
 
         sub_patho = cases_patho[rand_index_patho]
         sub_healthy = cases_healthy[rand_index_healthy]
