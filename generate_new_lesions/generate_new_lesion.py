@@ -159,6 +159,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print("Warning: image_patho and label_patho have different shapes --> skipping subject")
         return
 
+    """
+    Get intensity ratio between healthy and pathological SC and normalize images
+    """
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
     intensity_ratio = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
                       coefficient_of_variation(im_patho_data[im_patho_sc_data > 0])
@@ -170,6 +173,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_healthy_data = (im_healthy_data - np.min(im_healthy_data)) / (np.max(im_healthy_data) - np.min(im_healthy_data))
     im_patho_data = (im_patho_data - np.min(im_patho_data)) / (np.max(im_patho_data) - np.min(im_patho_data))
 
+    """
+    Main logic - copy lesion from pathological image to healthy image
+    """
     # Initialize Image instances for the new target and lesion
     new_target = zeros_like(im_healthy)
     new_lesion = zeros_like(im_healthy)
@@ -233,7 +239,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     s = str(index)
     s = s.zfill(3)
 
-    # Save new_target and new_label
+    """
+    Save new_target and new_lesion
+    """
     subject_name_out = sub_healthy.split('_')[0] + '_' + \
                        sub_patho.split('_')[0] + '_' + \
                        sub_patho.split('_')[1] + '_' + s
