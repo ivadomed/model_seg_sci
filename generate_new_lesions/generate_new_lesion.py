@@ -116,6 +116,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Reorient to RPI
     im_healthy.change_orientation("RPI")
     im_healthy_sc.change_orientation("RPI")
+    print("Reoriented to RPI")
 
     # Get numpy arrays
     im_healthy_data = im_healthy.data
@@ -146,6 +147,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_patho.change_orientation("RPI")
     im_patho_sc.change_orientation("RPI")
     im_patho_lesion.change_orientation("RPI")
+    print("Reoriented to RPI")
 
     # Get numpy arrays
     im_patho_data = im_patho.data
