@@ -53,6 +53,20 @@ def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
 
 
+def get_centerline(im_healthy_sc_data):
+    # Get centerline of the healthy SC
+    # for each slice in the mask_sc, get the center coordinate of the z-axis
+    num_z_slices = im_healthy_sc_data.shape[2]
+    healthy_centerline = list()
+    for z in range(num_z_slices):
+        x, y = ndimage.center_of_mass(im_healthy_sc_data[:, :, z])
+        # check if not nan (because spinal cord mask covers only spinal cord, not the whole image and all slices)
+        if not np.isnan(x) and not np.isnan(y):
+            healthy_centerline.append((round(x), round(y), z))
+
+    return healthy_centerline
+
+
 def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, im_healthy_sc_data, coords,
                   new_position, intensity_ratio):
     """"
@@ -143,16 +157,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print("Warning: image_patho and label_patho have different shapes --> skipping subject")
         return
 
-    # Get centerline of the healthy SC
-    # for each slice in the mask_sc, get the center coordinate of the z-axis
-    num_z_slices = im_healthy_sc_data.shape[2]
-    healthy_centerline = list()
-    for z in range(num_z_slices):
-        x, y = ndimage.center_of_mass(im_healthy_sc_data[:, :, z])
-        # check if not nan (because spinal cord mask covers only spinal cord, not the whole image and all slices)
-        if not np.isnan(x) and not np.isnan(y):
-            healthy_centerline.append((round(x), round(y), z))
-
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
     intensity_ratio = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
                       coefficient_of_variation(im_patho_data[im_patho_sc_data > 0])
@@ -180,6 +184,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
     coords = np.argwhere(im_patho_lesion_data > 0)
 
+    # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
+    healthy_centerline = get_centerline(im_healthy_sc_data)
     # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
     healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.1):
                                                     round(len(healthy_centerline)*0.9)]
