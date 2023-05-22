@@ -14,19 +14,15 @@ TODO: switch to BIDS?
 import sys
 import time
 import numpy as np
-import SimpleITK as sitk
-import nibabel as nib
 from scipy import ndimage
 from tqdm import tqdm
 import argparse
 import os
 
-from spinalcordtoolbox.image import Image
+from spinalcordtoolbox.image import Image, zeros_like
+from spinalcordtoolbox.resampling import resample_nib
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
-
-# TODO: Consider moving the script to SCT --> use RPI reorientation function, potentially use angle correction to
-#  rotate lesions along the SC, and eventually also SCT QC function to check if the generated lesions
 
 
 def get_parser():
@@ -53,53 +49,25 @@ def get_parser():
     return parser
 
 
-def get_head(img_path):
-    temp = sitk.ReadImage(img_path)
-    spacing = temp.GetSpacing()
-    direction = temp.GetDirection()
-    origin = temp.GetOrigin()
-
-    return spacing, direction, origin
-
-
-def copy_head_and_right_xyz(data, spacing, direction, origin):
-    TrainData_new = data.astype('float32')
-    TrainData_new = TrainData_new.transpose(2, 1, 0)
-    TrainData_new = sitk.GetImageFromArray(TrainData_new)
-    TrainData_new.SetSpacing(spacing)
-    TrainData_new.SetOrigin(origin)
-    TrainData_new.SetDirection(direction)
-
-    return TrainData_new
-
-
-def resample_volume(volume, new_spacing, interpolator=sitk.sitkLinear):
-    """
-    Resample volume to new spacing. Taken from:
-    https://discourse.itk.org/t/resample-volume-to-specific-voxel-spacing-simpleitk/3531/2
-    :param volume: volume to be resampled
-    :param new_spacing: new spacing
-    :param interpolator:
-    :return:
-    """
-    # volume = sitk.ReadImage(volume_path, sitk.sitkFloat32) # read and cast to float32
-    original_spacing = volume.GetSpacing()
-    original_size = volume.GetSize()
-    new_size = [int(round(osz*ospc/nspc)) for osz, ospc, nspc in zip(original_size, original_spacing, new_spacing)]
-    return sitk.Resample(volume, new_size, sitk.Transform(), interpolator,
-                         volume.GetOrigin(), new_spacing, volume.GetDirection(), 0,
-                         volume.GetPixelID())
-
-
 def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
 
 
-def insert_lesion(new_target, new_label, image_patho, label_patho, mask_sc, x0, x1, y0, y1, z0, z1, x, y, z,
-                  intensity_ratio):
+def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, im_healthy_sc_data, coords,
+                  new_position, intensity_ratio):
     """"
     Insert lesion from the bounding box to the new_target
     """
+    # Get bounding box coordinates
+    x0, y0, z0 = coords.min(axis=0)
+    x1, y1, z1 = coords.max(axis=0) + 1  # slices are exclusive at the top
+
+    # Get coordinates where to insert the lesion
+    x, y, z = new_position
+
+    # TODO - take angle of the centerline into account when projecting the lesion
+    # TODO for Nathan - rewrite this without 3 loops
+
     for x_step, x_cor in enumerate(range(x0, x1)):
         for y_step, y_cor in enumerate(range(y0, y1)):
             for z_step, z_cor in enumerate(range(z0, z1)):
@@ -108,89 +76,113 @@ def insert_lesion(new_target, new_label, image_patho, label_patho, mask_sc, x0, 
                     continue
                 # Insert only voxels corresponding to the lesion mask (label_b)
                 # Also make sure that the new lesion is not projected outside of the SC
-                if label_patho[x_cor, y_cor, z_cor] > 0 and mask_sc[x + x_step, y + y_step, z + z_step] > 0:
-                    new_target[x + x_step, y + y_step, z + z_step] = image_patho[x_cor, y_cor, z_cor] * intensity_ratio
-                    new_label[x + x_step, y + y_step, z + z_step] = label_patho[x_cor, y_cor, z_cor]
+                if im_patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
+                    new_target[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio
+                    new_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
 
-    return new_target, new_label
+    return new_target, new_lesion
 
 
 def generate_new_sample(sub_healthy, sub_patho, args, index):
 
+    """
+    Load healthy subject image and spinal cord segmentation
+    """
     # Construct paths
     path_image_healthy = os.path.join(args.dir_healthy, sub_healthy + '_0000.nii.gz')
     path_mask_sc_healthy = os.path.join(args.dir_masks_healthy, sub_healthy + '.nii.gz')
 
+    # Load image_healthy and mask_sc
+    im_healthy = Image(path_image_healthy)
+    im_healthy_sc = Image(path_mask_sc_healthy)
+
+    im_healthy_orientation_native = im_healthy.orientation
+    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native, im_healthy.dim[4:7]}")
+
+    # Reorient to RPI
+    im_healthy.change_orientation("RPI")
+    im_healthy_sc.change_orientation("RPI")
+
+    # Get numpy arrays
+    im_healthy_data = im_healthy.data
+    im_healthy_sc_data = im_healthy_sc.data
+
+    # Check if image and spinal cord mask have the same shape, if not, skip this subject
+    if im_healthy_data.shape != im_healthy_sc_data.shape:
+        print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
+        return
+
+    """
+    Load pathological subject image, spinal cord segmentation, and lesion mask
+    """
+    # Construct paths
     path_image_patho = os.path.join(args.dir_pathology, sub_patho + '_0000.nii.gz')
     path_label_patho = os.path.join(args.dir_lesions, sub_patho + '.nii.gz')
     path_mask_sc_patho = os.path.join(args.dir_masks_pathology, sub_patho + '.nii.gz')
 
-    # Load image_healthy and mask_sc
-    image_healthy_orig_orientation = Image(path_image_healthy).orientation
-    print("image_healthy_orig_orientation: ", image_healthy_orig_orientation)
-    image_healthy = Image(path_image_healthy).change_orientation("RPI").data
-    mask_sc = Image(path_mask_sc_healthy).change_orientation("RPI").data
-
-    # Check if image_healthy and mask_sc have the same shape, if not, skip this subject
-    if image_healthy.shape != mask_sc.shape:
-        print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
-        return
-
     # Load image_patho, label_patho, and mask_sc_patho
-    image_patho_orig_orientation = Image(path_image_patho).orientation
-    print("image_patho_orig_orientation: ", image_patho_orig_orientation)
-    image_patho = Image(path_image_patho).change_orientation("RPI").data
-    label_patho = Image(path_label_patho).change_orientation("RPI").data
-    mask_sc_patho = Image(path_mask_sc_patho).change_orientation("RPI").data
+    im_patho = Image(path_image_patho)
+    im_patho_sc = Image(path_mask_sc_patho)
+    im_patho_lesion = Image(path_label_patho)
 
-    # Check if image_patho and label_patho have the same shape, if not, skip this subject
-    if image_patho.shape != mask_sc_patho.shape:
+    im_patho_orientation_native = im_patho.orientation
+    print(f"Pathological subject {path_image_patho}: {im_patho_orientation_native, im_patho.dim[4:7]}")
+
+    # Reorient to RPI
+    im_patho.change_orientation("RPI")
+    im_patho_sc.change_orientation("RPI")
+    im_patho_lesion.change_orientation("RPI")
+
+    # Get numpy arrays
+    im_patho_data = im_patho.data
+    im_patho_sc_data = im_patho_sc.data
+    im_patho_lesion_data = im_patho_lesion.data
+
+    # Check if image and spinal cord mask have the same shape, if not, skip this subject
+    if im_patho_data.shape != im_patho_sc_data.shape:
         print("Warning: image_patho and label_patho have different shapes --> skipping subject")
         return
 
-    # get the header of the healthy image
-    spacing_healthy, direction_healthy, origin_healthy = get_head(path_image_healthy)
-    # get the header of the patho image
-    spacing_patho, direction_patho, origin_patho = get_head(path_image_patho)
-
     # Get centerline of the healthy SC
     # for each slice in the mask_sc, get the center coordinate of the z-axis
-    num_z_slices = mask_sc.shape[2]
-    centerline = list()
+    num_z_slices = im_healthy_sc_data.shape[2]
+    healthy_centerline = list()
     for z in range(num_z_slices):
-        x, y = ndimage.center_of_mass(mask_sc[:, :, z])
-        # check if not nan
+        x, y = ndimage.center_of_mass(im_healthy_sc_data[:, :, z])
+        # check if not nan (because spinal cord mask covers only spinal cord, not the whole image and all slices)
         if not np.isnan(x) and not np.isnan(y):
-            centerline.append((round(x), round(y), z))
+            healthy_centerline.append((round(x), round(y), z))
 
     # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
-    intensity_ratio = coefficient_of_variation(image_healthy[mask_sc > 0]) / \
-                      coefficient_of_variation(image_patho[mask_sc_patho > 0])
+    intensity_ratio = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
+                      coefficient_of_variation(im_patho_data[im_patho_sc_data > 0])
     # Make sure the intensity ratio is always > 1 (i.e. the lesion is always brighter than the healthy SC)
     if intensity_ratio < 1:
         intensity_ratio = 1 / intensity_ratio
 
     # normalize images to range 0 and 1
-    image_healthy = (image_healthy - np.min(image_healthy)) / (np.max(image_healthy) - np.min(image_healthy))
-    image_patho = (image_patho - np.min(image_patho)) / (np.max(image_patho) - np.min(image_patho))
+    im_healthy_data = (im_healthy_data - np.min(im_healthy_data)) / (np.max(im_healthy_data) - np.min(im_healthy_data))
+    im_patho_data = (im_patho_data - np.min(im_patho_data)) / (np.max(im_patho_data) - np.min(im_patho_data))
 
-    # Initialize new_target and new_label with the same shape as target_a
-    new_target = np.copy(image_healthy)
-    new_label = np.zeros_like(mask_sc)  # because we're creating a new label
+    # Initialize Image instances for the new target and lesion
+    new_target = zeros_like(im_healthy)
+    new_lesion = zeros_like(im_healthy)
+    # Initialize numpy arrays with the same shape as the healthy image
+    new_target_data = np.copy(im_healthy_data)
+    new_lesion_data = np.zeros_like(im_healthy_data)
 
-    # Check if label_patho has non-zero pixels (ie. there is no lesion in the image)
-    if np.count_nonzero(label_patho) == 0:
-        print(f"Warning: {label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject")
+    # Check if label_patho has non-zero pixels (i.e., there is no lesion). If so, skip this subject because there is
+    # nothing to copy from the pathological image
+    if np.count_nonzero(im_patho_lesion_data) == 0:
+        print(f"Warning: {path_label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject")
         return
-    # TODO: create an empty lession mask in such case?
 
-    # Create 3D bounding box around non-zero pixels in label_patho
-    coords = np.argwhere(label_patho > 0)
-    x0, y0, z0 = coords.min(axis=0)
-    x1, y1, z1 = coords.max(axis=0) + 1  # slices are exclusive at the top
+    # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
+    coords = np.argwhere(im_patho_lesion_data > 0)
 
-    # make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    centerline_cropped = centerline[round(len(centerline)*0.1):round(len(centerline)*0.9)]
+    # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
+    healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.1):
+                                                    round(len(healthy_centerline)*0.9)]
 
     # Select random coordinate on the centerline
     # index is used to have different seed for every subject to have different lesion positions across different
@@ -199,30 +191,35 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     while True:
         # New position for the lesion
-        x, y, z = centerline_cropped[rng.integers(0, len(centerline_cropped) - 1)]
-        print(f"Trying to insert lesion at ({x}, {y}, {z})")
-
-        # TODO - take angle of the centerline into account when projecting the lesion
-        # TODO for Nathan - rewrite this without 3 loops
+        new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
+#        x, y, z = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
+        print(f"Trying to insert lesion at {new_position}")
 
         # Insert lesion from the bounding box to the new_target
-        new_target, new_label = insert_lesion(new_target, new_label, image_patho, label_patho, mask_sc, x0, x1, y0, y1,
-                                              z0, z1, x, y, z, intensity_ratio)
+        new_target_data, new_lesion_data = insert_lesion(new_target_data, new_lesion_data, im_patho_data,
+                                                         im_patho_lesion_data, im_healthy_sc_data, coords, new_position,
+                                                         intensity_ratio)
 
-        # Check if new_label contains lesion (i.e., non-zero pixels)
-        if np.count_nonzero(new_label) > 0:
-            print(f"Lesion inserted at ({x}, {y}, {z})")
+        # Check if lesion was inserted, i.e., new_lesion contains non-zero pixels
+        if np.count_nonzero(new_lesion) > 0:
+            print(f"Lesion inserted at {new_position}")
             break
 
-    # Copy header information from target_a to new_target and new_label
-    new_target = copy_head_and_right_xyz(new_target, spacing_healthy, direction_healthy, origin_healthy)
-    new_label = copy_head_and_right_xyz(new_label, spacing_healthy, direction_healthy, origin_healthy)
+    # Insert newly created target and lesion into Image instances
+    new_target.data = new_target_data
+    new_lesion.data = new_lesion_data
 
     if args.resample:
-        # Resample new_target and new_label to the spacing of pathology subject
-        print('Resampling new_target and new_label to the spacing of pathology subject')
-        new_target = resample_volume(new_target, new_spacing=spacing_patho)
-        new_label = resample_volume(new_label, new_spacing=spacing_patho)
+        # Resample new_target and new_lesion to the spacing of pathology subject
+        print('Resampling new_target and new_lesion to the spacing of pathology subject')
+
+        print(f'Before resampling: {new_target.dim[4:7]}')
+
+        # Resample
+        new_target = resample_nib(new_target, image_dest=im_patho, interpolation='linear')
+        new_lesion = resample_nib(new_lesion, image_dest=im_patho, interpolation='linear')
+
+        print(f'After resampling: {new_target.dim[4:7]}')
 
     # Convert i to string and add 3 leading zeros
     s = str(index)
@@ -232,10 +229,14 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     subject_name_out = sub_healthy.split('_')[0] + '_' + \
                        sub_patho.split('_')[0] + '_' + \
                        sub_patho.split('_')[1] + '_' + s
-    sitk.WriteImage(new_target, os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz'))
-    print('Saving new sample: ', os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz'))
-    sitk.WriteImage(new_label, os.path.join(args.dir_save, subject_name_out + '.nii.gz'))
-    print('Saving new sample: ', os.path.join(args.dir_save, subject_name_out + '.nii.gz'))
+
+    new_target_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
+    new_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
+
+    new_target.save(new_target_path)
+    print(f'Saving {new_target_path}; {new_target.orientation, new_target.dim[4:7]}')
+    new_lesion.save(new_lesion_path)
+    print(f'Saving {new_lesion_path}; {new_lesion.orientation, new_lesion.dim[4:7]}')
     print('')
 
 
@@ -301,6 +302,9 @@ def main():
         sub_healthy = cases_healthy[rand_index_healthy]
 
         generate_new_sample(sub_healthy=sub_healthy, sub_patho=sub_patho, args=args, index=i)
+
+        # wait 0.1 seconds to avoid print overlapping with tqdm progress bar
+        time.sleep(0.1)
 
 
 if __name__ == '__main__':
