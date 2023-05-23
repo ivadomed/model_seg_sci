@@ -168,7 +168,7 @@ def main():
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
 
                 # binarize the label file
-                #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
                     subject_mask_file = os.path.join(subject_labels_path,
@@ -216,7 +216,7 @@ def main():
                 # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                 # binarize the label file
-                #binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
                 if args.include_masks_folders:
                     subject_mask_file = os.path.join(subject_labels_path,
