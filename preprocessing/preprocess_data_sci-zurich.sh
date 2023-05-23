@@ -107,10 +107,15 @@ fi
 # Dilate spinal cord mask
 sct_maths -i ${file_seg}.nii.gz -dilate 5 -shape ball -o ${file_seg}_dilate.nii.gz
 
+# TODO -  increase dilate to 10?
+
 # Use dilated mask to crop the original image
 sct_crop_image -i ${file}.nii.gz -m ${file_seg}_dilate.nii.gz -o ${file}_crop.nii.gz
 # Resample the cropped image to 0.75mm isotropic
 sct_resample -i ${file}_crop.nii.gz -mm 0.75x0.75x0.75 -o ${file}_crop_r.nii.gz
+
+# TODO - swap resampling and cropping?
+
 
 # Go to subject folder for segmentation GTs
 cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
