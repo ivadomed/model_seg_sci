@@ -169,7 +169,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     lesion_sc_diff = abs((np.mean(im_patho_data[im_patho_lesion_data > 0]) -
                          np.mean(im_patho_data[im_patho_sc_data > 0])) / np.mean(im_patho_data[im_patho_sc_data > 0]))
 
-    print(f"Lesion/SC intensity difference (higher mean that the lesion is more hyperintense): {lesion_sc_diff}")
+    print(f"Lesion/SC intensity difference (higher value means that the lesion is more hyperintense): {lesion_sc_diff}")
 
     # Second, get ratio healthy/patho SC
     intensity_ratio = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
