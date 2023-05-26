@@ -261,6 +261,14 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
+    # Expand user (i.e. ~) in paths
+    args.dir_healthy = os.path.expanduser(args.dir_healthy)
+    args.dir_masks_healthy = os.path.expanduser(args.dir_masks_healthy)
+    args.dir_pathology = os.path.expanduser(args.dir_pathology)
+    args.dir_lesions = os.path.expanduser(args.dir_lesions)
+    args.dir_masks_pathology = os.path.expanduser(args.dir_masks_pathology)
+    args.dir_save = os.path.expanduser(args.dir_save)
+
     # if not os.path.exists(args.mask_check_path):
     #     os.makedirs(args.mask_check_path, exist_ok=True)
 
