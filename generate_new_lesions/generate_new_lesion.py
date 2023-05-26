@@ -41,8 +41,9 @@ def get_parser():
     parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
     parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
-    parser.add_argument("-resample", default=False, type=bool, help="Resample the augmented images to the resolution "
-                                                                    "of pathological dataset. Default: False")
+    parser.add_argument("-resample", default=False, action='store_true', help="Resample the augmented images to the "
+                                                                              "resolution of pathological dataset. "
+                                                                              "Default: False")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
@@ -225,13 +226,17 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     if args.resample:
         # Resample new_target and new_lesion to the spacing of pathology subject
-        print('Resampling new_target and new_lesion to the spacing of pathology subject')
+        print(f'Resampling new_target and new_lesion to the spacing of pathology subject ({path_image_patho}).')
 
         print(f'Before resampling: {new_target.dim[4:7]}')
 
+        # Fetch voxel size of pathology subject (will be used for resampling)
+        # Note: get_zooms() is nibabel function that returns voxel size in mm (same as SCT's im_patho.dim[4:7])
+        im_patho_voxel_size = im_patho.header.get_zooms()
+
         # Resample
-        new_target = resample_nib(new_target, image_dest=im_patho, interpolation='linear')
-        new_lesion = resample_nib(new_lesion, image_dest=im_patho, interpolation='linear')
+        new_target = resample_nib(new_target, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
 
         print(f'After resampling: {new_target.dim[4:7]}')
 
