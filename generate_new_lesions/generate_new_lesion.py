@@ -161,14 +161,28 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         return
 
     """
-    Get intensity ratio between healthy and pathological SC and normalize images
+    Get intensity ratio between healthy and pathological SC and normalize images.
+    The ratio is used to multiply the lesion in the healthy image.
     """
-    # Get intensity ratio healthy/patho SC. This ratio is used to multiply the lesion in the healthy image
+
+    # First, compute the difference in mean intensity between lesion and SC in the pathological image
+    lesion_sc_diff = abs((np.mean(im_patho_data[im_patho_lesion_data > 0]) -
+                         np.mean(im_patho_data[im_patho_sc_data > 0])) / np.mean(im_patho_data[im_patho_sc_data > 0]))
+
+    print(f"Lesion/SC intensity difference (higher mean that the lesion is more hyperintense): {lesion_sc_diff}")
+
+    # Second, get ratio healthy/patho SC
     intensity_ratio = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
                       coefficient_of_variation(im_patho_data[im_patho_sc_data > 0])
+
+    # Finally, take into account the difference in intensity between lesion and patho SC
+    intensity_ratio = intensity_ratio * lesion_sc_diff
+
     # Make sure the intensity ratio is always > 1 (i.e. the lesion is always brighter than the healthy SC)
     if intensity_ratio < 1:
         intensity_ratio = 1 / intensity_ratio
+
+    print(f"Intensity ratio: {intensity_ratio}")
 
     # normalize images to range 0 and 1
     im_healthy_data = (im_healthy_data - np.min(im_healthy_data)) / (np.max(im_healthy_data) - np.min(im_healthy_data))
