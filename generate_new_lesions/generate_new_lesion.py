@@ -157,7 +157,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
     if im_patho_data.shape != im_patho_sc_data.shape:
-        print("Warning: image_patho and label_patho have different shapes --> skipping subject")
+        print("Warning: image_patho and label_patho have different shapes --> skipping subject\n")
         return
 
     """
@@ -206,7 +206,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Check if label_patho has non-zero pixels (i.e., there is no lesion). If so, skip this subject because there is
     # nothing to copy from the pathological image
     if np.count_nonzero(im_patho_lesion_data) == 0:
-        print(f"Warning: {path_label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject")
+        print(f"Warning: {path_label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject\n")
         return
 
     # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
