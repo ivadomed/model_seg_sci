@@ -41,9 +41,9 @@ def get_parser():
     parser.add_argument("-dir-save", default="labelsTr", type=str,
                         help="Path to save new lesion samples")
     parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
-    parser.add_argument("-resample", default=False, action='store_true', help="Resample the augmented images to the "
-                                                                              "resolution of pathological dataset. "
-                                                                              "Default: False")
+    parser.add_argument("-resample", default=False, action='store_true',
+                        help="Resample the augmented images to the resolution of pathological dataset. Default: False")
+    parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
@@ -282,6 +282,17 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_sc.save(new_sc_path)
     print(f'Saving {new_sc_path}; {new_sc.orientation, new_sc.dim[4:7]}')
     print('')
+
+    # Generate QC
+    if args.qc:
+        # Binarize new_lesion (sct_qc supports only binary masks)
+        new_lesion_bin_path = new_lesion_path.replace('.nii.gz', '_bin.nii.gz')
+        os.system(f'sct_maths -i {new_lesion_path} -bin 0 -o {new_lesion_bin_path}')
+        # Example: sct_qc -i t2.nii.gz -s t2_seg.nii.gz -d t2_lesion.nii.gz -p sct_deepseg_lesion -plane axial
+        os.system(f'sct_qc -i {new_target_path} -s {new_sc_path} -d {new_lesion_bin_path} -p sct_deepseg_lesion '
+                  f'-plane sagittal -qc {args.dir_save.replace("labelsTr", "qc")} -qc-subject {subject_name_out}')
+        # Remove binarized lesion
+        os.remove(new_lesion_bin_path)
 
 
 def main():
