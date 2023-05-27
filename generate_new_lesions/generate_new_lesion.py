@@ -198,6 +198,11 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_target_data = np.copy(im_healthy_data)
     new_lesion_data = np.zeros_like(im_healthy_data)
 
+    # Create a copy of the healthy SC mask. The mask will have the proper output name and will be saved under masksTr
+    # folder. The mask is useful for lesion QC (using sct_qc) or nnU-Net region-based training
+    # (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md)
+    new_sc = im_healthy_sc.copy()
+
     # Check if label_patho has non-zero pixels (i.e., there is no lesion). If so, skip this subject because there is
     # nothing to copy from the pathological image
     if np.count_nonzero(im_patho_lesion_data) == 0:
@@ -251,6 +256,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # Resample
         new_target = resample_nib(new_target, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
         new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
 
         print(f'After resampling: {new_target.dim[4:7]}')
 
@@ -267,11 +273,14 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     new_target_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
     new_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
+    new_sc_path = os.path.join(args.dir_masks_healthy, subject_name_out + '.nii.gz')
 
     new_target.save(new_target_path)
     print(f'Saving {new_target_path}; {new_target.orientation, new_target.dim[4:7]}')
     new_lesion.save(new_lesion_path)
     print(f'Saving {new_lesion_path}; {new_lesion.orientation, new_lesion.dim[4:7]}')
+    new_sc.save(new_sc_path)
+    print(f'Saving {new_sc_path}; {new_sc.orientation, new_sc.dim[4:7]}')
     print('')
 
 
