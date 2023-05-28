@@ -140,7 +140,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
     if im_healthy_data.shape != im_healthy_sc_data.shape:
         print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
-        return
+        return False
 
     """
     Load pathological subject image, spinal cord segmentation, and lesion mask
@@ -223,12 +223,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md)
     new_sc = im_healthy_sc.copy()
 
-    # Check if label_patho has non-zero pixels (i.e., there is no lesion). If so, skip this subject because there is
-    # nothing to copy from the pathological image
-    if np.count_nonzero(im_patho_lesion_data) == 0:
-        print(f"Warning: {path_label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject\n")
-        return False
-
     # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
     coords = np.argwhere(im_patho_lesion_data > 0)
 
@@ -281,8 +275,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print(f'After resampling: {new_target.dim[4:7]}')
 
     # Convert i to string and add 3 leading zeros
-    s = str(index)
-    s = s.zfill(3)
+    s = str(index).zfill(3)
 
     """
     Save new_target and new_lesion
