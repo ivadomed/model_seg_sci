@@ -44,6 +44,8 @@ def get_parser():
     parser.add_argument("-resample", default=False, action='store_true',
                         help="Resample the augmented images to the resolution of pathological dataset. Default: False")
     parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
+    parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=0.1, type=float,
+                        help="Minimum lesion volume in mm^3. Default: 0.1")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
@@ -66,6 +68,18 @@ def get_centerline(im_healthy_sc_data):
             healthy_centerline.append((round(x), round(y), z))
 
     return healthy_centerline
+
+
+def get_lesion_volume(im_patho_lesion_data, voxel_dims):
+    # Compute volume
+    nonzero_voxel_count = np.count_nonzero(im_patho_lesion_data)
+    voxel_volume = np.prod(voxel_dims)
+    nonzero_voxel_volume = nonzero_voxel_count * voxel_volume
+
+    # print("Number of non-zero voxels = {}".format(nonzero_voxel_count))
+    print(f"Volume of non-zero voxels = {nonzero_voxel_volume:.2f} mm^3")
+
+    return nonzero_voxel_volume
 
 
 def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, im_healthy_sc_data, coords,
@@ -160,11 +174,18 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print("Warning: image_patho and label_patho have different shapes --> skipping subject\n")
         return
 
+    # Check if lesion volume is less than X mm^3, if yes, skip this subject
+    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7])
+    # TODO: set min_lesion_volume to 400 (?)
+    if im_patho_lesion_vol < args.min_lesion_volume:
+        print("Warning: lesion volume is too small --> skipping subject\n")
+        return
+
+    
     """
     Get intensity ratio between healthy and pathological SC and normalize images.
     The ratio is used to multiply the lesion in the healthy image.
     """
-
     # First, compute the difference in mean intensity between lesion and SC in the pathological image
     lesion_sc_diff = abs((np.mean(im_patho_data[im_patho_lesion_data > 0]) -
                          np.mean(im_patho_data[im_patho_sc_data > 0])) / np.mean(im_patho_data[im_patho_sc_data > 0]))
@@ -226,7 +247,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     while True:
         # New position for the lesion
         new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
-#        x, y, z = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
+        # x, y, z = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
         print(f"Trying to insert lesion at {new_position}")
 
         # Insert lesion from the bounding box to the new_target
