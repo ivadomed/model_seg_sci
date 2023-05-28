@@ -172,16 +172,15 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
     if im_patho_data.shape != im_patho_sc_data.shape:
         print("Warning: image_patho and label_patho have different shapes --> skipping subject\n")
-        return
+        return False
 
     # Check if lesion volume is less than X mm^3, if yes, skip this subject
     im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7])
     # TODO: set min_lesion_volume to 400 (?)
     if im_patho_lesion_vol < args.min_lesion_volume:
         print("Warning: lesion volume is too small --> skipping subject\n")
-        return
+        return False
 
-    
     """
     Get intensity ratio between healthy and pathological SC and normalize images.
     The ratio is used to multiply the lesion in the healthy image.
@@ -228,7 +227,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # nothing to copy from the pathological image
     if np.count_nonzero(im_patho_lesion_data) == 0:
         print(f"Warning: {path_label_patho} has no non-zero pixels (i.e. no lesion) --> skipping subject\n")
-        return
+        return False
 
     # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
     coords = np.argwhere(im_patho_lesion_data > 0)
@@ -315,6 +314,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # Remove binarized lesion
         os.remove(new_lesion_bin_path)
 
+    return True
+
 
 def main():
     # Parse the command line arguments
@@ -362,19 +363,25 @@ def main():
     print("Random seed: ", args.seed)
     rng = np.random.default_rng(args.seed)
     # Get random indices for pathology and healthy subjects
-    patho_random_list = rng.choice(len(cases_patho), args.num)
+    patho_random_list = rng.choice(len(cases_patho), args.num*2) # *2 because we need same number of patho and healthy
     healthy_random_list = rng.choice(len(cases_healthy), args.num, replace=False)
+
+    # Duplicate healthy list (we need more subjects because some pair might be skipped, for example due to no lesion)
+    healthy_random_list = np.tile(healthy_random_list, 2)
+
     # Combine both lists
     rand_index = np.vstack((patho_random_list, healthy_random_list))
     # Keep only unique combinations (to avoid mixing the same subjects)
     rand_index = np.unique(rand_index, axis=1)
 
+    num_of_samples_generated = 0
+
     """
     Start generating new samples
     """
-    for i in tqdm(range(len(rand_index[0])), desc="mixing:"):
+    for i in range(len(rand_index[0])):
 
-        # wait 0.1 seconds to avoid print overlapping with tqdm progress bar
+        # wait 0.1 seconds to avoid print overlapping
         time.sleep(0.1)
 
         rand_index_patho = rand_index[0][i]
@@ -385,9 +392,18 @@ def main():
 
         print(f"\nHealthy subject: {sub_healthy}, Patho subject: {sub_patho}")
 
-        generate_new_sample(sub_healthy=sub_healthy, sub_patho=sub_patho, args=args, index=i)
+        # If augmentation is done successfully (True is returned), break the while loop and continue to the next
+        # sample
+        # If augmentation is not done successfully (False is returned), continue the while loop and try again
+        if generate_new_sample(sub_healthy=sub_healthy, sub_patho=sub_patho, args=args, index=i):
+            num_of_samples_generated += 1
+            print(f"Number of samples generated: {num_of_samples_generated}/{args.num}")
 
-        # wait 0.1 seconds to avoid print overlapping with tqdm progress bar
+        # If we have generated the required number of samples, break the for loop
+        if num_of_samples_generated == args.num:
+            break
+
+        # wait 0.1 seconds to avoid print overlapping
         time.sleep(0.1)
 
 
