@@ -44,8 +44,8 @@ def get_parser():
     parser.add_argument("-resample", default=False, action='store_true',
                         help="Resample the augmented images to the resolution of pathological dataset. Default: False")
     parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
-    parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=0.1, type=float,
-                        help="Minimum lesion volume in mm^3. Default: 0.1")
+    parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=400, type=float,
+                        help="Minimum lesion volume in mm^3. Default: 400")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
     #                     help="Path to save carved masks")
 
