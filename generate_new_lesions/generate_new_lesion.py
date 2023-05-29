@@ -105,10 +105,12 @@ def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, i
                 # Check that dimensions do not overflow
                 if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
                     continue
-                # Insert only voxels corresponding to the lesion mask (label_b)
+                # Insert only voxels corresponding to the lesion mask
                 # Also make sure that the new lesion is not projected outside of the SC
                 if im_patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
+                    # Lesion inserted into the target image
                     new_target[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio
+                    # Lesion mask
                     new_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
 
     return new_target, new_lesion
