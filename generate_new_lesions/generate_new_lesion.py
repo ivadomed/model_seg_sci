@@ -393,7 +393,9 @@ def main():
         # If augmentation is not done successfully (False is returned), continue the while loop and try again
         if generate_new_sample(sub_healthy=sub_healthy, sub_patho=sub_patho, args=args, index=i):
             num_of_samples_generated += 1
+            print('-' * 50)
             print(f"Number of samples generated: {num_of_samples_generated}/{args.num}")
+            print('-' * 50)
 
         # If we have generated the required number of samples, break the for loop
         if num_of_samples_generated == args.num:
