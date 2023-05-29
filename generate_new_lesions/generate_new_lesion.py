@@ -398,6 +398,8 @@ def main():
     rand_index = np.vstack((patho_random_list, healthy_random_list))
     # Keep only unique combinations (to avoid mixing the same subjects)
     rand_index = np.unique(rand_index, axis=1)
+    # np.unique sorts the array, so we need to shuffle it again
+    rng.shuffle(rand_index.T)
 
     num_of_samples_generated = 0
 
