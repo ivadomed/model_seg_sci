@@ -15,6 +15,7 @@ import sys
 import time
 import numpy as np
 from scipy import ndimage
+from skimage import measure
 from tqdm import tqdm
 import argparse
 import os
@@ -114,6 +115,24 @@ def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, i
                     new_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
 
     return new_target, new_lesion
+
+
+def keep_largest_component(new_lesion_data):
+    """
+    Keep only the largest connected component in the lesion mask
+    """
+    # Get connected components
+    labels = measure.label(new_lesion_data)
+    # Get number of connected components
+    num_components = labels.max()
+    # Get size of each connected component
+    component_sizes = np.bincount(labels.ravel())
+    # Get largest connected component
+    largest_component = np.argmax(component_sizes[1:]) + 1
+    # Keep only the largest connected component
+    new_lesion_data[labels != largest_component] = 0
+
+    return new_lesion_data
 
 
 def generate_new_sample(sub_healthy, sub_patho, args, index):
@@ -251,8 +270,18 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
                                                          im_patho_lesion_data, im_healthy_sc_data, coords, new_position,
                                                          intensity_ratio)
 
-        # Check if lesion was inserted, i.e., new_lesion contains non-zero pixels
-        if np.count_nonzero(new_lesion) > 0:
+        # Inserted lesion can be divided into several parts (due to the crop by the spinal cord mask and due to spinal
+        # cord curvature). In such case, keep only the largest part.
+        new_lesion_data = keep_largest_component(new_lesion_data)
+
+        # Insert back intensity values from the original healthy image everywhere where the lesion is zero. In other
+        # words, keep only the largest part of the lesion and replace the rest with the original healthy image.
+        new_target_data[new_lesion_data == 0] = im_healthy_data[new_lesion_data == 0]
+
+        # Check if inserted lesion is larger then min_lesion_volume
+        # Note: we are doing this check because the lesion can smaller due to crop by the spinal cord mask
+        lesion_vol = get_lesion_volume(new_lesion_data, new_lesion.dim[4:7], debug=True)
+        if lesion_vol > args.min_lesion_volume:
             print(f"Lesion inserted at {new_position}")
             break
 
