@@ -70,14 +70,16 @@ def get_centerline(im_healthy_sc_data):
     return healthy_centerline
 
 
-def get_lesion_volume(im_patho_lesion_data, voxel_dims):
+def get_lesion_volume(im_patho_lesion_data, voxel_dims, debug=False):
     # Compute volume
     nonzero_voxel_count = np.count_nonzero(im_patho_lesion_data)
     voxel_volume = np.prod(voxel_dims)
     nonzero_voxel_volume = nonzero_voxel_count * voxel_volume
 
-    # print("Number of non-zero voxels = {}".format(nonzero_voxel_count))
-    print(f"Volume of non-zero voxels = {nonzero_voxel_volume:.2f} mm^3")
+    if debug:
+        print("Voxel volume = {}".format(voxel_volume))
+        print("Number of non-zero voxels = {}".format(nonzero_voxel_count))
+        print(f"Volume of non-zero voxels = {nonzero_voxel_volume:.2f} mm^3")
 
     return nonzero_voxel_volume
 
@@ -175,8 +177,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         return False
 
     # Check if lesion volume is less than X mm^3, if yes, skip this subject
-    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7])
-    # TODO: set min_lesion_volume to 400 (?)
+    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7], debug=True)
     if im_patho_lesion_vol < args.min_lesion_volume:
         print("Warning: lesion volume is too small --> skipping subject\n")
         return False
