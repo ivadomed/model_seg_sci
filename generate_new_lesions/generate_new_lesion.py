@@ -305,6 +305,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         im_patho_voxel_size = im_patho.header.get_zooms()
 
         # Resample
+        # Note: we cannot use 'image_dest=' option because we do not want to introduce padding or cropping
         new_target = resample_nib(new_target, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
         new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
         new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
