@@ -11,14 +11,13 @@ Run:
 nnUNet data structure is required.
 TODO: switch to BIDS?
 """
+import os
 import sys
 import time
+import argparse
 import numpy as np
 from scipy import ndimage
 from skimage import measure
-from tqdm import tqdm
-import argparse
-import os
 
 from spinalcordtoolbox.image import Image, zeros_like
 from spinalcordtoolbox.resampling import resample_nib
