@@ -296,7 +296,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # Resample new_target and new_lesion to the spacing of pathology subject
         print(f'Resampling new_target and new_lesion to the spacing of pathology subject ({path_image_patho}).')
 
-        print(f'Before resampling: {new_target.dim[4:7]}')
+        print(f'Before resampling: {new_target.dim[0:3]}, {new_target.dim[4:7]}')
+        new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
+        print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
 
         # Fetch voxel size of pathology subject (will be used for resampling)
         # Note: get_zooms() is nibabel function that returns voxel size in mm (same as SCT's im_patho.dim[4:7])
@@ -307,7 +309,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
         new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
 
-        print(f'After resampling: {new_target.dim[4:7]}')
+        print(f'After resampling: {new_target.dim[0:3]}, {new_target.dim[4:7]}')
+        new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
+        print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
+        # TODO: lesion volume is not the same after resampling. And can be even zero!
 
     # Convert i to string and add 3 leading zeros
     s = str(index).zfill(3)
