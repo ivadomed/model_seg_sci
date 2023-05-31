@@ -74,11 +74,11 @@ def get_centerline(im_healthy_sc_data):
 def get_lesion_volume(im_patho_lesion_data, voxel_dims, debug=False):
     # Compute volume
     nonzero_voxel_count = np.count_nonzero(im_patho_lesion_data)
-    voxel_volume = np.prod(voxel_dims)
-    nonzero_voxel_volume = nonzero_voxel_count * voxel_volume
+    voxel_size = np.prod(voxel_dims)
+    nonzero_voxel_volume = nonzero_voxel_count * voxel_size
 
     if debug:
-        print("Voxel volume = {}".format(voxel_volume))
+        print("Voxel size = {}".format(voxel_size))
         print("Number of non-zero voxels = {}".format(nonzero_voxel_count))
         print(f"Volume of non-zero voxels = {nonzero_voxel_volume:.2f} mm^3")
 
