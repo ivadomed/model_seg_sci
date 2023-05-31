@@ -266,6 +266,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print(f"Trying to insert lesion at {new_position}")
 
         # Insert lesion from the bounding box to the new_target
+        # TODO: new_target and im_patho_lesion have different dimensions and resolution in this step!!!
+        #  The reason is because new_target was created from im_healthy
         new_target_data, new_lesion_data = insert_lesion(new_target_data, new_lesion_data, im_patho_data,
                                                          im_patho_lesion_data, im_healthy_sc_data, coords, new_position,
                                                          intensity_ratio)
