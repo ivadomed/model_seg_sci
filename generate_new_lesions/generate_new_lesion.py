@@ -284,6 +284,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         if lesion_vol > args.min_lesion_volume:
             print(f"Lesion inserted at {new_position}")
             break
+            # TODO: some subjects have no lesion. explore this!
 
     # Insert newly created target and lesion into Image instances
     new_target.data = new_target_data
