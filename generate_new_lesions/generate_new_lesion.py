@@ -148,7 +148,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_healthy_sc = Image(path_mask_sc_healthy)
 
     im_healthy_orientation_native = im_healthy.orientation
-    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native, im_healthy.dim[4:7]}")
+    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native}, {im_healthy.dim[0:3]}, {im_healthy.dim[4:7]}")
 
     # Reorient to RPI
     im_healthy.change_orientation("RPI")
@@ -178,7 +178,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_patho_lesion = Image(path_label_patho)
 
     im_patho_orientation_native = im_patho.orientation
-    print(f"Pathological subject {path_image_patho}: {im_patho_orientation_native, im_patho.dim[4:7]}")
+    print(f"Pathological subject {path_image_patho}: {im_patho_orientation_native}, {im_patho.dim[0:3]}, {im_patho.dim[4:7]}")
+    # TODO: consider reorienting back to native orientation
 
     # Reorient to RPI
     im_patho.change_orientation("RPI")
