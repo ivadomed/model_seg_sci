@@ -16,11 +16,11 @@ import sys
 import time
 import argparse
 import numpy as np
-from scipy import ndimage
-from skimage import measure
 
 from spinalcordtoolbox.image import Image, zeros_like
 from spinalcordtoolbox.resampling import resample_nib
+
+from utils import coefficient_of_variation, get_centerline, get_lesion_volume, keep_largest_component
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
@@ -52,42 +52,10 @@ def get_parser():
     return parser
 
 
-def coefficient_of_variation(masked_image):
-    return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
-
-
-def get_centerline(im_healthy_sc_data):
-    # Get centerline of the healthy SC
-    # for each slice in the mask_sc, get the center coordinate of the z-axis
-    num_z_slices = im_healthy_sc_data.shape[2]
-    healthy_centerline = list()
-    for z in range(num_z_slices):
-        x, y = ndimage.center_of_mass(im_healthy_sc_data[:, :, z])
-        # check if not nan (because spinal cord mask covers only spinal cord, not the whole image and all slices)
-        if not np.isnan(x) and not np.isnan(y):
-            healthy_centerline.append((round(x), round(y), z))
-
-    return healthy_centerline
-
-
-def get_lesion_volume(im_patho_lesion_data, voxel_dims, debug=False):
-    # Compute volume
-    nonzero_voxel_count = np.count_nonzero(im_patho_lesion_data)
-    voxel_size = np.prod(voxel_dims)
-    nonzero_voxel_volume = nonzero_voxel_count * voxel_size
-
-    if debug:
-        print("Voxel size = {}".format(voxel_size))
-        print("Number of non-zero voxels = {}".format(nonzero_voxel_count))
-        print(f"Volume of non-zero voxels = {nonzero_voxel_volume:.2f} mm^3")
-
-    return nonzero_voxel_volume
-
-
-def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, im_healthy_sc_data, coords,
+def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_lesion_data, im_healthy_sc_data, coords,
                   new_position, intensity_ratio):
     """"
-    Insert lesion from the bounding box to the new_target
+    Insert lesion from the bounding box to the im_augmented
     """
     # Get bounding box coordinates
     x0, y0, z0 = coords.min(axis=0)
@@ -103,66 +71,21 @@ def insert_lesion(new_target, new_lesion, im_patho_data, im_patho_lesion_data, i
         for y_step, y_cor in enumerate(range(y0, y1)):
             for z_step, z_cor in enumerate(range(z0, z1)):
                 # Check that dimensions do not overflow
-                if x + x_step >= new_target.shape[0] or y + y_step >= new_target.shape[1] or z + z_step >= new_target.shape[2]:
+                if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
                     continue
                 # Insert only voxels corresponding to the lesion mask
                 # Also make sure that the new lesion is not projected outside of the SC
                 if im_patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
                     # Lesion inserted into the target image
-                    new_target[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio
+                    im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio
                     # Lesion mask
-                    new_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
+                    im_augmented_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
 
-    return new_target, new_lesion
+    return im_augmented, im_augmented_lesion
 
-
-def keep_largest_component(new_lesion_data):
-    """
-    Keep only the largest connected component in the lesion mask
-    """
-    # Get connected components
-    labels = measure.label(new_lesion_data)
-    # Get number of connected components
-    num_components = labels.max()
-    # Get size of each connected component
-    component_sizes = np.bincount(labels.ravel())
-    # Get largest connected component
-    largest_component = np.argmax(component_sizes[1:]) + 1
-    # Keep only the largest connected component
-    new_lesion_data[labels != largest_component] = 0
-
-    return new_lesion_data
 
 
 def generate_new_sample(sub_healthy, sub_patho, args, index):
-
-    """
-    Load healthy subject image and spinal cord segmentation
-    """
-    # Construct paths
-    path_image_healthy = os.path.join(args.dir_healthy, sub_healthy + '_0000.nii.gz')
-    path_mask_sc_healthy = os.path.join(args.dir_masks_healthy, sub_healthy + '.nii.gz')
-
-    # Load image_healthy and mask_sc
-    im_healthy = Image(path_image_healthy)
-    im_healthy_sc = Image(path_mask_sc_healthy)
-
-    im_healthy_orientation_native = im_healthy.orientation
-    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native}, {im_healthy.dim[0:3]}, {im_healthy.dim[4:7]}")
-
-    # Reorient to RPI
-    im_healthy.change_orientation("RPI")
-    im_healthy_sc.change_orientation("RPI")
-    print("Reoriented to RPI")
-
-    # Get numpy arrays
-    im_healthy_data = im_healthy.data
-    im_healthy_sc_data = im_healthy_sc.data
-
-    # Check if image and spinal cord mask have the same shape, if not, skip this subject
-    if im_healthy_data.shape != im_healthy_sc_data.shape:
-        print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
-        return False
 
     """
     Load pathological subject image, spinal cord segmentation, and lesion mask
@@ -194,14 +117,73 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
     if im_patho_data.shape != im_patho_sc_data.shape:
-        print("Warning: image_patho and label_patho have different shapes --> skipping subject\n")
+        print("WARNING: image_patho and label_patho have different shapes --> skipping subject\n")
         return False
 
     # Check if lesion volume is less than X mm^3, if yes, skip this subject
-    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7], debug=True)
+    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7], debug=False)
     if im_patho_lesion_vol < args.min_lesion_volume:
-        print("Warning: lesion volume is too small --> skipping subject\n")
+        print("WARNING: lesion volume is too small --> skipping subject\n")
         return False
+
+
+    """
+    Load healthy subject image and spinal cord segmentation
+    """
+    # Construct paths
+    path_image_healthy = os.path.join(args.dir_healthy, sub_healthy + '_0000.nii.gz')
+    path_mask_sc_healthy = os.path.join(args.dir_masks_healthy, sub_healthy + '.nii.gz')
+
+    # Load image_healthy and mask_sc
+    im_healthy = Image(path_image_healthy)
+    im_healthy_sc = Image(path_mask_sc_healthy)
+
+    im_healthy_orientation_native = im_healthy.orientation
+    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native}, {im_healthy.dim[0:3]}, {im_healthy.dim[4:7]}")
+
+    # Reorient to RPI
+    im_healthy.change_orientation("RPI")
+    im_healthy_sc.change_orientation("RPI")
+    print("Reoriented to RPI")
+
+
+    """
+    Resample healthy subject image and spinal cord mask to the spacing of pathology subject
+    """
+    if args.resample:
+        # Resample healthy subject to the spacing of pathology subject
+        print(f'Resampling healthy subject image and SC mask to the spacing of pathology subject ({path_image_patho}).')
+
+        print(f'Before resampling - Image Shape: {im_healthy.dim[0:3]}, Image Resolution: {im_healthy.dim[4:7]}')
+        # new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
+        # print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
+
+        # Fetch voxel size of pathology subject (will be used for resampling)
+        # Note: get_zooms() is nibabel function that returns voxel size in mm (same as SCT's im_patho.dim[4:7])
+        im_patho_voxel_size = im_patho.header.get_zooms()
+
+        # Resample
+        # Note: we cannot use 'image_dest=' option because we do not want to introduce padding or cropping
+        im_healthy = resample_nib(im_healthy, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        # new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        im_healthy_sc = resample_nib(im_healthy_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        # new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+
+        print(f'After resampling - Image Shape: {im_healthy.dim[0:3]}, Image Resolution: {im_healthy.dim[4:7]}')
+        # print(f'After resampling - SC Shape: {im_healthy_sc.dim[0:3]}, SC Resolution: {im_healthy_sc.dim[4:7]}')
+        # new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
+        # print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
+        # TODO: lesion volume is not the same after resampling. And can be even zero!
+
+    # Get numpy arrays
+    im_healthy_data = im_healthy.data
+    im_healthy_sc_data = im_healthy_sc.data
+
+    # Check if image and spinal cord mask have the same shape, if not, skip this subject
+    if im_healthy_data.shape != im_healthy_sc_data.shape:
+        print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
+        return False
+
 
     """
     Get intensity ratio between healthy and pathological SC and normalize images.
@@ -230,15 +212,16 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_healthy_data = (im_healthy_data - np.min(im_healthy_data)) / (np.max(im_healthy_data) - np.min(im_healthy_data))
     im_patho_data = (im_patho_data - np.min(im_patho_data)) / (np.max(im_patho_data) - np.min(im_patho_data))
 
+
     """
     Main logic - copy lesion from pathological image to healthy image
     """
     # Initialize Image instances for the new target and lesion
-    new_target = zeros_like(im_healthy)
-    new_lesion = zeros_like(im_healthy)
+    im_augmented = zeros_like(im_healthy)
+    im_augmented_lesion = zeros_like(im_healthy)
     # Initialize numpy arrays with the same shape as the healthy image
-    new_target_data = np.copy(im_healthy_data)
-    new_lesion_data = np.zeros_like(im_healthy_data)
+    im_augmented_data = np.copy(im_healthy_data)
+    im_augmented_lesion_data = np.zeros_like(im_healthy_data)
 
     # Create a copy of the healthy SC mask. The mask will have the proper output name and will be saved under masksTr
     # folder. The mask is useful for lesion QC (using sct_qc) or nnU-Net region-based training
@@ -246,7 +229,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     new_sc = im_healthy_sc.copy()
 
     # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
-    coords = np.argwhere(im_patho_lesion_data > 0)
+    lesion_coords = np.argwhere(im_patho_lesion_data > 0)
 
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
     healthy_centerline = get_centerline(im_healthy_sc_data)
@@ -259,94 +242,87 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # subjects
     rng = np.random.default_rng(args.seed + index)
 
+    # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
+    # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
+    # is greater than args.min_lesion_volume
     while True:
         # New position for the lesion
         new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
         # x, y, z = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
         print(f"Trying to insert lesion at {new_position}")
 
-        # Insert lesion from the bounding box to the new_target
-        # TODO: new_target and im_patho_lesion have different dimensions and resolution in this step!!!
-        #  The reason is because new_target was created from im_healthy
-        new_target_data, new_lesion_data = insert_lesion(new_target_data, new_lesion_data, im_patho_data,
-                                                         im_patho_lesion_data, im_healthy_sc_data, coords, new_position,
-                                                         intensity_ratio)
+        # Insert lesion from the bounding box to the im_augmented
+        # TODO: im_augmented and im_patho_lesion have different dimensions and resolution in this step!!!
+        #  The reason is because im_augmented was created from im_healthy
+        im_augmented_data, im_augmented_lesion_data = insert_lesion(im_augmented_data, im_augmented_lesion_data, im_patho_data,
+                                                         im_patho_lesion_data, im_healthy_sc_data, lesion_coords, 
+                                                         new_position, intensity_ratio)
 
-        # Inserted lesion can be divided into several parts (due to the crop by the spinal cord mask and due to spinal
-        # cord curvature). In such case, keep only the largest part.
-        new_lesion_data = keep_largest_component(new_lesion_data)
+        # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and due to SC curvature).
+        # In such case, keep only the largest part.
+        # NOTE: im_augmented_lesion_data could still be empty if the coordinates of lesion bbox are overflowing out of healthy SC, 
+        # essentially never reaching the second if statement in insert_lesion() function. As a result, we get 
+        # "ValueError: attempt to get argmax of an empty sequence" error in keep_largest_component() function.
+        # So, check if im_augmented_lesion_data is empty and if so, try again (with a different position)
+        if not im_augmented_lesion_data.any():
+            print(f"Lesion inserted at {new_position} is empty. Trying again...")
+            continue
+        
+        im_augmented_lesion_data = keep_largest_component(im_augmented_lesion_data)
 
         # Insert back intensity values from the original healthy image everywhere where the lesion is zero. In other
         # words, keep only the largest part of the lesion and replace the rest with the original healthy image.
-        new_target_data[new_lesion_data == 0] = im_healthy_data[new_lesion_data == 0]
+        im_augmented_data[im_augmented_lesion_data == 0] = im_healthy_data[im_augmented_lesion_data == 0]
 
         # Check if inserted lesion is larger then min_lesion_volume
-        # Note: we are doing this check because the lesion can smaller due to crop by the spinal cord mask
-        lesion_vol = get_lesion_volume(new_lesion_data, new_lesion.dim[4:7], debug=True)
+        # NOTE: we are doing this check because the lesion can smaller due to crop by the spinal cord mask
+        lesion_vol = get_lesion_volume(im_augmented_lesion_data, im_augmented_lesion.dim[4:7], debug=False)
         if lesion_vol > args.min_lesion_volume:
             print(f"Lesion inserted at {new_position}")
             break
             # TODO: some subjects have no lesion. explore this!
 
     # Insert newly created target and lesion into Image instances
-    new_target.data = new_target_data
-    new_lesion.data = new_lesion_data
+    im_augmented.data = im_augmented_data
+    im_augmented_lesion.data = im_augmented_lesion_data
 
-    if args.resample:
-        # Resample new_target and new_lesion to the spacing of pathology subject
-        print(f'Resampling new_target and new_lesion to the spacing of pathology subject ({path_image_patho}).')
-
-        print(f'Before resampling: {new_target.dim[0:3]}, {new_target.dim[4:7]}')
-        new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
-        print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
-
-        # Fetch voxel size of pathology subject (will be used for resampling)
-        # Note: get_zooms() is nibabel function that returns voxel size in mm (same as SCT's im_patho.dim[4:7])
-        im_patho_voxel_size = im_patho.header.get_zooms()
-
-        # Resample
-        # Note: we cannot use 'image_dest=' option because we do not want to introduce padding or cropping
-        new_target = resample_nib(new_target, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
-        new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
-        new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
-
-        print(f'After resampling: {new_target.dim[0:3]}, {new_target.dim[4:7]}')
-        new_lesion_vol = get_lesion_volume(new_lesion.data, new_lesion.dim[4:7], debug=False)
-        print(f'Lesion volume before resampling: {new_lesion_vol} mm3')
-        # TODO: lesion volume is not the same after resampling. And can be even zero!
+    # Add a final check to ensure that the im_augmented_lesion is not empty
+    if np.sum(im_augmented_lesion.data) == 0:
+        print(f"WARNING: (augmented) im_augmented_lesion is empty. Check code again. Gracefully exiting....")
+        sys.exit(1)
 
     # Convert i to string and add 3 leading zeros
     s = str(index).zfill(3)
 
     """
-    Save new_target and new_lesion
+    Save im_augmented and im_augmented_lesion
     """
     subject_name_out = sub_healthy.split('_')[0] + '_' + \
                        sub_patho.split('_')[0] + '_' + \
                        sub_patho.split('_')[1] + '_' + s
 
-    new_target_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
-    new_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
+    im_augmented_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
+    im_augmented_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
     new_sc_path = os.path.join(args.dir_masks_healthy, subject_name_out + '.nii.gz')
 
-    new_target.save(new_target_path)
-    print(f'Saving {new_target_path}; {new_target.orientation, new_target.dim[4:7]}')
-    new_lesion.save(new_lesion_path)
-    print(f'Saving {new_lesion_path}; {new_lesion.orientation, new_lesion.dim[4:7]}')
+    im_augmented.save(im_augmented_path)
+    print(f'Saving {im_augmented_path}; {im_augmented.orientation, im_augmented.dim[4:7]}')
+    im_augmented_lesion.save(im_augmented_lesion_path)
+    print(f'Saving {im_augmented_lesion_path}; {im_augmented_lesion.orientation, im_augmented_lesion.dim[4:7]}')
     new_sc.save(new_sc_path)
     print(f'Saving {new_sc_path}; {new_sc.orientation, new_sc.dim[4:7]}')
     print('')
 
     # Generate QC
     if args.qc:
-        # Binarize new_lesion (sct_qc supports only binary masks)
-        new_lesion_bin_path = new_lesion_path.replace('.nii.gz', '_bin.nii.gz')
-        os.system(f'sct_maths -i {new_lesion_path} -bin 0 -o {new_lesion_bin_path}')
+        # Binarize im_augmented_lesion (sct_qc supports only binary masks)
+        im_augmented_lesion_bin_path = im_augmented_lesion_path.replace('.nii.gz', '_bin.nii.gz')
+        os.system(f'sct_maths -i {im_augmented_lesion_path} -bin 0 -o {im_augmented_lesion_bin_path}')
         # Example: sct_qc -i t2.nii.gz -s t2_seg.nii.gz -d t2_lesion.nii.gz -p sct_deepseg_lesion -plane axial
-        os.system(f'sct_qc -i {new_target_path} -s {new_sc_path} -d {new_lesion_bin_path} -p sct_deepseg_lesion '
+        os.system(f'sct_qc -i {im_augmented_path} -s {new_sc_path} -d {im_augmented_lesion_bin_path} -p sct_deepseg_lesion '
                   f'-plane sagittal -qc {args.dir_save.replace("labelsTr", "qc")} -qc-subject {subject_name_out}')
         # Remove binarized lesion
-        os.remove(new_lesion_bin_path)
+        os.remove(im_augmented_lesion_bin_path)
 
     return True
 
@@ -426,6 +402,10 @@ def main():
         sub_patho = cases_patho[rand_index_patho]
         sub_healthy = cases_healthy[rand_index_healthy]
 
+        # example subjects where augumentation was empty even within the while loop
+        # sub_patho = 'sub-zh21_ses-01_017'
+        # sub_healthy = 'sub-strasbourg03_192'
+
         print(f"\nHealthy subject: {sub_healthy}, Patho subject: {sub_patho}")
 
         # If augmentation is done successfully (True is returned), break the while loop and continue to the next
@@ -444,6 +424,7 @@ def main():
         # wait 0.1 seconds to avoid print overlapping
         time.sleep(0.1)
 
+    print("\nFinished generating new samples!")
 
 if __name__ == '__main__':
     main()
