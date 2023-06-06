@@ -234,7 +234,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
     healthy_centerline = get_centerline(im_healthy_sc_data)
     # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.1):
+    healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.2):
                                                     round(len(healthy_centerline)*0.9)]
 
     # Select random coordinate on the centerline
