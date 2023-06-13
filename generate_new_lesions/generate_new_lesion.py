@@ -25,13 +25,6 @@ from utils import coefficient_of_variation, get_centerline, get_lesion_volume, k
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
-# NOTE: Major changes for commit
-# 1. Removing lesion_sc_diff; using simple mean intensity instead
-# 2. Dilate lesion mask with 5x5 connetivity and use it to extract SC near the dilated lesion
-# 3. remove coefficient of variation and using mean ration of healthy and patho SC
-# 4. add function ensure_correct_intensity to augmented lesion/SC ratio is similar to patho lesion/SC ratio
-# 5. minor changes in variable names for clarity
-
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -60,8 +53,8 @@ def get_parser():
     return parser
 
 
-def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_lesion_data, 
-                  im_healthy_sc_data, coords, new_position, intensity_ratio_scs):
+def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_data, im_patho_lesion_data, 
+                  im_healthy_sc_data, coords, new_position, lesion_sc_ratio_patho):
     """"
     Insert lesion from the bounding box to the im_augmented
     """
@@ -86,17 +79,42 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_les
                 # Also make sure that the new lesion is not projected outside of the SC
                 if im_patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
                     # Lesion inserted into the target image
-                    im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio_scs   # original
+                    # im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio_scs   # original
 
-                    # # check whether the voxel intensity modified in im_augmented is at least as high as in im_augmented_copy
-                    # if im_augmented[x + x_step, y + y_step, z + z_step] < im_augmented_copy[x + x_step, y + y_step, z + z_step]:
-                    #     # if not, then increase the voxel intensity by adding (instead of replacing) the lesion intensity from patho subject
-                    #     im_augmented[x + x_step, y + y_step, z + z_step] = im_augmented_copy[x + x_step, y + y_step, z + z_step] + \
-                    #                                                          im_patho_data[x_cor, y_cor, z_cor] * intensity_ratio_scs
-                    # # TODO: this issue with this logic is that some voxels within the lesion are hypo and some are hyperintense     
+                    # Simply copy the lesion voxels
+                    im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor]
                                                             
                     # Lesion mask
                     im_augmented_lesion[x + x_step, y + y_step, z + z_step] = im_patho_lesion_data[x_cor, y_cor, z_cor]
+
+
+    # print(f"non zero elements in healthy SC before dilation: {np.count_nonzero(im_healthy_sc_data)}")
+    # print(f"non zero elements in AUGMENTED lesion: {np.count_nonzero(im_augmented_lesion)}")
+    # dilate the augmented lesion mask same as before
+    im_augmented_lesion_dilated = im_augmented_lesion.copy()
+    im_augmented_lesion_dilated = binary_dilation(im_augmented_lesion_dilated, structure=generate_binary_structure(3, 5), iterations=3)
+    # extract only the dilated region of the lesion from the healthy SC
+    im_healthy_sc_data = im_healthy_sc_data * im_augmented_lesion_dilated
+    # print(f"non zero elements in healthy SC after dilation: {np.count_nonzero(im_healthy_sc_data)}")
+
+    # compute the intensity ratio of the SCs of the patho and healthy image
+    # intensity_ratio_scs = np.mean(im_augmented[im_healthy_sc_data > 0]) / np.mean(im_patho_data[im_patho_sc_data > 0])
+    intensity_ratio_scs = np.mean(im_augmented[im_healthy_sc_data > 0]) / np.mean(im_patho_data[im_patho_sc_data > 0]) # using the copy of the augmented image (without the lesion)
+    print(f"Mean Intensity ratio of augmented/patho SC: {intensity_ratio_scs}")
+
+    # modify the augmented lesion voxels with the intensity ratio
+    im_augmented[im_augmented_lesion > 0] = im_augmented[im_augmented_lesion > 0] * intensity_ratio_scs
+
+    # compute the lesion/SC intensity ratio in the augmented image
+    lesion_sc_ratio_augmented = np.mean(im_augmented[im_augmented_lesion > 0]) / np.mean(im_augmented[im_healthy_sc_data > 0])
+    print(f"Mean Lesion/SC Intensity Ratio of Augmented Subject (AFTER LESION INSERTION): {lesion_sc_ratio_augmented}")
+
+    # modify the intensity ratio of augmented lesion to be similar to that of the patho lesion
+    im_augmented[im_augmented_lesion > 0] = im_augmented[im_augmented_lesion > 0] * lesion_sc_ratio_patho / lesion_sc_ratio_augmented
+
+    # recompute the lesion/SC intensity ratio in the augmented image
+    lesion_sc_ratio_augmented = np.mean(im_augmented[im_augmented_lesion > 0]) / np.mean(im_augmented[im_healthy_sc_data > 0])
+    print(f"Mean Lesion/SC Intensity Ratio of Augmented Subject (AFTER INTENSITY MODIFICATION): {lesion_sc_ratio_augmented}")
 
 
     return im_augmented, im_augmented_lesion
@@ -242,11 +260,11 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # First, compute the ratio of intensities between lesion and SC in the pathological image
     # METHOD 1: USING MEAN OF LESION AND SC INTENSITIES 
     # Extract SC mask in the neighbourhood of the lesion
-    print(f"non zero elements in SC before dilation: {np.count_nonzero(im_patho_sc_data)}")
-    print(f"non zero elements in lesion: {np.count_nonzero(im_patho_lesion_data)}")
-    im_patho_lesion_data_dilated = binary_dilation(im_patho_lesion_data, structure=generate_binary_structure(3, 5), iterations=5)
+    # print(f"non zero elements in patho SC before dilation: {np.count_nonzero(im_patho_sc_data)}")
+    # print(f"non zero elements in lesion: {np.count_nonzero(im_patho_lesion_data)}")
+    im_patho_lesion_data_dilated = binary_dilation(im_patho_lesion_data, structure=generate_binary_structure(3, 5), iterations=3)
     im_patho_sc_data = im_patho_sc_data * im_patho_lesion_data_dilated
-    print(f"non zero elements in SC after dilation: {np.count_nonzero(im_patho_sc_data)}")
+    # print(f"non zero elements in patho SC after dilation: {np.count_nonzero(im_patho_sc_data)}")
     
     lesion_sc_ratio_patho = np.mean(im_patho_data[im_patho_lesion_data > 0]) / np.mean(im_patho_data[im_patho_sc_data > 0]) 
     print(f"Mean lesion/SC Intensity Ratio of Patho Subject {sub_patho}: {lesion_sc_ratio_patho}")
@@ -255,42 +273,12 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         lesion_sc_ratio_patho = 1 / lesion_sc_ratio_patho
         print(f"Mean lesion/SC Intensity Ratio of Patho Subject {sub_patho} (after inversion): {lesion_sc_ratio_patho}")
 
-
-    # # METHOD 2: USING MEDIAN OF LESION AND SC INTENSITIES
-    # lesion_sc_ratio_patho = np.median(im_patho_data[im_patho_lesion_data > 0]) / np.median(im_patho_data[im_patho_sc_data > 0])
-    # print(f"Median lesion/SC Intensity Ratio of Patho Subject {sub_patho}: {lesion_sc_ratio_patho}")
-
-    # Second, get ratio healthy/patho SC
-    # intensity_ratio_scs = coefficient_of_variation(im_healthy_data[im_healthy_sc_data > 0]) / \
-    #                   coefficient_of_variation(im_patho_data[im_patho_sc_data > 0])
-    # USING MEAN
-    intensity_ratio_scs = np.mean(im_healthy_data[im_healthy_sc_data > 0]) / np.mean(im_patho_data[im_patho_sc_data > 0])
-    print(f"Mean Intensity ratio of healthy/patho SC: {intensity_ratio_scs}")
-    # intensity_ratio_scs = np.clip(intensity_ratio_scs, 1.0, 2.5)
-    
-    # TODO: Think about clamping the intensity ratio between a certain range
-    # # USING MEDIAN
-    # intensity_ratio_scs = np.median(im_healthy_data[im_healthy_sc_data > 0]) / np.median(im_patho_data[im_patho_sc_data > 0])
-    # print(f"Median Intensity ratio of healthy/patho SC before: {intensity_ratio_scs}")
-
-    # # Finally, take into account the difference in intensity between lesion and patho SC
-    # intensity_ratio = intensity_ratio * lesion_sc_diff
-
-    # # Make sure the intensity ratio is always > 1 (i.e. the lesion is always brighter than the healthy SC)
-    # if intensity_ratio_scs < 1:
-    #     intensity_ratio_scs = 1 / intensity_ratio_scs
-    # print(f"Intensity ratio of healthy/patho SC after inversion: {intensity_ratio_scs}")
-
-
     """
     Main logic - copy lesion from pathological image to healthy image
     """
     # Initialize Image instances for the new target and lesion
     im_augmented = zeros_like(im_healthy)
     im_augmented_lesion = zeros_like(im_healthy)
-    # Initialize numpy arrays with the same shape as the healthy image
-    im_augmented_data = np.copy(im_healthy_data)
-    im_augmented_lesion_data = np.zeros_like(im_healthy_data)
 
     # Create a copy of the healthy SC mask. The mask will have the proper output name and will be saved under masksTr
     # folder. The mask is useful for lesion QC (using sct_qc) or nnU-Net region-based training
@@ -303,8 +291,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
     healthy_centerline = get_centerline(im_healthy_sc_data)
     # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.25):
-                                                    round(len(healthy_centerline)*0.9)]
+    # healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.25):
+    #                                                 round(len(healthy_centerline)*0.9)]
+    healthy_centerline_cropped = healthy_centerline[round(len(healthy_centerline)*0.1):
+                                                    round(len(healthy_centerline)*0.75)]
+    # TODO: Check what's the origin - bottom left or top left. Because using 0.25-0.9 seems to place lesions at the 
+    # top levels but 0.1-0.75 does not do so
+
 
     # Select random coordinate on the centerline
     # index is used to have different seed for every subject to have different lesion positions across different subjects
@@ -314,17 +307,23 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
     # is greater than args.min_lesion_volume
     while True:
+        # Initialize numpy arrays with the same shape as the healthy image
+        im_augmented_data = np.copy(im_healthy_data)
+        im_augmented_lesion_data = np.zeros_like(im_healthy_data)
+
         # New position for the lesion
         new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
         # x, y, z = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
         print(f"Trying to insert lesion at {new_position}")
 
         # Insert lesion from the bounding box to the im_augmented
+        # NOTE: Because we're re-using im_augmented_data and im_augmented_lesion_data, it is stacking lesions if the loop 
+        # continues more than once!
         im_augmented_data, im_augmented_lesion_data = insert_lesion(im_augmented_data, im_augmented_lesion_data, im_patho_data,
-                                                         im_patho_lesion_data, im_healthy_sc_data,
-                                                         lesion_coords, new_position, intensity_ratio_scs)
+                                                         im_patho_sc_data, im_patho_lesion_data, im_healthy_sc_data,
+                                                         lesion_coords, new_position, lesion_sc_ratio_patho)
 
-        # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and due to SC curvature).
+        # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and SC curvature).
         # In such case, keep only the largest part.
         # NOTE: im_augmented_lesion_data could still be empty if the coordinates of lesion bbox are overflowing out of healthy SC, 
         # essentially never reaching the second if statement in insert_lesion() function. As a result, we get 
@@ -346,10 +345,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         if lesion_vol > args.min_lesion_volume:
             print(f"Lesion inserted at {new_position}")
             break
-
-    # Ensure that the inserted lesion has the correct intensity ratio
-    im_augmented_data, im_augmented_lesion_data = ensure_correct_intensity(im_augmented_data, im_augmented_lesion_data, 
-                                                                                im_healthy_sc_data, lesion_sc_ratio_patho)
 
     # Insert newly created target and lesion into Image instances
     im_augmented.data = im_augmented_data
