@@ -306,6 +306,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
     # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
     # is greater than args.min_lesion_volume
+    i=0
     while True:
         # Initialize numpy arrays with the same shape as the healthy image
         im_augmented_data = np.copy(im_healthy_data)
@@ -345,6 +346,11 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         if lesion_vol > args.min_lesion_volume:
             print(f"Lesion inserted at {new_position}")
             break
+
+        if i == 10:
+            print(f"WARNING: Tried 10 times to insert lesion but failed. Skipping this subject...")
+            return False
+        i+=1
 
     # Insert newly created target and lesion into Image instances
     im_augmented.data = im_augmented_data
