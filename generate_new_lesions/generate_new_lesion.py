@@ -12,6 +12,7 @@ nnUNet data structure is required.
 TODO: switch to BIDS?
 """
 import os
+import re
 import sys
 import time
 import argparse
@@ -367,9 +368,20 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     """
     Save im_augmented and im_augmented_lesion
     """
-    subject_name_out = sub_healthy.split('_')[0] + '_' + \
-                       sub_patho.split('_')[0] + '_' + \
-                       sub_patho.split('_')[1] + '_' + s
+    if sub_patho.startswith('sub-zh'):
+        # NOTE: Zurich also has sessions (e.g. sub-zh11_ses-01)
+        subject_name_out = sub_healthy.split('_')[0] + '_' + \
+                        sub_patho.split('_')[0] + '_' + \
+                        sub_patho.split('_')[1] + '_' + s
+        qc_plane = 'sagittal'
+    elif re.match(r'sub-\d{4}', sub_patho):
+        # subject is from sci-colorado
+        subject_name_out = sub_healthy.split('_')[0] + '_' + \
+                        sub_patho.split('_')[0] + '_' + s
+        qc_plane = 'axial'
+    else:
+        print(f"WARNING: Subject {sub_patho} is neither from SCI Zurich or Colorado. Exiting...")
+        sys.exit(1)
 
     im_augmented_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
     im_augmented_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
@@ -390,7 +402,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         os.system(f'sct_maths -i {im_augmented_lesion_path} -bin 0 -o {im_augmented_lesion_bin_path}')
         # Example: sct_qc -i t2.nii.gz -s t2_seg.nii.gz -d t2_lesion.nii.gz -p sct_deepseg_lesion -plane axial
         os.system(f'sct_qc -i {im_augmented_path} -s {new_sc_path} -d {im_augmented_lesion_bin_path} -p sct_deepseg_lesion '
-                  f'-plane sagittal -qc {args.dir_save.replace("labelsTr", "qc")} -qc-subject {subject_name_out}')
+                  f'-plane {qc_plane} -qc {args.dir_save.replace("labelsTr", "qc")} -qc-subject {subject_name_out}')
         # Remove binarized lesion
         os.remove(im_augmented_lesion_bin_path)
 
@@ -469,12 +481,15 @@ def main():
         sub_patho = cases_patho[rand_index_patho]
         sub_healthy = cases_healthy[rand_index_healthy]
 
-        # example subjects where augumentation was empty even within the while loop
-        # sub_patho = 'sub-zh21_ses-01_017'
-        # sub_healthy = 'sub-strasbourg03_192'
-
-        # sub_patho = 'sub-zh37_ses-01_029'     # example where lesion is only slight hyperintense
+        # SCI-Zurich example where lesion is only slight hyperintense
+        # sub_patho = 'sub-zh37_ses-01_029'
         # sub_healthy = 'sub-tokyoIngenia05_213'
+        
+        # NOTE: sub-5740 in SCI-Colorado has a weird contrast range when viewed on FSLeyes. It is 
+        # causing in the augmentation, hence it is skipped for now.
+        if 'sub-5740' in sub_patho:
+            print("Encountered sub-5740, skipping...")
+            continue
 
         print(f"\nHealthy subject: {sub_healthy}, Patho subject: {sub_patho}")
 
