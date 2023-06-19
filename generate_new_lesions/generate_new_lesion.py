@@ -12,7 +12,6 @@ nnUNet data structure is required.
 TODO: switch to BIDS?
 """
 import os
-import re
 import sys
 import time
 import argparse
@@ -22,7 +21,7 @@ from scipy.ndimage import binary_dilation, generate_binary_structure
 from spinalcordtoolbox.image import Image, zeros_like
 from spinalcordtoolbox.resampling import resample_nib
 
-from utils import coefficient_of_variation, get_centerline, get_lesion_volume, keep_largest_component
+from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
@@ -368,20 +367,21 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     """
     Save im_augmented and im_augmented_lesion
     """
-    if sub_patho.startswith('sub-zh'):
-        # NOTE: Zurich also has sessions (e.g. sub-zh11_ses-01)
-        subject_name_out = sub_healthy.split('_')[0] + '_' + \
-                        sub_patho.split('_')[0] + '_' + \
-                        sub_patho.split('_')[1] + '_' + s
-        qc_plane = 'sagittal'
-    elif re.match(r'sub-\d{4}', sub_patho):
-        # subject is from sci-colorado
-        subject_name_out = sub_healthy.split('_')[0] + '_' + \
-                        sub_patho.split('_')[0] + '_' + s
-        qc_plane = 'axial'
+    # Get subject and session IDs from the healthy image
+    subjectID_healthy, sessionID_healthy, _ = fetch_subject_and_session(sub_healthy)
+    # Get subject and session IDs from the patho image
+    subjectID_patho, sessionID_patho, _ = fetch_subject_and_session(sub_patho)
+
+    if sessionID_patho is None:
+        subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_' + s
+    # NOTE: Zurich also has sessions (e.g. sub-zh11_ses-01)
     else:
-        print(f"WARNING: Subject {sub_patho} is neither from SCI Zurich or Colorado. Exiting...")
-        sys.exit(1)
+        subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_' + sessionID_patho + '_' + s
+
+    if sub_patho.startswith('sub-zh'):
+        qc_plane = 'sagittal'
+    else:
+        qc_plane = 'axial'
 
     im_augmented_path = os.path.join(args.dir_healthy, subject_name_out + '_0000.nii.gz')
     im_augmented_lesion_path = os.path.join(args.dir_save, subject_name_out + '.nii.gz')
