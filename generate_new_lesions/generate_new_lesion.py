@@ -529,6 +529,10 @@ def main():
             print("Encountered sub-5740, skipping...")
             continue
 
+        # Strip .nii.gz from the subject name
+        sub_healthy = sub_healthy.replace('.nii.gz', '')
+        sub_patho = sub_patho.replace('.nii.gz', '')
+
         print(f"\nHealthy subject: {sub_healthy}, Patho subject: {sub_patho}")
 
         # If augmentation is done successfully (True is returned), break the while loop and continue to the next
