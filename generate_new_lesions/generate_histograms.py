@@ -43,7 +43,6 @@ def create_histogram(dir_path, title):
     dict_hist = dict()
     dict_hist_sc = dict()
 
-    counter = 0
     # Initialize the figure
     fig, axs = plt.subplots(1, 2, tight_layout=True)
     # Loop across all subjects
@@ -69,7 +68,6 @@ def create_histogram(dir_path, title):
 
         # Check if im_data and im_mask_data have the same shape
         if im_data.shape == im_mask_data.shape:
-            counter += 1
 
             # Whole image
             # Get histogram using np.histogram
