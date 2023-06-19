@@ -1,5 +1,13 @@
 """
 Generate histograms of the images from the pathology and healthy datasets.
+
+Example:
+    python generate_histograms.py
+    -dir-pathology
+    ~/data/sci-zurich-nnunet/Dataset525_tSCILesionsZurich/imagesTr
+    -dir-healthy
+    ~/data/data-multi-subject-nnunet/Dataset526_SpineGenericMultiSubject/imagesTr/
+
 """
 
 import os
