@@ -90,6 +90,7 @@ def create_histogram(dir_path, title):
         else:
             print(f'Skipping subject {sub} because image and SC mask have different shapes.')
 
+    # Compute mean histogram across subjects
     hist_mean = pd.DataFrame.from_dict(dict_hist, orient='index').mean()
     hist_sc_mean = pd.DataFrame.from_dict(dict_hist_sc, orient='index').mean()
 
