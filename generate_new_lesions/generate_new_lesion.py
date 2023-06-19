@@ -298,7 +298,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # TODO: Check what's the origin - bottom left or top left. Because using 0.25-0.9 seems to place lesions at the 
     # top levels but 0.1-0.75 does not do so
 
-
     # Select random coordinate on the centerline
     # index is used to have different seed for every subject to have different lesion positions across different subjects
     rng = np.random.default_rng(args.seed + index)
@@ -306,7 +305,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
     # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
     # is greater than args.min_lesion_volume
-    i=0
+    i = 0
     while True:
         # Initialize numpy arrays with the same shape as the healthy image
         im_augmented_data = np.copy(im_healthy_data)
@@ -350,7 +349,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         if i == 10:
             print(f"WARNING: Tried 10 times to insert lesion but failed. Skipping this subject...")
             return False
-        i+=1
+        i += 1
 
     # Insert newly created target and lesion into Image instances
     im_augmented.data = im_augmented_data
@@ -510,6 +509,7 @@ def main():
         time.sleep(0.1)
 
     print("\nFinished generating new samples!")
+
 
 if __name__ == '__main__':
     main()
