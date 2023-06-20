@@ -169,8 +169,12 @@ def generate_histogram(im_healthy_data, im_healthy_sc_data, im_patho_data, im_pa
     axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label='Healthy', alpha=0.4)
     axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label='Patho', alpha=0.4)
     axs[0].set_title('Whole image')
+    # Healthy SC
     axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Healthy SC', alpha=0.4)
-    axs[1].hist(im_patho_data[im_patho_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Patho SC', alpha=0.4)
+    # Patho SC - lesion
+    axs[1].hist(im_patho_data[(im_patho_sc_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+                label='Patho SC', alpha=0.4)
+    # Lesion
     axs[1].hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=(0, 1), label='Lesion', alpha=0.4)
     axs[1].set_title('Spinal cord only')
     # Add legend
