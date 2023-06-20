@@ -83,8 +83,6 @@ def main():
     path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
     path_out_labelsTs = Path(os.path.join(path_out, 'labelsTs'))
 
-    # train_images, train_labels, train_masks, test_images, test_labels, test_masks = [], [], [], [], [], []
-
     # make the directories
     pathlib.Path(path_out).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
@@ -123,9 +121,6 @@ def main():
         # Get the training and test splits
         train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
         logger.info(f"Creating a dataset with {len(train_subjects)} training subjects and {len(test_subjects)} test subjects.")
-
-
-    # print(train_subjects[:4])
 
     train_ctr, test_ctr = 0, 0
     for subject in subjects:
@@ -170,9 +165,6 @@ def main():
                 subject_label_file_nnunet = os.path.join(path_out_labelsTr,
                                                          f"{sub_ses_name}_{train_ctr:03d}.nii.gz")
                 
-                # train_images.append(subject_image_file_nnunet)
-                # train_labels.append(subject_label_file_nnunet)
-
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
                 os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
@@ -195,6 +187,7 @@ def main():
                         os.symlink(os.path.abspath(subject_mask_file), subject_mask_file_nnunet)
                     else:
                         print(f"Mask file {subject_mask_file} not found. Skipping this subject.")
+
         elif subject in test_subjects:
 
             # Another for loop for going through sessions
@@ -234,9 +227,6 @@ def main():
                                                          f"{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
                 subject_label_file_nnunet = os.path.join(path_out_labelsTs,
                                                          f"{sub_ses_name}_{test_ctr:03d}.nii.gz")
-
-                # test_images.append(subject_image_file_nnunet)
-                # test_labels.append(subject_label_file_nnunet)
 
                 # copy the files to new structure using symbolic links
                 os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
