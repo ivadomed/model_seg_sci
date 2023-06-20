@@ -152,27 +152,33 @@ def ensure_correct_intensity(im_augmented, im_augmented_lesion, im_healthy_sc_da
     return im_augmented, im_augmented_lesion
 
 
-def generate_histogram(im_healthy_data, im_healthy_sc_data, im_patho_data, im_patho_sc_data, figure_path):
+def generate_histogram(im_healthy_data, im_healthy_sc_data, im_patho_data, im_patho_sc_data, im_patho_lesion_data,
+                       figure_path):
     """
     Generate healthy-patho pair histogram for the whole image and for their SCs
     :param im_healthy_data: healthy image data
     :param im_healthy_sc_data: healthy image SC data
     :param im_patho_data: patho image data
     :param im_patho_sc_data: patho image SC data
+    :param im_patho_lesion_data: patho image lesion data
     :param figure_path: path to save the figure
     """
-    # Create 2x2 subplots
-    fig, axs = plt.subplots(1, 2, tight_layout=True)
+    # Create 1x2 subplots
+    fig, axs = plt.subplots(1, 2, tight_layout=True, figsize=(10, 5))
     # Plot histograms
-    axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label='Healthy', alpha=0.5)
-    axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label='Patho', alpha=0.5)
+    axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label='Healthy', alpha=0.4)
+    axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label='Patho', alpha=0.4)
     axs[0].set_title('Whole image')
-    axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Healthy', alpha=0.5)
-    axs[1].hist(im_patho_data[im_patho_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Patho', alpha=0.5)
+    axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Healthy SC', alpha=0.4)
+    axs[1].hist(im_patho_data[im_patho_sc_data > 0].flatten(), bins=50, range=(0, 1), label='Patho SC', alpha=0.4)
+    axs[1].hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=(0, 1), label='Lesion', alpha=0.4)
     axs[1].set_title('Spinal cord only')
     # Add legend
     axs[0].legend()
     axs[1].legend()
+    # Add x label
+    axs[0].set_xlabel('Normalized Intensity')
+    axs[1].set_xlabel('Normalized Intensity')
     # Add y label
     axs[0].set_ylabel('Count')
     axs[1].set_ylabel('Count')
@@ -414,7 +420,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     if not os.path.exists(args.dir_save.replace("labelsTr", "histograms")):
         os.makedirs(args.dir_save.replace("labelsTr", "histograms"))
     figure_path = args.dir_save.replace("labelsTr", "histograms") + f"/{subject_name_out}_histogram.png"
-    generate_histogram(im_healthy_data, im_healthy_sc_data, im_patho_data, im_patho_sc_data, figure_path)
+    generate_histogram(im_healthy_data, im_healthy_sc_data, im_patho_data, im_patho_sc_data, im_patho_lesion_data,
+                       figure_path)
 
     if sub_patho.startswith('sub-zh'):
         qc_plane = 'sagittal'
