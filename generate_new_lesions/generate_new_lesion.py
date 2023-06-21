@@ -153,7 +153,7 @@ def ensure_correct_intensity(im_augmented, im_augmented_lesion, im_healthy_sc_da
 
 
 def generate_histogram(im_healthy_data, im_healthy_sc_data,
-                       im_patho_data, im_patho_sc_data, im_patho_lesion_data,
+                       im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
                        im_augmented_data, im_augmented_lesion_data, new_sc_data,
                        sub_healthy, sub_patho, subject_name_out,
                        output_dir):
@@ -187,18 +187,21 @@ def generate_histogram(im_healthy_data, im_healthy_sc_data,
     # Healthy SC
     axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1),
                 label=f'Healthy SC ({sub_healthy})', alpha=0.3, histtype='step', linewidth=3, color='green')
-    # Patho SC - lesion
+    # Patho SC minus lesion
     axs[1].hist(im_patho_data[(im_patho_sc_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
                 label=f'Patho SC ({sub_patho})', alpha=0.3, histtype='step', linewidth=3, color='red')
+    # Patho SC dilated minus lesion
+    axs[1].hist(im_patho_data[(im_patho_sc_dil_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+                label=f'Patho SC dilated ({sub_patho})', alpha=0.9, histtype='step', linewidth=3, color='pink')
     # Augmented SC
     axs[1].hist(im_augmented_data[(new_sc_data > 0) & (im_augmented_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
                 label=f'Augmented SC ({subject_name_out})', alpha=0.3, histtype='step', linewidth=3, color='blue')
-    # Lesion
+    # Lesion only
     axs[1].hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=(0, 1),
-                label=f'Lesion ({sub_patho})', alpha=0.6, histtype='step', linewidth=3, color='pink')
-    # Augmented lesion
+                label=f'Lesion ({sub_patho})', alpha=0.6, histtype='step', linewidth=3, color='orange')
+    # Augmented lesion only
     axs[1].hist(im_augmented_data[im_augmented_lesion_data > 0].flatten(), bins=50, range=(0, 1),
-                label=f'Augmented lesion ({subject_name_out})', alpha=0.6, histtype='step', linewidth=3, color='lightblue')
+                label=f'Augmented lesion ({subject_name_out})', alpha=0.9, histtype='step', linewidth=3, color='lightblue')
     axs[1].set_title('Spinal cord only')
 
     # Add legend to top right corner and decrease font size
@@ -445,7 +448,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Generate healthy-patho pair histogram
     generate_histogram(im_healthy_data, im_healthy_sc_data,
-                       im_patho_data, im_patho_sc_data, im_patho_lesion_data,
+                       im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
                        im_augmented_data, im_augmented_lesion_data, new_sc.data,
                        sub_healthy, sub_patho, subject_name_out,
                        output_dir=args.dir_save.replace("labelsTr", "histograms"))
