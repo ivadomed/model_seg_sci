@@ -1,6 +1,9 @@
 import os
 import re
 import numpy as np
+
+import matplotlib.pyplot as plt
+
 from scipy import ndimage
 from skimage import measure
 
@@ -79,3 +82,71 @@ def fetch_subject_and_session(filename_path):
     # . - any character
 
     return subjectID, sessionID, filename
+
+
+def generate_histogram(im_healthy_data, im_healthy_sc_data,
+                       im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
+                       im_augmented_data, im_augmented_lesion_data, new_sc_data,
+                       sub_healthy, sub_patho, subject_name_out,
+                       output_dir):
+    """
+    Generate healthy-patho pair histogram for the whole image and for their SCs
+    :param im_healthy_data: healthy image data
+    :param im_healthy_sc_data: healthy image SC data
+    :param im_patho_data: patho image data
+    :param im_patho_sc_data: patho image SC data
+    :param im_patho_lesion_data: patho image lesion data
+    :param figure_path: path to save the figure
+    """
+
+    # Check if directory exists, if not create it
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    figure_path = output_dir + f"/{subject_name_out}_histogram.png"
+
+    # Create 1x2 subplots
+    fig, axs = plt.subplots(1, 2, tight_layout=True, figsize=(15, 5))
+    # Whole images
+    axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label=f'Healthy subject ({sub_healthy})',
+                alpha=0.3, histtype='step', linewidth=3, color='green')
+    axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label=f'Patho subject ({sub_patho})',
+                alpha=0.3, histtype='step', linewidth=3, color='red')
+    axs[0].hist(im_augmented_data.flatten(), bins=50, range=(0, 1), label=f'Augmented subject ({subject_name_out})',
+                alpha=0.3, histtype='step', linewidth=3, color='blue')
+    axs[0].set_title('Whole image')
+
+    # Spinal cords only
+    # Healthy SC
+    axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1),
+                label=f'Healthy SC ({sub_healthy})', alpha=0.3, histtype='step', linewidth=3, color='green')
+    # Patho SC minus lesion
+    axs[1].hist(im_patho_data[(im_patho_sc_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+                label=f'Patho SC ({sub_patho})', alpha=0.3, histtype='step', linewidth=3, color='red')
+    # Patho SC dilated minus lesion
+    axs[1].hist(im_patho_data[(im_patho_sc_dil_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+                label=f'Patho SC dilated ({sub_patho})', alpha=0.9, histtype='step', linewidth=3, color='pink')
+    # Augmented SC
+    axs[1].hist(im_augmented_data[(new_sc_data > 0) & (im_augmented_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+                label=f'Augmented SC ({subject_name_out})', alpha=0.3, histtype='step', linewidth=3, color='blue')
+    # Lesion only
+    axs[1].hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=(0, 1),
+                label=f'Lesion ({sub_patho})', alpha=0.6, histtype='step', linewidth=3, color='orange')
+    # Augmented lesion only
+    axs[1].hist(im_augmented_data[im_augmented_lesion_data > 0].flatten(), bins=50, range=(0, 1),
+                label=f'Augmented lesion ({subject_name_out})', alpha=0.9, histtype='step', linewidth=3, color='lightblue')
+    axs[1].set_title('Spinal cord only')
+
+    # Add legend to top right corner and decrease font size
+    axs[0].legend(loc='upper right', prop={'size': 8})
+    axs[1].legend(loc='upper right', prop={'size': 8})
+    # Add x labels
+    axs[0].set_xlabel('Normalized Intensity')
+    axs[1].set_xlabel('Normalized Intensity')
+    # Add y labels
+    axs[0].set_ylabel('Count')
+    axs[1].set_ylabel('Count')
+    # Save plot
+    plt.savefig(figure_path, dpi=300)
+    print(f"Saved histogram to {figure_path}")
+    # Close plot
+    plt.close(fig)

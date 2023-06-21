@@ -16,13 +16,13 @@ import sys
 import time
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.ndimage import binary_dilation, generate_binary_structure
 
 from spinalcordtoolbox.image import Image, zeros_like
 from spinalcordtoolbox.resampling import resample_nib
 
-from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session
+from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session, \
+    generate_histogram
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
@@ -46,6 +46,7 @@ def get_parser():
     parser.add_argument("-resample", default=False, action='store_true',
                         help="Resample the augmented images to the resolution of pathological dataset. Default: False")
     parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
+    parser.add_argument("-histogram", default=False, action='store_true', help="Create histograms. Default: False")
     parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=200, type=float,
                         help="Minimum lesion volume in mm^3. Default: 200")
     # parser.add_argument("--mask_save_path", "-mask-pth", default="mask", type=str,
@@ -347,12 +348,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     else:
         subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_' + sessionID_patho + '_' + s
 
-    # Generate healthy-patho pair histogram
-    generate_histogram(im_healthy_data, im_healthy_sc_data,
-                       im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
-                       im_augmented_data, im_augmented_lesion_data, new_sc.data,
-                       sub_healthy, sub_patho, subject_name_out,
-                       output_dir=args.dir_save.replace("labelsTr", "histograms"))
+    if args.histogram:
+        # Generate healthy-patho pair histogram
+        generate_histogram(im_healthy_data, im_healthy_sc_data,
+                           im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
+                           im_augmented_data, im_augmented_lesion_data, new_sc.data,
+                           sub_healthy, sub_patho, subject_name_out,
+                           output_dir=args.dir_save.replace("labelsTr", "histograms"))
 
     if sub_patho.startswith('sub-zh'):
         qc_plane = 'sagittal'
