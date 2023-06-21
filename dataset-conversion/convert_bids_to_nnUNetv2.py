@@ -24,6 +24,7 @@ import os
 from collections import OrderedDict
 import pandas as pd
 from loguru import logger
+import yaml
 from sklearn.model_selection import train_test_split
 
 import nibabel as nib
@@ -50,6 +51,13 @@ def get_parser():
                         help='Include masks folders (with SC segmentations) in the output dataset. Default: False')
     parser.add_argument('--create-dummy-dataset', '-dummy', action='store_true', default=False,
                         help='Create a dummy dataset with training subjects only. Default: False')
+
+    # add argument to create dataset with good subjects only
+    parser.add_argument('--good-subjects-only', '-good', action='store_true', default=False,
+                        help='Create a dataset with good subjects only. Default: False')
+    parser.add_argument('--path-yaml', nargs='+', type=str, default=None,
+                        help='Paths to yaml files containing the failed subjects and artifacts. Required if '
+                             '--good-subjects-only is True.')
 
     return parser
 
@@ -97,15 +105,38 @@ def main():
         pathlib.Path(path_out_masksTr).mkdir(parents=True, exist_ok=True)
         pathlib.Path(path_out_masksTs).mkdir(parents=True, exist_ok=True)
 
-    # Get all subjects from participants.tsv
-    subjects_df = pd.read_csv(os.path.join(root, 'participants.tsv'), sep='\t')
-    subjects = subjects_df['participant_id'].values.tolist()
-    logger.info(f"Total number of subjects in the dataset: {len(subjects)}")
-
     if args.create_dummy_dataset:
         assert len(args.split) == 3, 'The split argument must have 3 values for train, val and test splits. E.g. ' \
                                      '[0.6 0.2 0.2]'
         train_ratio, val_ratio, test_ratio = args.split
+
+        # check if yaml files are provided if good subjects are only included
+        if args.good_subjects_only:
+            assert args.path_yaml is not None, 'Please provide the path to yaml files containing the failed subjects and ' \
+                                            'artifacts. Use --path-yaml argument to provide the paths to yaml files.'
+            
+            # get the list of bad subjects and artifacts from the yaml files
+            bad_subjects = []
+            for path_yaml in args.path_yaml:
+                with open(path_yaml) as file:
+                    data = yaml.load(file, Loader=yaml.FullLoader)
+                    sub_paths = data['FILES_GMSEG']
+                    for sub_path in sub_paths:
+                        bad_subjects.append(sub_path.split('.')[0].split('/')[-4])
+            
+            # remove duplicates
+            bad_subjects = sorted(list(set(bad_subjects)))
+            logger.info(f"Total number of bad subjects to be excluded from the dataset: {len(bad_subjects)}")
+
+            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-') and subject not in bad_subjects]
+            logger.info(f"Total number of subjects in the (curated) dataset: {len(subjects)}")
+
+        else:
+            # Get all subjects from the root folder
+            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+            logger.info(f"Total number of subjects in the dataset: {len(subjects)}")
+
+
         # Get the training and test splits
         train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
         # Use the training split to further split into training and validation splits
