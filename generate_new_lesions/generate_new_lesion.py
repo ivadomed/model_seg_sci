@@ -329,10 +329,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # print(f"non zero elements in patho SC before dilation: {np.count_nonzero(im_patho_sc_data)}")
     # print(f"non zero elements in lesion: {np.count_nonzero(im_patho_lesion_data)}")
     im_patho_lesion_data_dilated = binary_dilation(im_patho_lesion_data, structure=generate_binary_structure(3, 5), iterations=3)
-    im_patho_sc_data = im_patho_sc_data * im_patho_lesion_data_dilated
-    # print(f"non zero elements in patho SC after dilation: {np.count_nonzero(im_patho_sc_data)}")
+    im_patho_sc_dil_data = im_patho_sc_data * im_patho_lesion_data_dilated
+    # print(f"non zero elements in patho SC after dilation: {np.count_nonzero(im_patho_sc_dil_data)}")
     
-    lesion_sc_ratio_patho = np.mean(im_patho_data[im_patho_lesion_data > 0]) / np.mean(im_patho_data[im_patho_sc_data > 0]) 
+    lesion_sc_ratio_patho = np.mean(im_patho_data[im_patho_lesion_data > 0]) / np.mean(im_patho_data[im_patho_sc_dil_data > 0])
     print(f"Mean lesion/SC Intensity Ratio of Patho Subject {sub_patho}: {lesion_sc_ratio_patho}")
     # Make sure the intensity ratio is always > 1 (i.e. the lesion is always brighter than the healthy SC)
     if lesion_sc_ratio_patho < 1:
@@ -386,7 +386,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # NOTE: Because we're re-using im_augmented_data and im_augmented_lesion_data, it is stacking lesions if the loop 
         # continues more than once!
         im_augmented_data, im_augmented_lesion_data = insert_lesion(im_augmented_data, im_augmented_lesion_data, im_patho_data,
-                                                         im_patho_sc_data, im_patho_lesion_data, im_healthy_sc_data,
+                                                         im_patho_sc_dil_data, im_patho_lesion_data, im_healthy_sc_data,
                                                          lesion_coords, new_position, lesion_sc_ratio_patho)
 
         # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and SC curvature).
