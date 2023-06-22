@@ -76,6 +76,35 @@ def binarize_label(subject_path, label_path):
     nib.save(label_bin, label_path)
 
 
+def get_good_subjects(args, root):
+
+    if args.good_subjects_only:
+        assert args.path_yaml is not None, 'Please provide the path to yaml files containing the failed subjects and ' \
+                                                'artifacts. Use --path-yaml argument to provide the paths to yaml files.'
+        
+        # get the list of bad subjects and artifacts from the yaml files
+        bad_subjects = []
+        for path_yaml in args.path_yaml:
+            with open(path_yaml) as file:
+                data = yaml.load(file, Loader=yaml.FullLoader)
+                sub_paths = data['FILES_GMSEG']
+                for sub_path in sub_paths:
+                    bad_subjects.append(sub_path.split('.')[0].split('/')[-4])
+        
+        # remove duplicates
+        bad_subjects = sorted(list(set(bad_subjects)))
+        logger.info(f"Total number of bad subjects to be excluded from the dataset: {len(bad_subjects)}")
+
+        subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-') and subject not in bad_subjects]
+        logger.info(f"Total number of subjects in the (curated) dataset: {len(subjects)}")
+
+    else:
+        subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+        logger.info(f"Total number of subjects in the (curated) dataset: {len(subjects)}")
+
+    return subjects
+
+
 def main():
 
     parser = get_parser()
@@ -110,32 +139,8 @@ def main():
                                      '[0.6 0.2 0.2]'
         train_ratio, val_ratio, test_ratio = args.split
 
-        # check if yaml files are provided if good subjects are only included
-        if args.good_subjects_only:
-            assert args.path_yaml is not None, 'Please provide the path to yaml files containing the failed subjects and ' \
-                                            'artifacts. Use --path-yaml argument to provide the paths to yaml files.'
-            
-            # get the list of bad subjects and artifacts from the yaml files
-            bad_subjects = []
-            for path_yaml in args.path_yaml:
-                with open(path_yaml) as file:
-                    data = yaml.load(file, Loader=yaml.FullLoader)
-                    sub_paths = data['FILES_GMSEG']
-                    for sub_path in sub_paths:
-                        bad_subjects.append(sub_path.split('.')[0].split('/')[-4])
-            
-            # remove duplicates
-            bad_subjects = sorted(list(set(bad_subjects)))
-            logger.info(f"Total number of bad subjects to be excluded from the dataset: {len(bad_subjects)}")
-
-            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-') and subject not in bad_subjects]
-            logger.info(f"Total number of subjects in the (curated) dataset: {len(subjects)}")
-
-        else:
-            # Get all subjects from the root folder
-            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
-            logger.info(f"Total number of subjects in the dataset: {len(subjects)}")
-
+        # get only good subjects or the whole dataset depending on args.good_subjects_only
+        subjects = get_good_subjects(args, root)
 
         # Get the training and test splits
         train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
@@ -143,12 +148,16 @@ def main():
         train_subjects, val_subjects = train_test_split(train_subjects, test_size=val_ratio / (train_ratio + val_ratio),
                                                         random_state=args.seed)
         logger.info(f"Creating a dummy dataset with {len(train_subjects)} training subjects only.")
+    
     else:
         assert len(args.split) == 2, 'The split argument must have 2 values for train and test splits. E.g. ' \
                                      '[0.8 0.2]. If you indeed want to use 3 values, use also the ' \
                                      '--create-dummy-dataset flag.'
-
         train_ratio, test_ratio = args.split
+
+        # get only good subjects or the whole dataset depending on args.good_subjects_only
+        subjects = get_good_subjects(args, root)
+            
         # Get the training and test splits
         train_subjects, test_subjects = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
         logger.info(f"Creating a dataset with {len(train_subjects)} training subjects and {len(test_subjects)} test subjects.")
