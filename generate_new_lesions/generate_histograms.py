@@ -42,6 +42,7 @@ def create_histogram(dir_path, title):
     # Initialize dictionaries to store histograms for individual subjects
     dict_hist = dict()
     dict_hist_sc = dict()
+    dict_hist_lesion = dict()
 
     # Initialize the figure
     fig, axs = plt.subplots(1, 2, tight_layout=True)
@@ -66,6 +67,15 @@ def create_histogram(dir_path, title):
         # Get numpy array
         im_mask_data = im_mask.data
 
+        # Lesion (available only for sci-zurich dataset)
+        if 'sub-zh' in sub:
+            path_lesion = os.path.join(dir_path.replace('imagesTr', 'labelsTr'), sub)
+            # Remove _0000 from the filename
+            path_lesion = path_lesion.replace('_0000', '')
+            im_lesion = Image(path_lesion)
+            # Get numpy array
+            im_lesion_data = im_lesion.data
+
         # Check if im_data and im_mask_data have the same shape
         if im_data.shape == im_mask_data.shape:
 
@@ -76,16 +86,27 @@ def create_histogram(dir_path, title):
             dict_hist[sub] = hist
 
             # Spinal cord only
-            im_data_sc = im_data[im_mask_data > 0]
+            if 'sub-zh' in sub:
+                im_data_sc = im_data[(im_mask_data > 0) & (im_lesion_data == 0)]
+            else:
+                im_data_sc = im_data[im_mask_data > 0]
             # Get histogram using np.histogram
             hist_sc, bin_edges = np.histogram(im_data_sc, bins=50, range=(0, 1))
             # Store histogram in dictionary
             dict_hist_sc[sub] = hist_sc
 
+            # Lesion (available only for sci-zurich dataset)
+            if 'sub-zh' in sub:
+                im_data_lesion = im_data[im_lesion_data > 0]
+                # Get histogram using np.histogram
+                hist_lesion, bin_edges = np.histogram(im_data_lesion, bins=50, range=(0, 1))
+                # Store histogram in dictionary
+                dict_hist_lesion[sub] = hist_lesion
+
             # Plot histograms
-            axs[0].hist(im_data.flatten(), bins=50, histtype='step', range=(0, 1))
+            axs[0].hist(im_data.flatten(), bins=50, histtype='step', range=(0, 1), alpha=0.6)
             axs[0].set_title('Whole image')
-            axs[1].hist(im_data_sc.flatten(), bins=50, histtype='step', range=(0, 1))
+            axs[1].hist(im_data_sc.flatten(), bins=50, histtype='step', range=(0, 1), alpha=0.6)
             axs[1].set_title('Spinal cord only')
         else:
             print(f'Skipping subject {sub} because image and SC mask have different shapes.')
@@ -93,6 +114,8 @@ def create_histogram(dir_path, title):
     # Compute mean histogram across subjects
     hist_mean = pd.DataFrame.from_dict(dict_hist, orient='index').mean()
     hist_sc_mean = pd.DataFrame.from_dict(dict_hist_sc, orient='index').mean()
+    if 'sub-zh' in sub:
+        hist_lesion_mean = pd.DataFrame.from_dict(dict_hist_lesion, orient='index').mean()
 
     # # Plot using sns.distplot
     # sns.displot(pd.DataFrame.from_dict(dict_hist, orient='index'), bins=50, kind="kde")
@@ -100,11 +123,16 @@ def create_histogram(dir_path, title):
     # sns.distplot(hist_sc_mean, bins=50, ax=axs[1])
 
     axs[0].plot(bin_edges[:-1], hist_mean, label='Mean histogram', color='red', linewidth=2)
-    axs[1].plot(bin_edges[:-1], hist_sc_mean, label='Mean histogram', color='red', linewidth=2)
+    axs[1].plot(bin_edges[:-1], hist_sc_mean, label='Mean histogram SC', color='red', linewidth=2)
+    if 'sub-zh' in sub:
+        axs[1].plot(bin_edges[:-1], hist_lesion_mean, label='Mean histogram lesion', color='blue', linewidth=2)
 
     # Add legend
     axs[0].legend()
     axs[1].legend()
+
+    # Adjust ylim for axs[1]
+    axs[1].set_ylim([0, 0.3 * np.max(hist_sc_mean)])
 
     # Add master title
     fig.suptitle(title)
