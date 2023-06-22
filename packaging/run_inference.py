@@ -39,6 +39,9 @@ def get_parser():
     parser.add_argument('--use-mirroring', action='store_true', default=False,
                         help='Use mirroring (test-time) augmentation for prediction. '
                         'NOTE: Inference takes a long time when this is enabled. Default: False')
+    parser.add_argument('--use-best-checkpoint', action='store_true', default=False,
+                        help='Use the best checkpoint (instead of the final checkpoint) for prediction. '
+                        'NOTE: nnUNet by default uses the final checkpoint. Default: False')
 
     return parser
 
@@ -160,7 +163,7 @@ def main():
         verbose=False,
         save_probabilities=False,
         overwrite=True,
-        checkpoint_name='checkpoint_final.pth',
+        checkpoint_name='checkpoint_final.pth' if not args.use_best_checkpoint else 'checkpoint_best.pth',
         num_processes_preprocessing=3,
         num_processes_segmentation_export=3
     )
