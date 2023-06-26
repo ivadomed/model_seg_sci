@@ -37,21 +37,25 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6135867/pdf/41598_2018_Article_3191
 and in Section 4 of this paper (for how the subjects with no lesions are handled):
 https://portal.fli-iam.irisa.fr/files/2021/06/MS_Challenge_Evaluation_Challengers.pdf
 
+NOTE: Check out the latest version of ANIMA here: https://github.com/Inria-Empenn/Anima-Public/releases
+and modify the folder names during the installation process accordingly. 
+(at the time of writing, the latest version is 4.2, hence the folder names below)
+
 INSTALLATION:
 ##### STEP 0: Install git lfs via apt if you don't already have it.
 ##### STEP 1: Install ANIMA #####
 cd ~
-mkdir anima/
-cd anima/
+mkdir anima_4.2/
+cd anima_4.2/
 wget -q https://github.com/Inria-Visages/Anima-Public/releases/download/v4.2/Anima-Ubuntu-4.2.zip   (change version to latest)
 unzip Anima-Ubuntu-4.2.zip
 git lfs install
 git clone --depth 1 https://github.com/Inria-Visages/Anima-Scripts-Public.git
 git clone --depth 1 https://github.com/Inria-Visages/Anima-Scripts-Data-Public.git
 cd ~
-mkdir .anima/
-touch .anima/config.txt
-nano .anima/config.txt
+mkdir .anima_4.2/
+touch .anima_4.2/config.txt
+nano .anima_4.2/config.txt
 
 ##### STEP 2: Configure directories #####
 # Variable names and section titles should stay the same
@@ -62,9 +66,9 @@ nano .anima/config.txt
 # Use full paths, nothing relative or using tildes 
 
 [anima-scripts]
-anima = /home/<your-user-name>/anima/Anima-Binaries-4.2/
-anima-scripts-public-root = /home/<your-user-name>/anima/Anima-Scripts-Public/
-extra-data-root = /home/<your-user-name>/anima/Anima-Scripts-Data-Public/
+anima = /home/<your-user-name>/anima_4.2/Anima-Binaries-4.2/
+anima-scripts-public-root = /home/<your-user-name>/anima_4.2/Anima-Scripts-Public/
+extra-data-root = /home/<your-user-name>/anima_4.2/Anima-Scripts-Data-Public/
 
 USAGE:
 python compute_test_metrics_anima.py --pred_folder <path_to_predictions_folder> 
