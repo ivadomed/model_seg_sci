@@ -53,7 +53,12 @@ segment_if_does_not_exist() {
   else
     echo "Not found. Proceeding with automatic segmentation."
     # Segment spinal cord
-    sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -qc ${PATH_QC} -qc-subject ${SUBJECT}
+    # sub-hal008 has highly curved spinal cord --> use init centerline (created manually)
+    if [[ ${SUBJECT} == "sub-hal008" ]]; then
+        sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -centerline file -file_centerline ${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_centerline.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
+    else
+        sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -qc ${PATH_QC} -qc-subject ${SUBJECT}
+    fi
   fi
 }
 
