@@ -3,7 +3,9 @@
 # Process site-012 dataset from spineimage.ca
 #
 # Usage:
-#     sct_run_batch -script preprocessing/preprocess_data_site-012.sh -path-data <PATH_TO_DATA> -path-output <PATH_TO_DATA>_2023-06-27 -jobs 24
+#     sct_run_batch -script preprocessing/preprocess_data_site-012.sh -path-data <PATH_TO_DATA> -path-output <PATH_TO_DATA>_2023-06-27 -jobs 24 -exclude sub-hal022
+#
+# Note: sub-hal022 has two runs; both are severely corrupted by artifacts --> the subject is skipped
 #
 # The following global variables are retrieved from the caller sct_run_batch
 # but could be overwritten by uncommenting the lines below:
@@ -72,7 +74,19 @@ cd $PATH_DATA_PROCESSED
 
 # Copy source T2w sag images
 # Note: we use '/./' in order to include the sub-folder 'ses-0X'
-rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_T2w* .
+# sub-hal003 has multiple images covering the whole spine --> copy only the first one covering cervical spine
+if [[ ${SUBJECT} == "sub-hal003" ]]; then
+    rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-01_T2w* .
+# sub-hal004 has two runs --> copy only the first one (the second one is a repeat and corrupted by artifacts)
+elif [[ ${SUBJECT} == "sub-hal004" ]]; then
+  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-01_T2w* .
+# sub-hal006 has two runs --> copy only the second one (the first one contains slight artifacts)
+elif [[ ${SUBJECT} == "sub-hal006" ]]; then
+  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-02_T2w* .
+# other subjects have only one run --> copy it
+else
+  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_T2w* .
+fi
 
 # Go to subject folder for source images
 cd ${SUBJECT}/anat
