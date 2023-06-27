@@ -77,15 +77,21 @@ cd $PATH_DATA_PROCESSED
 # sub-hal003 has multiple images covering the whole spine --> copy only the first one covering cervical spine
 if [[ ${SUBJECT} == "sub-hal003" ]]; then
     rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-01_T2w* .
+    mv sub-hal003/anat/sub-hal003_acq-sag_run-01_T2w.nii.gz sub-hal003/anat/sub-hal003_acq-sag_T2w.nii.gz
+    mv sub-hal003/anat/sub-hal003_acq-sag_run-01_T2w.json sub-hal003/anat/sub-hal003_acq-sag_T2w.json
 # sub-hal004 has two runs --> copy only the first one (the second one is a repeat and corrupted by artifacts)
 elif [[ ${SUBJECT} == "sub-hal004" ]]; then
-  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-01_T2w* .
+    rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-01_T2w* .
+    mv sub-hal004/anat/sub-hal004_acq-sag_run-01_T2w.nii.gz sub-hal004/anat/sub-hal004_acq-sag_T2w.nii.gz
+    mv sub-hal004/anat/sub-hal004_acq-sag_run-01_T2w.json sub-hal004/anat/sub-hal004_acq-sag_T2w.json
 # sub-hal006 has two runs --> copy only the second one (the first one contains slight artifacts)
 elif [[ ${SUBJECT} == "sub-hal006" ]]; then
-  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-02_T2w* .
+    rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_run-02_T2w* .
+    mv sub-hal006/anat/sub-hal006_acq-sag_run-02_T2w.nii.gz sub-hal006/anat/sub-hal006_acq-sag_T2w.nii.gz
+    mv sub-hal006/anat/sub-hal006_acq-sag_run-02_T2w.json sub-hal006/anat/sub-hal006_acq-sag_T2w.json
 # other subjects have only one run --> copy it
 else
-  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_T2w* .
+    rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*acq-sag_T2w* .
 fi
 
 # Go to subject folder for source images
