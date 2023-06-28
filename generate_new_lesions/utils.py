@@ -6,10 +6,23 @@ import matplotlib.pyplot as plt
 
 from scipy import ndimage
 from skimage import measure
+from spinalcordtoolbox.image import Image, zeros_like
+import skimage.exposure as exposure
 
 
 def coefficient_of_variation(masked_image):
     return np.std(masked_image, ddof=1) / np.mean(masked_image) * 100
+
+
+def save_image_to_nifti(im, im_path, im_name):
+    """
+    Save image to nifti file
+    """
+    if not os.path.exists(im_path):
+        os.makedirs(im_path, exist_ok=True)
+    im_nifti = Image(im)
+    # im_nifti.setFileName(os.path.join(im_path, im_name))
+    im_nifti.save(os.path.join(im_path, im_name))
 
 
 def get_centerline(im_healthy_sc_data):
@@ -84,7 +97,7 @@ def fetch_subject_and_session(filename_path):
     return subjectID, sessionID, filename
 
 
-def generate_histogram(im_healthy_data, im_healthy_sc_data,
+def generate_histogram(im_healthy_data, im_healthy_sc_data, im_healthy_sc_dil_data,
                        im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
                        im_augmented_data, im_augmented_lesion_data, new_sc_data,
                        sub_healthy, sub_patho, subject_name_out,
@@ -105,48 +118,83 @@ def generate_histogram(im_healthy_data, im_healthy_sc_data,
     figure_path = output_dir + f"/{subject_name_out}_histogram.png"
 
     # Create 1x2 subplots
-    fig, axs = plt.subplots(1, 2, tight_layout=True, figsize=(15, 5))
-    # Whole images
-    axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label=f'Healthy subject ({sub_healthy})',
-                alpha=0.3, histtype='step', linewidth=3, color='green')
-    axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label=f'Patho subject ({sub_patho})',
-                alpha=0.3, histtype='step', linewidth=3, color='red')
-    axs[0].hist(im_augmented_data.flatten(), bins=50, range=(0, 1), label=f'Augmented subject ({subject_name_out})',
-                alpha=0.3, histtype='step', linewidth=3, color='blue')
-    axs[0].set_title('Whole image')
+    fig, axs = plt.subplots(1, 1, tight_layout=True, figsize=(7, 4))
+    # # Whole images
+    # axs[0].hist(im_healthy_data.flatten(), bins=50, range=(0, 1), label=f'Healthy subject ({sub_healthy})',
+    #             alpha=0.3, histtype='step', linewidth=3, color='green')
+    # axs[0].hist(im_patho_data.flatten(), bins=50, range=(0, 1), label=f'Patho subject ({sub_patho})',
+    #             alpha=0.3, histtype='step', linewidth=3, color='red')
+    # axs[0].hist(im_augmented_data.flatten(), bins=50, range=(0, 1), label=f'Augmented subject ({subject_name_out})',
+    #             alpha=0.3, histtype='step', linewidth=3, color='blue')
+    # axs[0].set_title('Whole image')
 
     # Spinal cords only
     # Healthy SC
-    axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1),
-                label=f'Healthy SC ({sub_healthy})', alpha=0.3, histtype='step', linewidth=3, color='green')
-    # Patho SC minus lesion
-    axs[1].hist(im_patho_data[(im_patho_sc_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
-                label=f'Patho SC ({sub_patho})', alpha=0.3, histtype='step', linewidth=3, color='red')
+    # axs[1].hist(im_healthy_data[im_healthy_sc_data > 0].flatten(), bins=50, range=(0, 1),
+    #             label=f'Healthy SC ({sub_healthy})', alpha=0.3, histtype='step', linewidth=3, color='green')
+    # # Patho SC minus lesion
+    # axs[1].hist(im_patho_data[(im_patho_sc_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
+    #             label=f'Patho SC ({sub_patho})', alpha=0.3, histtype='step', linewidth=3, color='red')
     # Patho SC dilated minus lesion
-    axs[1].hist(im_patho_data[(im_patho_sc_dil_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
-                label=f'Patho SC dilated ({sub_patho})', alpha=0.9, histtype='step', linewidth=3, color='pink')
-    # Augmented SC
-    axs[1].hist(im_augmented_data[(new_sc_data > 0) & (im_augmented_lesion_data == 0)].flatten(), bins=50, range=(0, 1),
-                label=f'Augmented SC ({subject_name_out})', alpha=0.3, histtype='step', linewidth=3, color='blue')
+    axs.hist(im_patho_data[(im_patho_sc_dil_data > 0) & (im_patho_lesion_data == 0)].flatten(), bins=50, range=None, #(0, 1),
+                label=f'Patho SC dilated ({sub_patho})', alpha=0.9, histtype='step', linewidth=3, color='green')
+    # Augmented SC dilated minus lesion
+    axs.hist(im_augmented_data[(im_healthy_sc_dil_data > 0) & (im_augmented_lesion_data == 0)].flatten(), bins=50, range=None, # (0, 1),
+                label=f'Augmented SC dilated ({subject_name_out})', alpha=0.7, histtype='step', linewidth=3, color='blue')
     # Lesion only
-    axs[1].hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=(0, 1),
-                label=f'Lesion ({sub_patho})', alpha=0.6, histtype='step', linewidth=3, color='orange')
+    axs.hist(im_patho_data[im_patho_lesion_data > 0].flatten(), bins=50, range=None, #(0, 1),
+                label=f'Patho lesion ({sub_patho})', alpha=0.9, histtype='step', linewidth=3, color='lightgreen')
     # Augmented lesion only
-    axs[1].hist(im_augmented_data[im_augmented_lesion_data > 0].flatten(), bins=50, range=(0, 1),
+    axs.hist(im_augmented_data[im_augmented_lesion_data > 0].flatten(), bins=50, range=None, #(0, 1),
                 label=f'Augmented lesion ({subject_name_out})', alpha=0.9, histtype='step', linewidth=3, color='lightblue')
-    axs[1].set_title('Spinal cord only')
+    axs.set_title('Spinal cord only')
 
     # Add legend to top right corner and decrease font size
-    axs[0].legend(loc='upper right', prop={'size': 8})
-    axs[1].legend(loc='upper right', prop={'size': 8})
+    axs.legend(loc='upper right', prop={'size': 8})
+    # axs[1].legend(loc='upper right', prop={'size': 8})
     # Add x labels
-    axs[0].set_xlabel('Normalized Intensity')
-    axs[1].set_xlabel('Normalized Intensity')
+    axs.set_xlabel('Normalized Intensity')
+    # axs[1].set_xlabel('Normalized Intensity')
     # Add y labels
-    axs[0].set_ylabel('Count')
-    axs[1].set_ylabel('Count')
+    axs.set_ylabel('Count')
+    # axs[1].set_ylabel('Count')
     # Save plot
     plt.savefig(figure_path, dpi=300)
     print(f"Saved histogram to {figure_path}")
     # Close plot
     plt.close(fig)
+
+
+# helper functions for histogram matching
+def match_histogram(source_slice, target_slice):
+    matched_slice = exposure.match_histograms(source_slice, target_slice)
+    return matched_slice
+
+def match_histogram_3D(source_volume, target_volume):
+
+    # # Resample the volumes to a common shape
+    # common_shape = (
+    #     max(source_volume.shape[0], target_volume.shape[0]),
+    #     max(source_volume.shape[1], target_volume.shape[1]),
+    #     max(source_volume.shape[2], target_volume.shape[2])
+    #     )
+    # print(f"Common shape: {common_shape}")
+    
+    # # source_volume_resampled = zoom(source_volume, np.array(common_shape) / np.array(source_volume.shape))
+    # source_volume_resampled = zoom(source_volume, np.array(target_volume.shape) / np.array(source_volume.shape))
+    # print(f"Source volume resampled shape: {source_volume_resampled.shape}")
+    # # target_volume_resampled = zoom(target_volume, np.array(common_shape) / np.array(target_volume.shape))
+    # # print(f"Target volume resampled shape: {target_volume_resampled.shape}")
+    
+    # Perform histogram matching for each slice in the resampled volumes
+    matched_volume = np.empty_like(source_volume)
+    # for z in range(common_shape[2]):
+    for z in range(source_volume.shape[0]):
+        # matched_volume_resampled[..., z] = match_histogram(source_volume_resampled[..., z], target_volume_resampled[..., z])
+        matched_volume[z, ...] = match_histogram(source_volume[z, ...], target_volume[z, ...])
+    
+    # Rescale the matched volume back to the original shape
+    # matched_volume = zoom(matched_volume_resampled, source_volume.shape / common_shape)
+    # matched_volume = zoom(matched_volume_resampled, np.array(target_volume.shape) / np.array(common_shape))
+    
+    return matched_volume
