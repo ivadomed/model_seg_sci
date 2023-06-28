@@ -26,6 +26,7 @@ import pandas as pd
 from loguru import logger
 import yaml
 from sklearn.model_selection import train_test_split
+import shutil
 
 import nibabel as nib
 import numpy as np
@@ -120,6 +121,10 @@ def main():
     path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
     path_out_labelsTs = Path(os.path.join(path_out, 'labelsTs'))
 
+    # exceptionally create directories for validation images and labels (to be used for creating manual splits)
+    path_out_imagesVal = Path(os.path.join(path_out, 'imagesVal'))
+    path_out_labelsVal = Path(os.path.join(path_out, 'labelsVal'))
+
     # make the directories
     pathlib.Path(path_out).mkdir(parents=True, exist_ok=True)
     pathlib.Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
@@ -206,8 +211,10 @@ def main():
                                                          f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
                 
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
-                os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
-                os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
+                # os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
+                # os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
+                shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+                shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                 # binarize the label file
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
@@ -270,10 +277,10 @@ def main():
                                                          f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
 
                 # copy the files to new structure using symbolic links
-                os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
-                os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
-                # shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                # shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+                # os.symlink(os.path.abspath(subject_image_file), subject_image_file_nnunet)
+                # os.symlink(os.path.abspath(subject_label_file), subject_label_file_nnunet)
+                shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+                shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                 # binarize the label file
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
