@@ -57,10 +57,8 @@ def keep_largest_component(new_lesion_data):
     """
     Keep only the largest connected component in the lesion mask
     """
-    # Get connected components
-    labels = measure.label(new_lesion_data)
-    # Get number of connected components
-    num_components = labels.max()
+    # Get connected components and their number
+    labels, num_components = ndimage.label(new_lesion_data)
     # Get size of each connected component
     component_sizes = np.bincount(labels.ravel())
     # Get largest connected component
@@ -198,3 +196,34 @@ def match_histogram_3D(source_volume, target_volume):
     # matched_volume = zoom(matched_volume_resampled, np.array(target_volume.shape) / np.array(common_shape))
     
     return matched_volume
+
+
+# ------------------------------------------------------
+# In case of > 1 lesion, extract all of them
+# ------------------------------------------------------
+
+def extract_lesions(label_data):
+    """
+    Extract a lesion from the label mask to be used for augmentation
+    TODO: Feature to add multiple lesions per subject
+    """
+
+    # # voxel volume in mm^3
+    # voxel_volume = np.prod(voxel_dims)
+    
+    # Compute number of individual lesions
+    label_im, nb_labels = ndimage.label(label_data)
+    print("Number of individual lesions = {}".format(nb_labels))
+
+    # # Compute volume of each label
+    # label_volumes = []
+    # for lbl in range(1, nb_labels + 1):
+    #     label_volumes.append(np.count_nonzero(label_im == lbl) * voxel_volume)
+
+    extracted_lesions = []
+    for lbl in range(nb_labels):
+        lesion_ext = np.zeros(label_im.shape)
+        lesion_ext[label_im == (lbl + 1)] = 1
+        extracted_lesions.append(lesion_ext)
+
+    return extracted_lesions
