@@ -24,10 +24,6 @@ from spinalcordtoolbox.resampling import resample_nib
 from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session, \
     generate_histogram, extract_lesions
 
-# TODO: Figure out an elegant way to use while loop within the for loop for trying to insert the 
-# lesion if the volume condition is not met
-
-
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-path-data", type=str, required=True,
@@ -59,27 +55,25 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
     # Get coordinates where to insert the lesion
     x, y, z = new_position
 
-    # TODO: run the loop from the center of the bounding boxes
-    for x_step, x_cor in enumerate(range(x0, x1)):
-        for y_step, y_cor in enumerate(range(y0, y1)):
-            for z_step, z_cor in enumerate(range(z0, z1)):
-                
+    # Compute the shift to the center of the bounding box
+    shift_x, shift_y, shift_z = (x1 - x0) // 2, (y1 - y0) // 2, (z1 - z0) // 2
+
+    # The new origin is shifted to the center of the bounding box (unlike the bottom left earlier)
+    for x_step, x_cor in zip(range(-shift_x, shift_x + 1), range(x0, x1)):
+        for y_step, y_cor in zip(range(-shift_y, shift_y + 1 ), range(y0, y1)):
+            for z_step, z_cor in zip(range(-shift_z, shift_z + 1), range(z0, z1)):
+
                 # make sure that the new lesion is not projected outside of the SC
                 if patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
-                    # Check that dimensions do not overflow
-                    if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
-                        continue
-
+                    # ensure that patho_lesion does not overlap with an existing lesion in label
+                    if im_augmented_lesion[x + x_step, y + y_step, z + z_step] == 0:
+                        # Simply copy the lesion voxels
+                        im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor]
+                                                                
+                        # Lesion mask
+                        im_augmented_lesion[x + x_step, y + y_step, z + z_step] = patho_lesion_data[x_cor, y_cor, z_cor]
                     else: 
-                        # ensure that patho_lesion does not overlap with an existing lesion in label
-                        if im_augmented_lesion[x + x_step, y + y_step, z + z_step] == 0:
-                            # Simply copy the lesion voxels
-                            im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor]
-                                                                    
-                            # Lesion mask
-                            im_augmented_lesion[x + x_step, y + y_step, z + z_step] = patho_lesion_data[x_cor, y_cor, z_cor]
-                        else: 
-                            continue
+                        continue
 
     # dilate the augmented lesion mask same as before
     im_augmented_lesion_dilated = im_augmented_lesion.copy()
@@ -153,11 +147,11 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print("WARNING: no lesion in image_patho --> skipping subject\n")
         return False
 
-    # Check if lesion volume is less than X mm^3, if yes, skip this subject
-    im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7], debug=False)
-    # if im_patho_lesion_vol < args.min_lesion_volume:
-    #     print("WARNING: lesion volume is too small --> skipping subject\n")
-    #     return False
+    # # Check if lesion volume is less than X mm^3, if yes, skip this subject
+    # im_patho_lesion_vol = get_lesion_volume(im_patho_lesion_data, im_patho.dim[4:7], debug=False)
+    # # if im_patho_lesion_vol < args.min_lesion_volume:
+    # #     print("WARNING: lesion volume is too small --> skipping subject\n")
+    # #     return False
 
 
     """
@@ -234,13 +228,14 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md)
     new_sc = im_healthy_sc.copy()
 
+    # TODO: Maybe remove the centerline extraction for MS lesion augs
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
     healthy_centerline = get_centerline(im_healthy_sc_data)
     # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
     healthy_centerline_cropped = healthy_centerline # [round(len(healthy_centerline)*0.1): round(len(healthy_centerline)*0.75)]
     # TODO: Check what's the origin - bottom left or top left. Because using 0.25-0.9 seems to place lesions at the top levels but 0.1-0.75 does not do so
 
-    # Initialize numpy arrays with the same shape as the healthy image
+    # Initialize numpy arrays with the same shape as the healthy image once
     im_augmented_data = np.copy(im_healthy_data)
     im_augmented_lesion_data = np.zeros_like(im_healthy_data)
 
@@ -269,52 +264,63 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # index is used to have different seed for every subject to have different lesion positions across different subjects
         rng = np.random.default_rng(args.seed + index)
 
-
         # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
         # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
         # is greater than args.min_lesion_volume
-        # i = 0
-        # while True:
-            # # Initialize numpy arrays with the same shape as the healthy image
-            # im_augmented_data = np.copy(im_healthy_data)
-            # im_augmented_lesion_data = np.zeros_like(im_healthy_data)
+        j = 0
+        while True:            
+            # Initialize numpy arrays with the same shape as the healthy image
+            im_augmented_data_new = np.copy(im_augmented_data)
+            im_augmented_lesion_data_new = np.copy(im_augmented_lesion_data)
 
-        # New position for the lesion
-        new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
-        print(f"Trying to insert lesion at {new_position}")
+            # get the volume of the augmented lesion first
+            lesion_vol_aug_init = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
 
-        # Insert lesion from the bounding box to the im_augmented
-        im_augmented_data, im_augmented_lesion_data, im_healthy_sc_dil_data = insert_lesion(im_augmented_data, im_augmented_lesion_data, im_patho_data,
-                                                        im_patho_sc_dil_data, patho_lesion_data, im_healthy_sc_data,
-                                                        lesion_coords, new_position, lesion_sc_ratio_patho)
+            # New position for the lesion (on the centerline)
+            new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
+            # # New position for the lesion (randomly selected from the lesion coordinates)
+            # new_position = new_coords[rng.integers(0, len(new_coords) - 1)]
+            print(f"Trying to insert lesion at {new_position}")
 
-        # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and SC curvature).
-        # In such case, keep only the largest part.
-        # NOTE: im_augmented_lesion_data could still be empty if the coordinates of lesion bbox are overflowing out of healthy SC, 
-        # essentially never reaching the second if statement in insert_lesion() function. As a result, we get 
-        # "ValueError: attempt to get argmax of an empty sequence" error in keep_largest_component() function.
-        # So, check if im_augmented_lesion_data is empty and if so, try again (with a different position)
-        if not im_augmented_lesion_data.any():
-            print(f"Lesion inserted at {new_position} is empty. Trying again...")
-            continue
+            # Insert lesion from the bounding box to the im_augmented
+            im_augmented_data_new, im_augmented_lesion_data_new, _ = insert_lesion(im_augmented_data_new, im_augmented_lesion_data_new, im_patho_data,
+                                                            im_patho_sc_dil_data, patho_lesion_data, im_healthy_sc_data,
+                                                            lesion_coords, new_position, lesion_sc_ratio_patho)
+
+            # check if im_augmented_lesion_data is empty and if so, try again (with a different position)
+            if not im_augmented_lesion_data_new.any():
+                print(f"Lesion inserted at {new_position} is empty. Trying again...")
+                continue
             
-            # im_augmented_lesion_data = keep_largest_component(im_augmented_lesion_data)
+            lesion_vol_aug_temp = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
+            # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and SC curvature).
+            # In such case, keep only the largest part.            
+            im_augmented_lesion_data_new = keep_largest_component(im_augmented_lesion_data_new)
             # Insert back intensity values from the original healthy image everywhere where the lesion is zero. In other
             # words, keep only the largest part of the lesion and replace the rest with the original healthy image.
-            # im_augmented_data[im_augmented_lesion_data == 0] = im_healthy_data[im_augmented_lesion_data == 0]
+            im_augmented_data_new[im_augmented_lesion_data_new == 0] = im_healthy_data[im_augmented_lesion_data_new == 0]
 
             # # Check if inserted lesion is larger then min_lesion_volume
             # # NOTE: we are doing this check because the lesion can smaller due to crop by the spinal cord mask
-            # lesion_vol = get_lesion_volume(im_augmented_lesion_data, im_augmented_lesion.dim[4:7], debug=False)
-            # if lesion_vol > args.min_lesion_volume:
-            #     print(f"Lesion inserted at {new_position}")
-            #     break
+            lesion_vol_aug_final = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
+            print(f"Volume of lesion after augmentation: {lesion_vol_aug_final - lesion_vol_aug_init}")
+            lesion_vol_orig = get_lesion_volume(patho_lesion_data, im_patho_lesion.dim[4:7], debug=False)
+            print(f"Volume of lesion {i+1} in original image: {lesion_vol_orig}")
+            # keep the augmented lesion if it is greater than 80% of the original lesion
+            if (lesion_vol_aug_final - lesion_vol_aug_init) >= 0.8 * lesion_vol_orig:
+                print(f"Lesion inserted at {new_position}")
+                break
 
-            # if i == 10:
-            #     print(f"WARNING: Tried 10 times to insert lesion but failed. Skipping this subject...")
-            #     return False
-            # i += 1
+            if j == 10:
+                print(f"WARNING: Tried 10 times to insert lesion but failed. Skipping this lesion...")
+                break
+            j += 1
 
+        # re-use im_augmented_data for the next lesion
+        im_augmented_data = np.copy(im_augmented_data_new)
+        im_augmented_lesion_data = np.copy(im_augmented_lesion_data_new)
+
+        
     # Insert newly created target and lesion into Image instances
     im_augmented.data = im_augmented_data
     im_augmented_lesion.data = im_augmented_lesion_data
@@ -323,9 +329,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     if np.sum(im_augmented_lesion.data) == 0:
         print(f"WARNING: (augmented) im_augmented_lesion is empty. Check code again. Gracefully exiting....")
         sys.exit(1)
-
-    # # Convert i to string and add 3 leading zeros
-    # s = str(index).zfill(3)
 
     """
     Save im_augmented and im_augmented_lesion
