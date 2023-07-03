@@ -436,7 +436,7 @@ def main():
     """
     Start generating new samples
     """
-    for i in range(len(rand_index[0])): # it doesn't matter if we use 0 or 1, they have the same length
+    for i in range(rand_index.shape[1]):
 
         # wait 0.1 seconds to avoid print overlapping
         time.sleep(0.1)
