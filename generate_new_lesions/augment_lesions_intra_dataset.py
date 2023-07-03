@@ -398,6 +398,8 @@ def main():
     args.path_qc = os.path.expanduser(args.path_qc)
 
     # get all pathology cases
+    # TODO: the filtering of healthy and patho cases is now specific to basel-mp2rage dataset --> generalize it
+    #  (probably using participants.tsv)
     all_cases = os.listdir(args.path_data)
     cases_patho = [case for case in all_cases if 'sub-P' in case]
     print(f"Found {len(cases_patho)} pathology cases.")
