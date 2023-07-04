@@ -78,12 +78,18 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
     # TODO - take angle of the centerline into account when projecting the lesion
     # TODO for Nathan - rewrite this without 3 loops
 
-    for x_step, x_cor in enumerate(range(x0, x1)):
-        for y_step, y_cor in enumerate(range(y0, y1)):
-            for z_step, z_cor in enumerate(range(z0, z1)):
-                # Check that dimensions do not overflow
-                if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
-                    continue
+    # Compute the shift to the center of the bounding box
+    shift_x, shift_y, shift_z = (x1 - x0) // 2, (y1 - y0) // 2, (z1 - z0) // 2
+
+    # for x_step, x_cor in enumerate(range(x0, x1)):
+    #     for y_step, y_cor in enumerate(range(y0, y1)):
+    #         for z_step, z_cor in enumerate(range(z0, z1)):
+    for x_step, x_cor in zip(range(-shift_x, shift_x + 1), range(x0, x1)):
+        for y_step, y_cor in zip(range(-shift_y, shift_y + 1 ), range(y0, y1)):
+            for z_step, z_cor in zip(range(-shift_z, shift_z + 1), range(z0, z1)):
+                # # Check that dimensions do not overflow
+                # if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
+                #     continue
                 
                 # Insert only voxels corresponding to the lesion mask
                 # Also make sure that the new lesion is not projected outside of the SC
