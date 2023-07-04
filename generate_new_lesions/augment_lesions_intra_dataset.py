@@ -82,7 +82,6 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
     im_healthy_sc_dil_data = im_healthy_sc_data * im_augmented_lesion_dilated
     # print(f"non zero elements in healthy SC after dilation: {np.count_nonzero(im_healthy_sc_data)}")
 
-    # TODO: check whether this is the same as multiplying element-wise
     # compute the intensity ratio of the SCs of the patho and healthy image
     intensity_ratio_scs = np.mean(im_augmented[(im_healthy_sc_dil_data > 0) & (im_augmented_lesion == 0)]) / \
                                     np.mean(im_patho_data[(im_patho_sc_dil_data > 0) & (patho_lesion_data == 0)])  # without lesion
@@ -107,7 +106,7 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
 
 def generate_new_sample(sub_healthy, sub_patho, args, index):
 
-    # TODO: Create classes for healthy and pathology subjects 
+    # TODO: Create classes for healthy and pathology subjects --> Requires major refactoring
 
     """
     Load pathological subject image, spinal cord segmentation, and lesion mask
@@ -239,6 +238,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     im_augmented_data = np.copy(im_healthy_data)
     im_augmented_lesion_data = np.zeros_like(im_healthy_data)
 
+    # Select random coordinate on the centerline
+    # index is used to have different seed for every subject to have different lesion positions across different subjects
+    rng = np.random.default_rng(args.seed + index)
+
     for i, patho_lesion_data in enumerate(extracted_patho_lesions):
         print(f"Inserting Lesion {i+1} out of {len(extracted_patho_lesions)}")
         """
@@ -260,13 +263,9 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
         lesion_coords = np.argwhere(patho_lesion_data > 0)
 
-        # Select random coordinate on the centerline
-        # index is used to have different seed for every subject to have different lesion positions across different subjects
-        rng = np.random.default_rng(args.seed + index)
-
         # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
         # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
-        # is greater than args.min_lesion_volume
+        # has similar volume w.r.t the original lesion
         j = 0
         while True:            
             # Initialize numpy arrays with the same shape as the healthy image
@@ -292,22 +291,16 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
                 print(f"Lesion inserted at {new_position} is empty. Trying again...")
                 continue
             
-            lesion_vol_aug_temp = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
-            # Inserted lesion can be divided into several parts (due to the crop by the healthy SC mask and SC curvature).
-            # In such case, keep only the largest part.            
-            im_augmented_lesion_data_new = keep_largest_component(im_augmented_lesion_data_new)
-            # Insert back intensity values from the original healthy image everywhere where the lesion is zero. In other
-            # words, keep only the largest part of the lesion and replace the rest with the original healthy image.
-            im_augmented_data_new[im_augmented_lesion_data_new == 0] = im_healthy_data[im_augmented_lesion_data_new == 0]
+            # NOTE: Keeping largest component for MS lesions suppresses a lot of small lesions. Hence, unlike in SCI, we 
+            # don't use it here. 
 
-            # # Check if inserted lesion is larger then min_lesion_volume
-            # # NOTE: we are doing this check because the lesion can smaller due to crop by the spinal cord mask
+            # Check if volume of inserted lesion is similar to that of the original one 
             lesion_vol_aug_final = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
             print(f"Volume of lesion after augmentation: {lesion_vol_aug_final - lesion_vol_aug_init}")
             lesion_vol_orig = get_lesion_volume(patho_lesion_data, im_patho_lesion.dim[4:7], debug=False)
             print(f"Volume of lesion {i+1} in original image: {lesion_vol_orig}")
             # keep the augmented lesion if it is greater than 80% of the original lesion
-            if (lesion_vol_aug_final - lesion_vol_aug_init) >= 0.8 * lesion_vol_orig:
+            if (lesion_vol_aug_final - lesion_vol_aug_init) >= 0.9 * lesion_vol_orig:
                 print(f"Lesion inserted at {new_position}")
                 break
 
@@ -403,6 +396,7 @@ def main():
     # get all pathology cases
     # TODO: the filtering of healthy and patho cases is now specific to basel-mp2rage dataset --> generalize it
     #  (probably using participants.tsv)
+    # TODO: split the dataset into train/val/test sets and use healthy subjects in train set for augmentation 
     all_cases = os.listdir(args.path_data)
     cases_patho = [case for case in all_cases if 'sub-P' in case]
     print(f"Found {len(cases_patho)} pathology cases.")
