@@ -13,6 +13,7 @@ NOTE: BIDS structure is expected for the input data.
 import os
 import sys
 import time
+import yaml
 import argparse
 import numpy as np
 import pandas as pd
@@ -40,7 +41,8 @@ def get_parser():
                         help="Number of healthy controls to use for augmentation Default: num_patho // 2")
     parser.add_argument('-split', nargs='+', required=False, type=float, default=[0.6, 0.2, 0.2],
                         help='Ratios of training, validation and test splits lying between 0-1. Example: --split 0.6 0.2 0.2')
-    parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
+    parser.add_argument("-qc", default=False, action='store_true', 
+                        help="Perform QC using sct_qc. QC will be saved under -path-out. Default: False")
     # parser.add_argument("-histogram", default=False, action='store_true', help="Create histograms. Default: False")
     # parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=200, type=float,
     #                     help="Minimum lesion volume in mm^3. Default: 200")
@@ -332,7 +334,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # else:
     #     subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_' + sessionID_patho + '_augmented'
 
-    subject_name_out = sub_healthy + '_' + sub_patho + '_augmented'
+    subject_name_out = sub_healthy + '_' + sub_patho
 
     # if args.histogram:
     #     # Generate healthy-patho pair histogram
@@ -352,10 +354,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     save_path = os.path.join(args.path_out, f"augmented-{dataset_name}-seed{args.seed}")
     os.makedirs(save_path, exist_ok=True)
     # create new folder for each subject
-    sub_save_path = os.path.join(save_path, sub_healthy)
+    sub_save_path = os.path.join(save_path, subject_name_out)
     os.makedirs(sub_save_path, exist_ok=True)
     # save the augmented data in the subject folder
-    im_augmented_path = os.path.join(sub_save_path, f"{subject_name_out}.nii.gz")
+    im_augmented_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_augmented.nii.gz")
     im_augmented_lesion_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
     new_sc_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_label-SC_seg-augmented.nii.gz")
 
@@ -418,6 +420,9 @@ def main():
     # # add the healthy subjects to the training set
     # train_subjects = train_subjects + cases_healthy     # selected_healthy_subjects
 
+    # create a yml file with the train, val and test subjects
+    split_dict = {'train': train_subjects, 'val': val_subjects, 'test': test_subjects}
+    split_dict['seed'] = args.seed
 
     """
     Mix pathology and healthy subjects
@@ -459,6 +464,10 @@ def main():
             print('-' * 50)
             print(f"Number of samples generated: {num_of_samples_generated}/{args.num}")
             print('-' * 50)
+            
+            # add the augmented subject to the yml file
+            split_dict['train'].append(f'{sub_healthy}_{sub_patho}')
+            
 
         # If we have generated the required number of samples, break the for loop
         if num_of_samples_generated == args.num:
@@ -468,6 +477,10 @@ def main():
         time.sleep(0.1)
 
     print("\nFinished generating new samples!")
+
+    split_file = os.path.join(args.path_out, 'data_split.yml')
+    with open(split_file, 'w') as outfile:
+        yaml.dump(split_dict, outfile, default_flow_style=False)
 
 
 if __name__ == '__main__':
