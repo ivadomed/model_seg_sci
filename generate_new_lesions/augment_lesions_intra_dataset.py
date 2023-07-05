@@ -30,9 +30,8 @@ def get_parser():
     parser.add_argument("-path-data", type=str, required=True,
                         help="Path to BIDS dataset containing both healthy controls and patients with lesions "
                              "(e.g., basel-mp2rage)")
-    parser.add_argument("-path-qc", type=str,
-                        help="Path where QC report generated using sct_qc will be saved. If not provided, "
-                             "QC report will not be generated.")
+    parser.add_argument("-path-out", type=str, required=True,
+                        help="Path where the augmented dataset will be saved.")
     parser.add_argument("-num", default=100, type=int, help="Total number of newly generated subjects. Default: 100")
     parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
     parser.add_argument("-resample", default=False, action='store_true',
@@ -41,6 +40,7 @@ def get_parser():
                         help="Number of healthy controls to use for augmentation Default: num_patho // 2")
     parser.add_argument('-split', nargs='+', required=False, type=float, default=[0.6, 0.2, 0.2],
                         help='Ratios of training, validation and test splits lying between 0-1. Example: --split 0.6 0.2 0.2')
+    parser.add_argument("-qc", default=False, action='store_true', help="Perform QC using sct_qc. Default: False")
     # parser.add_argument("-histogram", default=False, action='store_true', help="Create histograms. Default: False")
     # parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=200, type=float,
     #                     help="Minimum lesion volume in mm^3. Default: 200")
@@ -213,6 +213,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # Extract all individual lesions from the pathological image
     extracted_patho_lesions = extract_lesions(im_patho_lesion_data)
 
+
     """
     Main logic - copy lesion from pathological image to healthy image
     """
@@ -345,16 +346,18 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     qc_plane = 'sagittal'
     # else:
     #     qc_plane = 'axial'
-
-    # im_augmented_path = os.path.join(args.path_data, sub_healthy, "anat", f"{subject_name_out}.nii.gz")
-    # im_augmented_lesion_path = os.path.join(args.path_data,  "derivatives", "labels", sub_healthy, "anat", f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
-    # new_sc_path = os.path.join(args.path_data,  "derivatives", "labels", sub_healthy, "anat", f"{subject_name_out}_UNIT1_label-augmented-SC_seg.nii.gz")
-    # use temporary for now
-    os.makedirs(os.path.join(args.path_data, "temp"), exist_ok=True)
-    im_augmented_path = os.path.join(args.path_data, "temp", f"{subject_name_out}.nii.gz")
-    im_augmented_lesion_path = os.path.join(args.path_data, "temp", f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
-    new_sc_path = os.path.join(args.path_data,  "temp", f"{subject_name_out}_UNIT1_label-augmented-SC_seg.nii.gz")
-
+    
+    # save the augmented data in a separate folder with the seed used
+    dataset_name = args.path_data.split('/')[-1]
+    save_path = os.path.join(args.path_out, f"augmented-{dataset_name}-seed{args.seed}")
+    os.makedirs(save_path, exist_ok=True)
+    # create new folder for each subject
+    sub_save_path = os.path.join(save_path, sub_healthy)
+    os.makedirs(sub_save_path, exist_ok=True)
+    # save the augmented data in the subject folder
+    im_augmented_path = os.path.join(sub_save_path, f"{subject_name_out}.nii.gz")
+    im_augmented_lesion_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
+    new_sc_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_label-SC_seg-augmented.nii.gz")
 
     im_augmented.save(im_augmented_path)
     print(f'Saving {im_augmented_path}; {im_augmented.orientation, im_augmented.dim[4:7]}')
@@ -365,13 +368,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     print('')
 
     # Generate QC
-    if args.path_qc is not None:
+    if args.qc:
         # Binarize im_augmented_lesion (sct_qc supports only binary masks)
         im_augmented_lesion_bin_path = im_augmented_lesion_path.replace('.nii.gz', '_bin.nii.gz')
         os.system(f'sct_maths -i {im_augmented_lesion_path} -bin 0 -o {im_augmented_lesion_bin_path}')
         # Example: sct_qc -i t2.nii.gz -s t2_seg.nii.gz -d t2_lesion.nii.gz -p sct_deepseg_lesion -plane axial
         os.system(f'sct_qc -i {im_augmented_path} -s {new_sc_path} -d {im_augmented_lesion_bin_path} -p sct_deepseg_lesion '
-                  f'-plane {qc_plane} -qc {args.path_qc} -qc-subject {subject_name_out}')
+                  f'-plane {qc_plane} -qc {os.path.join(save_path, "qc")} -qc-subject {subject_name_out}')
         # Remove binarized lesion
         os.remove(im_augmented_lesion_bin_path)
 
@@ -385,7 +388,6 @@ def main():
 
     # Expand user (i.e. ~) in paths
     args.path_data = os.path.expanduser(args.path_data)
-    args.path_qc = os.path.expanduser(args.path_qc)
 
     # define random number generator
     print("Random seed: ", args.seed)
