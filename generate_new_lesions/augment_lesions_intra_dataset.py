@@ -15,13 +15,14 @@ import sys
 import time
 import argparse
 import numpy as np
+import pandas as pd
 from scipy.ndimage import binary_dilation, generate_binary_structure
-import nibabel as nib
+from sklearn.model_selection import train_test_split
 
 from spinalcordtoolbox.image import Image, zeros_like
 from spinalcordtoolbox.resampling import resample_nib
 
-from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session, \
+from utils import get_centerline, get_lesion_volume, fetch_subject_and_session, \
     generate_histogram, extract_lesions
 
 def get_parser():
@@ -36,6 +37,10 @@ def get_parser():
     parser.add_argument("-seed", default=99, type=int, help="Random seed used for subject mixing. Default: 99")
     parser.add_argument("-resample", default=False, action='store_true',
                         help="Resample the augmented images to the resolution of pathological dataset. Default: False")
+    parser.add_argument("-use-n-healthy", default=1, type=int,
+                        help="Number of healthy controls to use for augmentation Default: num_patho // 2")
+    parser.add_argument('-split', nargs='+', required=False, type=float, default=[0.6, 0.2, 0.2],
+                        help='Ratios of training, validation and test splits lying between 0-1. Example: --split 0.6 0.2 0.2')
     # parser.add_argument("-histogram", default=False, action='store_true', help="Create histograms. Default: False")
     # parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=200, type=float,
     #                     help="Minimum lesion volume in mm^3. Default: 200")
@@ -205,14 +210,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
         return False
 
-    # # normalize images to range 0 and 1 using min-max normalization
-    # im_healthy_data = (im_healthy_data - np.min(im_healthy_data)) / (np.max(im_healthy_data) - np.min(im_healthy_data))
-    # im_patho_data = (im_patho_data - np.min(im_patho_data)) / (np.max(im_patho_data) - np.min(im_patho_data))
-    # # normalize with Z-score
-    # im_healthy_data = (im_healthy_data - np.mean(im_healthy_data)) / (np.std(im_healthy_data) + 1e-8)
-    # im_patho_data = (im_patho_data - np.mean(im_patho_data)) / (np.std(im_patho_data) + 1e-8)
-
-    # voxel_dims = im_patho.dim[4:7]
+    # Extract all individual lesions from the pathological image
     extracted_patho_lesions = extract_lesions(im_patho_lesion_data)
 
     """
@@ -227,12 +225,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     # (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md)
     new_sc = im_healthy_sc.copy()
 
-    # TODO: Maybe remove the centerline extraction for MS lesion augs
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
     healthy_centerline = get_centerline(im_healthy_sc_data)
-    # Make sure that the z-axis is at the max of the SC mask so that it is not mapped on the brainstem
-    healthy_centerline_cropped = healthy_centerline # [round(len(healthy_centerline)*0.1): round(len(healthy_centerline)*0.75)]
-    # TODO: Check what's the origin - bottom left or top left. Because using 0.25-0.9 seems to place lesions at the top levels but 0.1-0.75 does not do so
 
     # Initialize numpy arrays with the same shape as the healthy image once
     im_augmented_data = np.copy(im_healthy_data)
@@ -276,7 +270,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
             lesion_vol_aug_init = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
 
             # New position for the lesion (on the centerline)
-            new_position = healthy_centerline_cropped[rng.integers(0, len(healthy_centerline_cropped) - 1)]
+            new_position = healthy_centerline[rng.integers(0, len(healthy_centerline) - 1)]
             # # New position for the lesion (randomly selected from the lesion coordinates)
             # new_position = new_coords[rng.integers(0, len(new_coords) - 1)]
             print(f"Trying to insert lesion at {new_position}")
@@ -299,7 +293,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
             print(f"Volume of lesion after augmentation: {lesion_vol_aug_final - lesion_vol_aug_init}")
             lesion_vol_orig = get_lesion_volume(patho_lesion_data, im_patho_lesion.dim[4:7], debug=False)
             print(f"Volume of lesion {i+1} in original image: {lesion_vol_orig}")
-            # keep the augmented lesion if it is greater than 80% of the original lesion
+            # keep the augmented lesion if it is greater than X % of the original lesion
             if (lesion_vol_aug_final - lesion_vol_aug_init) >= 0.9 * lesion_vol_orig:
                 print(f"Lesion inserted at {new_position}")
                 break
@@ -393,33 +387,42 @@ def main():
     args.path_data = os.path.expanduser(args.path_data)
     args.path_qc = os.path.expanduser(args.path_qc)
 
-    # get all pathology cases
-    # TODO: the filtering of healthy and patho cases is now specific to basel-mp2rage dataset --> generalize it
-    #  (probably using participants.tsv)
-    # TODO: split the dataset into train/val/test sets and use healthy subjects in train set for augmentation 
-    all_cases = os.listdir(args.path_data)
-    cases_patho = [case for case in all_cases if 'sub-P' in case]
-    print(f"Found {len(cases_patho)} pathology cases.")
-    cases_healthy = [case for case in all_cases if 'sub-C' in case]
-    print(f"Found {len(cases_healthy)} healthy cases.")
+    # define random number generator
+    print("Random seed: ", args.seed)
+    rng = np.random.default_rng(args.seed)
 
-    # # Check if number of samples to generate is not larger than the number of available subjects
-    # # Because we want to use each healthy subject only once
-    # if args.num > len(cases_healthy):
-    #     sys.exit(f"Number of samples to generate ({args.num}) is larger than the number of available "
-    #              f"subjects ({len(cases_patho)})")
+    # get split ratios
+    train_ratio, val_ratio, test_ratio = args.split
+
+    # get all subjects from participants.tsv
+    subjects_df = pd.read_csv(os.path.join(args.path_data, 'participants.tsv'), sep='\t')
+    subjects = subjects_df['participant_id'].values.tolist()
+    print(f"Total number of subjects in the dataset: {len(subjects)}")
+
+    cases_patho = [sub for sub in subjects if sub.startswith('sub-P')]
+    print(f"Total number of pathology subjects: {len(cases_patho)}")
+
+    cases_healthy = [sub for sub in subjects if sub.startswith('sub-C')]
+    print(f"Total number of healthy subjects: {len(cases_healthy)}")
+
+    # choose a random set of healthy subjects for augmentation
+    selected_healthy_subjects = rng.choice(cases_healthy, args.use_n_healthy)
+
+    # Get only the training and test splits initially from the pathology cases only
+    train_subjects, test_subjects = train_test_split(cases_patho, test_size=test_ratio, random_state=args.seed)
+    # Use the training split to further split into training and validation splits
+    train_subjects, val_subjects = train_test_split(train_subjects, test_size=val_ratio / (train_ratio + val_ratio),
+                                                    random_state=args.seed, )
+    # # add the healthy subjects to the training set
+    # train_subjects = train_subjects + cases_healthy     # selected_healthy_subjects
+
 
     """
     Mix pathology and healthy subjects
     """
-    print("Random seed: ", args.seed)
-    rng = np.random.default_rng(args.seed)
     # Get random indices for pathology and healthy subjects
-    patho_random_list = rng.choice(len(cases_patho), len(cases_healthy)) 
+    patho_random_list = rng.choice(len(train_subjects), len(cases_healthy)) 
     healthy_random_list = rng.choice(len(cases_healthy), len(cases_healthy))     # rng.choice(len(cases_healthy), args.num, replace=False)
-
-    # # Duplicate healthy list (we need more subjects because some pair might be skipped, for example due to no lesion)
-    # healthy_random_list = np.tile(healthy_random_list, 2)
 
     # Combine both lists
     rand_index = np.vstack((patho_random_list, healthy_random_list))
@@ -445,10 +448,6 @@ def main():
         # sub_patho = patho_random_list[rand_index_patho]
         sub_healthy = cases_healthy[rand_index_healthy]
         
-        # # Strip .nii.gz from the subject name
-        # sub_healthy = sub_healthy.replace('.nii.gz', '')
-        # sub_patho = sub_patho.replace('.nii.gz', '')
-
         print(f"\nHealthy subject: {sub_healthy}, Patho subject: {sub_patho}")
 
         # If augmentation is done successfully (True is returned), break the loop and continue to the next sample
