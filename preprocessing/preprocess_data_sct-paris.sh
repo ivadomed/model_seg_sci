@@ -68,6 +68,26 @@ segment_if_does_not_exist() {
   fi
 }
 
+copy_lesion() {
+  ###
+  #  This function checks if a manual lesion segmentation exists, then:
+  #    - If it does, copy it locally
+  ###
+  local image="$1"
+  # Update global variable with segmentation file name
+  FILELESION="${image}_lesion"
+  FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${FILELESION}-manual.nii.gz"
+  echo "Looking for manual lesion segmentation: $FILELESIONMANUAL"
+  if [[ -e $FILELESIONMANUAL ]]; then
+    echo "Found! Using manual lesion segmentation."
+    rsync -avzh $FILELESIONMANUAL ${FILELESION}.nii.gz
+
+    # Make sure the lesion is binary
+    sct_maths -i ${FILELESION}.nii.gz -bin 0 -o ${FILELESION}_bin.nii.gz
+  fi
+
+}
+
 # Retrieve input params and other params
 SUBJECT=$1
 
@@ -104,6 +124,15 @@ if [[ -f ${file_t2w}.nii.gz ]];then
 
     # Spinal cord segmentation
     segment_if_does_not_exist ${file_t2w} 't2'
+
+    # Automatic SC seg fails at the lesion, so we add the lesion to the segmentation (to save time with manual corrections)
+    # Copy SCI lesion
+    copy_lesion ${file_t2w}
+    # Add lesion to SC segmentation
+    sct_maths -i ${file_t2w}_seg.nii.gz -add ${FILELESION}_bin.nii.gz -o ${file_t2w}_seg.nii.gz
+    # Make sure the final SC segmentation is binary
+    sct_maths -i ${file_t2w}_seg.nii.gz -bin 0.5 -o ${file_t2w}_seg.nii.gz
+    sct_qc -i ${file_t2w}.nii.gz -p sct_deepseg_sc -s ${file_t2w}_seg.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 fi
 
