@@ -39,6 +39,9 @@ def get_parser():
                         help="Resample the augmented images to the resolution of pathological dataset. Default: False")
     parser.add_argument("-use-n-healthy", default=1, type=int,
                         help="Number of healthy controls to use for augmentation Default: num_patho // 2")
+    parser.add_argument('--fraction_patho_data', default=1.0, type=float,
+                    help='Fraction of pathology data to be used for training. '
+                    'Use 0.5 for half, 0.25 for 1/4th, etc. ') 
     parser.add_argument('-split', nargs='+', required=False, type=float, default=[0.6, 0.2, 0.2],
                         help='Ratios of training, validation and test splits lying between 0-1. Example: --split 0.6 0.2 0.2')
     parser.add_argument("-qc", default=False, action='store_true', 
@@ -414,6 +417,11 @@ def main():
 
     # Get only the training and test splits initially from the pathology cases only
     train_subjects, test_subjects = train_test_split(cases_patho, test_size=test_ratio, random_state=args.seed)
+
+    # choose only fraction of the train_subjects (which are pathology) for augmentation
+    train_subjects = rng.choice(train_subjects, int(len(train_subjects) * args.fraction_patho_data), replace=False).tolist()
+    print(f"Using {int(args.fraction_patho_data * 100)}% of pathology subjects for augmentation.")
+
     # Use the training split to further split into training and validation splits
     train_subjects, val_subjects = train_test_split(train_subjects, test_size=val_ratio / (train_ratio + val_ratio),
                                                     random_state=args.seed, )
