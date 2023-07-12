@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # Segment spinal cord and generate QC.
+# Note: Since automatic SC segmentation fails at the lesion, we add the SCI lesion to the segmentation (to save time
+# with manual corrections)
 #
 # Dependencies (versions):
 # - SCT (5.8)
