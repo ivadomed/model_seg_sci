@@ -265,6 +265,7 @@ def main():
     output_folder = os.path.join(pred_folder, f"anima_stats")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
+    print(f"Saving ANIMA performance metrics to {output_folder}")
 
     if dataset_name not in ["sci-zurich-region", "sci-colorado-region"]:
 
