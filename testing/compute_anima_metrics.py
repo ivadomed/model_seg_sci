@@ -99,20 +99,23 @@ print('ANIMA Binaries Path:', anima_binaries_path)
 # version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
 print('Running ANIMA version:', subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n'))
 
-# Define arguments
-parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
 
-# Arguments for model, data, and training
-parser.add_argument('--pred-folder', required=True, type=str,
-                    help='Path to the folder containing nifti images of test predictions')
-parser.add_argument('--gt-folder', required=True, type=str,
-                    help='Path to the folder containing nifti images of GT labels')
-parser.add_argument('-dname', '--dataset-name', required=True, type=str,
-                    help='Dataset name used for storing on git-annex. For region-based metrics, append "-region" to the dataset name')
-# parser.add_argument('-o', '--output-folder', required=True, type=str,
-#                     help='Path to the output folder to save the test metrics results')
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
 
-args = parser.parse_args()
+    # Arguments for model, data, and training
+    parser.add_argument('--pred-folder', required=True, type=str,
+                        help='Path to the folder containing nifti images of test predictions')
+    parser.add_argument('--gt-folder', required=True, type=str,
+                        help='Path to the folder containing nifti images of GT labels')
+    parser.add_argument('-dname', '--dataset-name', required=True, type=str,
+                        help='Dataset name used for storing on git-annex. For region-based metrics, '
+                             'append "-region" to the dataset name')
+    # parser.add_argument('-o', '--output-folder', required=True, type=str,
+    #                     help='Path to the output folder to save the test metrics results')
+
+    return parser
 
 
 def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set):
@@ -251,7 +254,11 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
         return subject_filepaths
 
 
-def main(args):
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
+
     # define variables
     pred_folder, gt_folder = args.pred_folder, args.gt_folder
     dataset_name = args.dataset_name
@@ -351,4 +358,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(args)
+    main()
