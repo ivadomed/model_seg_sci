@@ -55,16 +55,16 @@ nano .anima/config.txt
 
 ##### STEP 2: Configure directories #####
 # Variable names and section titles should stay the same
-# Put this file in your HomeFolder/.anima/config.txt
+# Put this file in ${HOME}/.anima/config.txt
 # Make the anima variable point to your Anima public build
 # Make the extra-data-root point to the data folder of Anima-Scripts
 # The last folder separator for each path is crucial, do not forget them
 # Use full paths, nothing relative or using tildes 
 
 [anima-scripts]
-anima = /home/<your-user-name>/anima/Anima-Binaries-4.2/
-anima-scripts-public-root = /home/<your-user-name>/anima/Anima-Scripts-Public/
-extra-data-root = /home/<your-user-name>/anima/Anima-Scripts-Data-Public/
+anima = ${HOME}/anima/Anima-Binaries-4.2/
+anima-scripts-public-root = ${HOME}/anima/Anima-Scripts-Public/
+extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/
 
 USAGE:
 python compute_anima_metrics.py --pred_folder <path_to_predictions_folder> 
