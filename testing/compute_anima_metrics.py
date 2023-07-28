@@ -79,7 +79,7 @@ NOTE 2: We use certain additional arguments below with the following purposes:
       -a -> intra-lesion evalulation (advanced), -s -> segmentation evaluation, 
       -X -> save as XML file  -A -> prints details on output metrics and exits
 
-Authors: Naga Karthik
+Authors: Naga Karthik, Jan Valosek
 """
 
 import os
