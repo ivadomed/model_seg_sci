@@ -111,7 +111,7 @@ def get_parser():
     return parser
 
 
-def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set):
+def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set):
     """
     Computes the test metrics given folders containing nifti images of test predictions 
     and GT images by running the "animaSegPerfAnalyzer" command
@@ -272,7 +272,8 @@ def main():
     if dataset_name not in ["sci-zurich-region", "sci-colorado-region"]:
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set=dataset_name)
+        subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
+                                                        data_set=dataset_name)
 
         test_metrics = defaultdict(list)
 
@@ -314,7 +315,9 @@ def main():
     else:
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_sc_filepaths, subject_lesion_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set=dataset_name)
+        subject_sc_filepaths, subject_lesion_filepaths = \
+            get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
+                                        data_set=dataset_name)
 
         # loop through the sc and lesion filepaths and get the metrics
         for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
