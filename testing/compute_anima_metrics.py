@@ -185,8 +185,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
         
         return subject_sc_filepaths, subject_lesion_filepaths
 
-
-    elif data_set in ["spine-generic", "sci-colorado", "sci-zurich" "basel-mp2rage"]:
+    elif data_set in ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]:
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
         gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
