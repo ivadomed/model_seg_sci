@@ -93,7 +93,7 @@ import nibabel as nib
 from test_utils import fetch_filename_details
 
 # get the ANIMA binaries path
-cmd = r'''grep "^anima = " ~/.anima_4.2/config.txt | sed "s/.* = //"'''
+cmd = r'''grep "^anima = " ~/.anima/config.txt | sed "s/.* = //"'''
 anima_binaries_path = subprocess.check_output(cmd, shell=True).decode('utf-8').strip('\n')
 print('ANIMA Binaries Path:', anima_binaries_path)
 # version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
