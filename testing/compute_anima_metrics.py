@@ -176,7 +176,6 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
                 os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
                 os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
 
-
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_sc_filepaths = [os.path.join(output_folder, f) for f in
                                 os.listdir(output_folder) if f.endswith('.xml') and 'sc' in f]
@@ -238,7 +237,6 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
             os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"))
             os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
 
-
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_filepaths = [os.path.join(output_folder, f) for f in
                                 os.listdir(output_folder) if f.endswith('.xml')]
@@ -297,7 +295,6 @@ def main():
 
                 test_metrics[name].append(value)
 
-
         # Print aggregation of each metric via mean and standard dev.
         with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
             print('Test Phase Metrics [ANIMA]: ', file=f)
@@ -345,7 +342,6 @@ def main():
                         continue
 
                     test_metrics[name].append(value)
-
 
             # Print aggregation of each metric via mean and standard dev.
             with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
