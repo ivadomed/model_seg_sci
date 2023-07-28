@@ -92,13 +92,6 @@ import numpy as np
 import nibabel as nib
 from test_utils import fetch_filename_details
 
-# get the ANIMA binaries path
-cmd = r'''grep "^anima = " ~/.anima/config.txt | sed "s/.* = //"'''
-anima_binaries_path = subprocess.check_output(cmd, shell=True).decode('utf-8').strip('\n')
-print('ANIMA Binaries Path:', anima_binaries_path)
-# version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
-print('Running ANIMA version:', subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n'))
-
 
 def get_parser():
     # parse command line arguments
@@ -255,6 +248,15 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
 
 
 def main():
+
+    # get the ANIMA binaries path
+    cmd = r'''grep "^anima = " ~/.anima/config.txt | sed "s/.* = //"'''
+    anima_binaries_path = subprocess.check_output(cmd, shell=True).decode('utf-8').strip('\n')
+    print('ANIMA Binaries Path:', anima_binaries_path)
+    # version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
+    print('Running ANIMA version:',
+          subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode(
+              'utf-8').strip('\n'))
 
     parser = get_parser()
     args = parser.parse_args()
