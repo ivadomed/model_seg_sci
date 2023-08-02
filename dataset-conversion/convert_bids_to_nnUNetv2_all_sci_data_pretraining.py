@@ -78,9 +78,6 @@ def main():
     Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
     Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
 
-    # set the random number generator seed
-    rng = np.random.default_rng(args.seed)
-
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
     for dataset in args.path_data:
