@@ -165,7 +165,6 @@ def main():
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-            
 
         elif subject in test_subjects:
 
