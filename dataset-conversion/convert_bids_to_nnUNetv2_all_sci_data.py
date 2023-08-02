@@ -1,17 +1,23 @@
 """
-Converts the BIDS-structured sci-zurich and sci-colorado datasets to the nnUNetv2 dataset format. 
+Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to the nnUNetv2 dataset format. 
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
-Note that the conversion from BIDS to nnUNet is done using symbolic links to avoid creating multiple copies of the 
-(original) BIDS dataset.
-
+An option to create region-based labels for segmentating both lesion and the spinal cord is also provided. 
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
 Usage example:
-    python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --task-name tSCILesionsZurich --task-number 525 --split 0.8 0.2 --seed 42
+    python convert_bids_to_nnUNetv2_all_sci_data.py 
+        --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi 
+        --path-out ${nnUNet_raw}
+        -dname tSCICombinedRegion
+        -dnum 275
+        --split 0.8 0.2
+        --seed 50
+        --region-based
+
+Authors: Naga Karthik
 """
 
 import argparse
