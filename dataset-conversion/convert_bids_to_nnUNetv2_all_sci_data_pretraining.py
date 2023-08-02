@@ -1,17 +1,19 @@
 """
-Converts the BIDS-structured sci-zurich and sci-colorado datasets to the nnUNetv2 dataset format. 
+Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to the nnUNetv2 dataset format.
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
-
-Note that the conversion from BIDS to nnUNet is done using symbolic links to avoid creating multiple copies of the 
-(original) BIDS dataset.
 
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
 Usage example:
-    python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --task-name tSCILesionsZurich --task-number 525 --split 0.8 0.2 --seed 42
+    python convert_bids_to_nnUNetv2_all_sci_data_pretraining.py
+        --path-data sci-zurich_rpi sci-colorado_rpi sci-paris_rpi
+        --path-out ./
+        --dataset-name tSCIAllDatasetsSCPretrain
+        --task-number 540
+        --mask_to_use seg
+        --split 0.8 0.2 --seed 50
 """
 
 import argparse
@@ -23,51 +25,51 @@ import shutil
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
-from utils import binarize_label, create_region_based_label
-
-import nibabel as nib
-import numpy as np
+from utils import binarize_label
 
 
-# parse command line arguments
-parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
-parser.add_argument('--path-data', nargs='+', required=True, type=str,
-                    help='Path to BIDS datasets (list).')
-parser.add_argument('--path-out', help='Path to output directory.', required=True)
-parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
-                    help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus',)
-parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
-                    help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured datasets to nnUNetv2 database format.')
+    parser.add_argument('--path-data', nargs='+', required=True, type=str,
+                        help='Path to BIDS datasets (list).')
+    parser.add_argument('--path-out', help='Path to output directory.', required=True)
+    parser.add_argument('--dataset-name', '-dname', default='tSCIAllDatasetsSCPretrain', type=str,
+                        help='Specify the task name - usually the anatomy to be segmented.')
+    parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
+                        help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+    parser.add_argument('--seed', default=50, type=int,
+                        help='Seed to be used for the random number generator split into training and test sets.')
+    parser.add_argument('--region-based', action='store_true', default=False,
+                        help='If set, the script will create labels for region-based nnUNet training. Default: False')
+    # argument that accepts a list of floats as train val test splits
+    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. '
+                             'Example: --split 0.8 0.2')
+    parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
+                        help='Specify the mask to use for creating labels for pre-training and fine-tuning. '
+                             'Default: lesion')
 
-parser.add_argument('--seed', default=42, type=int, 
-                    help='Seed to be used for the random number generator split into training and test sets.')
-parser.add_argument('--region-based', action='store_true', default=False,
-                    help='If set, the script will create labels for region-based nnUNet training. Default: False')
-# argument that accepts a list of floats as train val test splits
-parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                    help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
-parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
-                    help='Specify the mask to use for creating labels for pre-training and fine-tuning. Default: lesion')
-
-args = parser.parse_args()
-
-train_ratio, test_ratio = args.split
-path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
-
-# create individual directories for train and test images and labels
-path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
-path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
-
-path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
-path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
-
-path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
-path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
-
-train_images, train_labels, test_images, test_labels = [], [], [], []
+    return parser
 
 
-if __name__ == '__main__':
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
+
+    train_ratio, test_ratio = args.split
+    path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
+
+    # create individual directories for train and test images and labels
+    path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
+    path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+
+    path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
+    path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+
+    path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
+    path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
 
     # make the directories
     Path(path_out).mkdir(parents=True, exist_ok=True)
@@ -79,9 +81,6 @@ if __name__ == '__main__':
 
     Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
     Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
-
-    # set the random number generator seed
-    rng = np.random.default_rng(args.seed)
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
@@ -170,7 +169,6 @@ if __name__ == '__main__':
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-            
 
         elif subject in test_subjects:
 
@@ -302,3 +300,5 @@ if __name__ == '__main__':
         outfile.write(json_object)
 
 
+if __name__ == '__main__':
+    main()
