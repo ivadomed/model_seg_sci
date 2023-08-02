@@ -1,17 +1,19 @@
 """
-Converts the BIDS-structured sci-zurich and sci-colorado datasets to the nnUNetv2 dataset format. 
+Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to the nnUNetv2 dataset format.
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
-
-Note that the conversion from BIDS to nnUNet is done using symbolic links to avoid creating multiple copies of the 
-(original) BIDS dataset.
 
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
 Usage example:
-    python convert_bids_to_nnUNetv2.py --path-data ~/datasets/sci-zurich --path-out ~/datasets/sci-zurich-nnunet
-                    --task-name tSCILesionsZurich --task-number 525 --split 0.8 0.2 --seed 42
+    python convert_bids_to_nnUNetv2_all_sci_data_pretraining.py
+        --path-data sci-zurich_rpi sci-colorado_rpi sci-paris_rpi
+        --path-out ./
+        --dataset-name tSCIAllDatasetsSCPretrain
+        --task-number 540
+        --mask_to_use seg
+        --split 0.8 0.2 --seed 50
 """
 
 import argparse
@@ -28,23 +30,25 @@ from utils import binarize_label
 
 def get_parser():
     # parse command line arguments
-    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured datasets to nnUNetv2 database format.')
     parser.add_argument('--path-data', nargs='+', required=True, type=str,
                         help='Path to BIDS datasets (list).')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
-    parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
+    parser.add_argument('--dataset-name', '-dname', default='tSCIAllDatasetsSCPretrain', type=str,
                         help='Specify the task name - usually the anatomy to be segmented.')
-    parser.add_argument('--dataset-number', '-dnum', default=501,type=int,
+    parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
-    parser.add_argument('--seed', default=42, type=int,
+    parser.add_argument('--seed', default=50, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     parser.add_argument('--region-based', action='store_true', default=False,
                         help='If set, the script will create labels for region-based nnUNet training. Default: False')
     # argument that accepts a list of floats as train val test splits
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. '
+                             'Example: --split 0.8 0.2')
     parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
-                        help='Specify the mask to use for creating labels for pre-training and fine-tuning. Default: lesion')
+                        help='Specify the mask to use for creating labels for pre-training and fine-tuning. '
+                             'Default: lesion')
 
     return parser
 
