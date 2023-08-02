@@ -26,28 +26,33 @@ from sklearn.model_selection import train_test_split
 from utils import binarize_label
 
 
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser.add_argument('--path-data', nargs='+', required=True, type=str,
+                        help='Path to BIDS datasets (list).')
+    parser.add_argument('--path-out', help='Path to output directory.', required=True)
+    parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
+                        help='Specify the task name - usually the anatomy to be segmented.')
+    parser.add_argument('--dataset-number', '-dnum', default=501,type=int,
+                        help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+    parser.add_argument('--seed', default=42, type=int,
+                        help='Seed to be used for the random number generator split into training and test sets.')
+    parser.add_argument('--region-based', action='store_true', default=False,
+                        help='If set, the script will create labels for region-based nnUNet training. Default: False')
+    # argument that accepts a list of floats as train val test splits
+    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+    parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
+                        help='Specify the mask to use for creating labels for pre-training and fine-tuning. Default: lesion')
 
-# parse command line arguments
-parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
-parser.add_argument('--path-data', nargs='+', required=True, type=str,
-                    help='Path to BIDS datasets (list).')
-parser.add_argument('--path-out', help='Path to output directory.', required=True)
-parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
-                    help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus',)
-parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
-                    help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+    return parser
 
-parser.add_argument('--seed', default=42, type=int, 
-                    help='Seed to be used for the random number generator split into training and test sets.')
-parser.add_argument('--region-based', action='store_true', default=False,
-                    help='If set, the script will create labels for region-based nnUNet training. Default: False')
-# argument that accepts a list of floats as train val test splits
-parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                    help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
-parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
-                    help='Specify the mask to use for creating labels for pre-training and fine-tuning. Default: lesion')
 
-args = parser.parse_args()
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
 
 train_ratio, test_ratio = args.split
 path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
