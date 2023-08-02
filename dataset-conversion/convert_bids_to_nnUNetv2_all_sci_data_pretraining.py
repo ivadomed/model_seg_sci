@@ -23,10 +23,8 @@ import shutil
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
-from utils import binarize_label, create_region_based_label
+from utils import binarize_label
 
-import nibabel as nib
-import numpy as np
 
 
 # parse command line arguments
