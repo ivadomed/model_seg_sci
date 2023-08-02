@@ -55,16 +55,16 @@ nano .anima/config.txt
 
 ##### STEP 2: Configure directories #####
 # Variable names and section titles should stay the same
-# Put this file in your HomeFolder/.anima/config.txt
+# Put this file in ${HOME}/.anima/config.txt
 # Make the anima variable point to your Anima public build
 # Make the extra-data-root point to the data folder of Anima-Scripts
 # The last folder separator for each path is crucial, do not forget them
 # Use full paths, nothing relative or using tildes 
 
 [anima-scripts]
-anima = /home/<your-user-name>/anima/Anima-Binaries-4.2/
-anima-scripts-public-root = /home/<your-user-name>/anima/Anima-Scripts-Public/
-extra-data-root = /home/<your-user-name>/anima/Anima-Scripts-Data-Public/
+anima = ${HOME}/anima/Anima-Binaries-4.2/
+anima-scripts-public-root = ${HOME}/anima/Anima-Scripts-Public/
+extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/
 
 USAGE:
 python compute_anima_metrics.py --pred_folder <path_to_predictions_folder> 
@@ -79,7 +79,7 @@ NOTE 2: We use certain additional arguments below with the following purposes:
       -a -> intra-lesion evalulation (advanced), -s -> segmentation evaluation, 
       -X -> save as XML file  -A -> prints details on output metrics and exits
 
-Authors: Naga Karthik
+Authors: Naga Karthik, Jan Valosek
 """
 
 import os
@@ -92,30 +92,26 @@ import numpy as np
 import nibabel as nib
 from test_utils import fetch_filename_details
 
-# get the ANIMA binaries path
-cmd = r'''grep "^anima = " ~/.anima_4.2/config.txt | sed "s/.* = //"'''
-anima_binaries_path = subprocess.check_output(cmd, shell=True).decode('utf-8').strip('\n')
-print('ANIMA Binaries Path:', anima_binaries_path)
-# version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
-print('Running ANIMA version:', subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n'))
 
-# Define arguments
-parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
 
-# Arguments for model, data, and training
-parser.add_argument('--pred-folder', required=True, type=str,
-                    help='Path to the folder containing nifti images of test predictions')
-parser.add_argument('--gt-folder', required=True, type=str,
-                    help='Path to the folder containing nifti images of GT labels')
-parser.add_argument('-dname', '--dataset-name', required=True, type=str,
-                    help='Dataset name used for storing on git-annex. For region-based metrics, append "-region" to the dataset name')
-# parser.add_argument('-o', '--output-folder', required=True, type=str,
-#                     help='Path to the output folder to save the test metrics results')
+    # Arguments for model, data, and training
+    parser.add_argument('--pred-folder', required=True, type=str,
+                        help='Path to the folder containing nifti images of test predictions')
+    parser.add_argument('--gt-folder', required=True, type=str,
+                        help='Path to the folder containing nifti images of GT labels')
+    parser.add_argument('-dname', '--dataset-name', required=True, type=str,
+                        help='Dataset name used for storing on git-annex. For region-based metrics, '
+                             'append "-region" to the dataset name')
+    # parser.add_argument('-o', '--output-folder', required=True, type=str,
+    #                     help='Path to the output folder to save the test metrics results')
 
-args = parser.parse_args()
+    return parser
 
 
-def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set):
+def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set):
     """
     Computes the test metrics given folders containing nifti images of test predictions 
     and GT images by running the "animaSegPerfAnalyzer" command
@@ -180,7 +176,6 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
                 os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
                 os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
 
-
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_sc_filepaths = [os.path.join(output_folder, f) for f in
                                 os.listdir(output_folder) if f.endswith('.xml') and 'sc' in f]
@@ -189,8 +184,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
         
         return subject_sc_filepaths, subject_lesion_filepaths
 
-
-    elif data_set in ["spine-generic", "sci-colorado", "sci-zurich" "basel-mp2rage"]:
+    elif data_set in ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]:
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
         gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
@@ -243,7 +237,6 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
             os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"))
             os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
 
-
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_filepaths = [os.path.join(output_folder, f) for f in
                                 os.listdir(output_folder) if f.endswith('.xml')]
@@ -251,7 +244,20 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set)
         return subject_filepaths
 
 
-def main(args):
+def main():
+
+    # get the ANIMA binaries path
+    cmd = r'''grep "^anima = " ~/.anima/config.txt | sed "s/.* = //"'''
+    anima_binaries_path = subprocess.check_output(cmd, shell=True).decode('utf-8').strip('\n')
+    print('ANIMA Binaries Path:', anima_binaries_path)
+    # version = subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode('utf-8').strip('\n')
+    print('Running ANIMA version:',
+          subprocess.check_output(anima_binaries_path + 'animaSegPerfAnalyzer --version', shell=True).decode(
+              'utf-8').strip('\n'))
+
+    parser = get_parser()
+    args = parser.parse_args()
+
     # define variables
     pred_folder, gt_folder = args.pred_folder, args.gt_folder
     dataset_name = args.dataset_name
@@ -259,11 +265,13 @@ def main(args):
     output_folder = os.path.join(pred_folder, f"anima_stats")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
+    print(f"Saving ANIMA performance metrics to {output_folder}")
 
     if dataset_name not in ["sci-zurich-region", "sci-colorado-region"]:
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set=dataset_name)
+        subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
+                                                        data_set=dataset_name)
 
         test_metrics = defaultdict(list)
 
@@ -288,7 +296,6 @@ def main(args):
 
                 test_metrics[name].append(value)
 
-
         # Print aggregation of each metric via mean and standard dev.
         with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
             print('Test Phase Metrics [ANIMA]: ', file=f)
@@ -305,7 +312,9 @@ def main(args):
     else:
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_sc_filepaths, subject_lesion_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, data_set=dataset_name)
+        subject_sc_filepaths, subject_lesion_filepaths = \
+            get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
+                                        data_set=dataset_name)
 
         # loop through the sc and lesion filepaths and get the metrics
         for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
@@ -335,7 +344,6 @@ def main(args):
 
                     test_metrics[name].append(value)
 
-
             # Print aggregation of each metric via mean and standard dev.
             with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
                 print(f'Test Phase Metrics [ANIMA] for {seg_type}: ', file=f)
@@ -351,4 +359,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(args)
+    main()
