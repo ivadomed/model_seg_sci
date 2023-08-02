@@ -35,40 +35,27 @@ import nibabel as nib
 import numpy as np
 
 
-# parse command line arguments
-parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
-parser.add_argument('--path-data', nargs='+', required=True, type=str,
-                    help='Path to BIDS datasets (list).')
-parser.add_argument('--path-out', help='Path to output directory.', required=True)
-parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
-                    help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus',)
-parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
-                    help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
+def get_parser():
+    # parse command line arguments
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser.add_argument('--path-data', nargs='+', required=True, type=str,
+                        help='Path to BIDS datasets (list).')
+    parser.add_argument('--path-out', help='Path to output directory.', required=True)
+    parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
+                        help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus',)
+    parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
+                        help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
 
-parser.add_argument('--seed', default=42, type=int, 
-                    help='Seed to be used for the random number generator split into training and test sets.')
-parser.add_argument('--region-based', action='store_true', default=False,
-                    help='If set, the script will create labels for region-based nnUNet training. Default: False')
-# argument that accepts a list of floats as train val test splits
-parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                    help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+    parser.add_argument('--seed', default=42, type=int, 
+                        help='Seed to be used for the random number generator split into training and test sets.')
+    parser.add_argument('--region-based', action='store_true', default=False,
+                        help='If set, the script will create labels for region-based nnUNet training. Default: False')
+    # argument that accepts a list of floats as train val test splits
+    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
 
-args = parser.parse_args()
+    return parser
 
-train_ratio, test_ratio = args.split
-path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
-
-# create individual directories for train and test images and labels
-path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
-path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
-
-path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
-path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
-
-path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
-path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
-
-train_images, train_labels, test_images, test_labels = [], [], [], []
 
 
 def get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5):
@@ -81,7 +68,7 @@ def get_region_based_label(subject_labels_path, subject_label_file, subject_imag
     
     # check if the seg file exists
     if not os.path.exists(subject_seg_file):
-        logger.info(f"Segmentation file for subject {subject} and session {session} does not exist. Skipping.")
+        logger.info(f"Segmentation file for subject {sub_ses_name} does not exist. Skipping.")
         return None
 
     # create region-based label
@@ -103,7 +90,23 @@ def get_region_based_label(subject_labels_path, subject_label_file, subject_imag
     return subject_label_file
 
 
-if __name__ == '__main__':
+def main():
+
+    parser = get_parser()
+    args = parser.parse_args()
+
+    train_ratio, test_ratio = args.split
+    path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
+
+    # create individual directories for train and test images and labels
+    path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
+    path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+
+    path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
+    path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+
+    path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
+    path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
 
     # make the directories
     Path(path_out).mkdir(parents=True, exist_ok=True)
@@ -115,9 +118,6 @@ if __name__ == '__main__':
 
     Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
     Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
-
-    # set the random number generator seed
-    rng = np.random.default_rng(args.seed)
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
@@ -390,4 +390,5 @@ if __name__ == '__main__':
     with open(os.path.join(path_out, dataset_dict_name), "w") as outfile:
         outfile.write(json_object)
 
-
+if __name__ == "__main__":
+    main()
