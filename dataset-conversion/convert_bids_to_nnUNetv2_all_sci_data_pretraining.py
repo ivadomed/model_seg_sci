@@ -54,23 +54,18 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-train_ratio, test_ratio = args.split
-path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
+    train_ratio, test_ratio = args.split
+    path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
 
-# create individual directories for train and test images and labels
-path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
-path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+    # create individual directories for train and test images and labels
+    path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
+    path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
 
-path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
-path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+    path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
+    path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
 
-path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
-path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
-
-train_images, train_labels, test_images, test_labels = [], [], [], []
-
-
-if __name__ == '__main__':
+    path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
+    path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
 
     # make the directories
     Path(path_out).mkdir(parents=True, exist_ok=True)
@@ -305,3 +300,5 @@ if __name__ == '__main__':
         outfile.write(json_object)
 
 
+if __name__ == '__main__':
+    main()
