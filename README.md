@@ -105,3 +105,24 @@ TODO: add training details
 
 ### Things To-Do
 1. Current preprocessing deals with multiple sessions within the subjects _independently_ (for simplicity), implying that the sessions are not co-registered and treated as separate subjects. Future versions will incorporate the longitudinal aspect of this, meaning that the sessions will be co-registered with each other before feeding as inputs to the model.
+
+### Inference
+We provide two methods to run inference on a trained model to obtain the segmentations.
+
+1. **On Individual Images**: This accepts a single image or a list of images. Note that in the case of a list of images, each input image must be separated by a space. Run the following command from the terminal:
+
+```bash
+python run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model
+```
+
+2. On a Dataset: This method performs the inference on all the images in the given dataset. Run the following command from the terminal:
+
+```bash
+python run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model
+```
+
+> **Note**
+> The inference scripts also supports inference on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. 
+
+
+
