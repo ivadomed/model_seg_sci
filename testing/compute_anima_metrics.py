@@ -105,13 +105,16 @@ def get_parser():
     parser.add_argument('-dname', '--dataset-name', required=True, type=str,
                         help='Dataset name used for storing on git-annex. For region-based metrics, '
                              'append "-region" to the dataset name')
+    parser.add_argument('--label-type', required=True, type=str, choices=['sc', 'lesion'],
+                        help='Type of prediction and GT label to be used for ANIMA evaluation.'
+                            'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation')
     # parser.add_argument('-o', '--output-folder', required=True, type=str,
     #                     help='Path to the output folder to save the test metrics results')
 
     return parser
 
 
-def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set):
+def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set, label_type):
     """
     Computes the test metrics given folders containing nifti images of test predictions 
     and GT images by running the "animaSegPerfAnalyzer" command
@@ -222,10 +225,12 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
             nib.save(img=gtc_nib, filename=os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
 
             # Run ANIMA segmentation performance metrics on the predictions            
-            if data_set in ["sci-colorado", "basel-mp2rage"]:
+            if label_type == 'lesion':
                  seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -l -s -X'
-            else:
+            elif label_type == 'sc':
                 seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -X'
+            else:
+                raise ValueError('Please specify a valid label type: lesion or sc')
 
             os.system(seg_perf_analyzer_cmd %
                         (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
@@ -261,6 +266,7 @@ def main():
     # define variables
     pred_folder, gt_folder = args.pred_folder, args.gt_folder
     dataset_name = args.dataset_name
+    label_type = args.label_type
 
     output_folder = os.path.join(pred_folder, f"anima_stats")
     if not os.path.exists(output_folder):
@@ -271,7 +277,7 @@ def main():
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                                        data_set=dataset_name)
+                                                        data_set=dataset_name, label_type=label_type)
 
         test_metrics = defaultdict(list)
 
@@ -314,7 +320,7 @@ def main():
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_sc_filepaths, subject_lesion_filepaths = \
             get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                        data_set=dataset_name)
+                                        data_set=dataset_name, label_type=label_type)
 
         # loop through the sc and lesion filepaths and get the metrics
         for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
