@@ -68,7 +68,7 @@ extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/
 
 USAGE:
 python compute_anima_metrics.py --pred_folder <path_to_predictions_folder> 
---gt_folder <path_to_gt_folder> -dname <dataset_name> 
+--gt_folder <path_to_gt_folder> -dname <dataset_name> --label-type <sc/lesion>
 
 
 NOTE 1: For checking all the available options run the following command from your terminal: 
