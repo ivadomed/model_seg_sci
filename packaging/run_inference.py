@@ -31,9 +31,6 @@ def get_parser():
     parser.add_argument('--path-model', required=True, 
                         help='Path to the model directory. This folder should contain individual folders '
                         'like fold_0, fold_1, etc.',)
-    # parser.add_argument('--use-all-folds', action='store_true', default=False,
-    #                     help='Specify the folds of the trained model that should be used for prediction. '
-    #                          'Default: (0, 1, 2, 3, 4)')
     parser.add_argument('--use-gpu', action='store_true', default=False,
                         help='Use GPU for inference. Default: False')
     parser.add_argument('--use-mirroring', action='store_true', default=False,
