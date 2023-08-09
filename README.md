@@ -1,96 +1,80 @@
-# Segmentation of T2 hyperintense lesion in acute spinal cord injury
+# Automated Segmentation of the Spinal Cord and Hyperintense Lesions in Acute Spinal Cord Injury
 
-Preprocessing pipeline to prepare dataset for training lesion segmentation model in SCI.
+This repository contains the code for deep learning-based segmentation of the spinal cord and T2-weighted hyperintense lesions in acute spinal cord injury (SCI). The code is based on the well-known [nnUNet framework](https://github.com/MIC-DKFZ/nnUNet).
 
-![Screen Shot 2021-04-28 at 4 15 17 PM](https://user-images.githubusercontent.com/2482071/116466831-f95c1e00-a83c-11eb-9626-d7f668e62d41.png)
+
+## Model Overview
+
+TODO: add a screenshot/gif of input, network and output
+
 
 ## Data
 
-Data used for this project hosted on a private repository.
+The data used for training the model are hosted on a private repository according to the [BIDS](https://bids.neuroimaging.io) standard. They are gathered from three different sites as shown below (in brackets: the name of the dataset at NeuroPoly's internal server):
 
-Data for this project come from the following sites (in brackets: the name of the dataset at NeuroPoly's internal server):
-- University of Zurich (`sci-zurich`) 🇨🇭
-  - Contrasts: T1w sag, T2w sag, T2w ax
-  - Manual segmentation done on the T2w sag
-  - Multiple sessions (1, 2, 3)
+- University of Zurich (`sci-zurich`) (N=) 🇨🇭
+  - Contrasts available: Sagittal T1w, Sagittal T2w, Axial T2w
+  - Contrasts used for training: Sagittal T2w
+  - Manual segmentations for both spinal cord (SC) and lesion only available for Sagittal T2w
+  - Mix of single and multiple (up to 3) sessions
+  - Number of subjects: 97
 - University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
-  - Contrasts: T1w ax, T2w ax
-  - Manual segmentation: none
+  - Contrasts available: Axial T1w, Axial T2w
+  - Contrasts used for training: Axial T2w
+  - Manual segmentations for both SC and lesion only available for Axial T2w
   - Single session
+  - Number of subjects: 80
+- XXX (`sci-paris`) 🇫🇷
+  - Contrasts available: Axial T2w
+  - Contrasts used for training: Axial T2w
+  - Manual segmentations for both SC and lesion available for Axial T2w
+  - Single session
+  - Number of subjects: 14
 
-Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure, as in the example below:
-
-~~~
-dataset
-├── dataset_description.json
-├── participants.json
-├── participants.tsv
-├── sub-ubc01
-├── sub-ubc02
-├── sub-ubc03
-├── sub-ubc04
-├── sub-ubc05
-├── sub-ubc06
-│   ├── ses-01
-│   └── ses-02
-|       └── anat
-|           ├── sub-ubc06_ses-02_T1w.json
-|           ├── sub-ubc06_ses-02_T1w.nii.gz
-|           ├── sub-ubc06_ses-02_T2w.json
-|           ├── sub-ubc06_ses-02_T2w.nii.gz
-|           ├── sub-ubc06_ses-02_acq-ax_T2w.json
-|           └── sub-ubc06_ses-02_acq-ax_T2w.nii.gz
-|
-└── derivatives
-    └── labels
-        └── sub-ubc06
-                ├── ses-01
-                └── ses-02
-                    └── anat
-                        ├── sub-ubc06_ses-02_T2w_seg-manual.json
-                        ├── sub-ubc06_ses-02_T2w_seg-manual.nii.gz  <------------- manually-corrected spinal cord segmentation
-                        ├── sub-ubc06_ses-02_T2w_lesion-manual.json
-                        └── sub-ubc06_ses-02_T2w_lesion-manual.nii.gz  <---------- manually-created lesion segmentation
-~~~
-
-More details to convert a dataset into BIDS is available from the [spine-generic](https://spine-generic.readthedocs.io/en/latest/data-acquisition.html#data-conversion-dicom-to-bids) project.
 
 ## Getting started
 
 ### Dependencies
 
-- [SCT](https://spinalcordtoolbox.com/) commit: 7fd2ea718751dd858840c3823c0830a910d9777c
-- [ivadomed](https://ivadomed.org) commit: XXX
+TODO: add updated requirements.txt --> those are the dependencies
 
-### Clone this repository
+### Step 1: Cloning the Repository
 
 ~~~
 git clone https://github.com/ivadomed/model_seg_sci.git
 ~~~
 
-### Name and Version of the Data
+### Names and Versions of the Dataset
 
-- git@data.neuro.polymtl.ca:datasets/sci-zurich
-- Commit: 4ef05bf0b70c04490cd73f433cac4f5f43e5dac3
+- `sci-zurich`
+  - Name: git@data.neuro.polymtl.ca:datasets/sci-zurich
+  - Commit: b3cb6f51  (can be checked by running `git log --oneline` after downloading the dataset)
+- `sci-colorado`
+  - Name: git@data.neuro.polymtl.ca:datasets/sci-colorado
+  - Commit: 1518ecd
+- `sci-paris`
+  - Name: git@data.neuro.polymtl.ca:datasets/sci-paris
+  - Commit: c4e3bf7
 
 ### Downloading the Dataset
+
+The downloading procedure is same for all the three datasets, just replace the "<dataset-name>" by the name of the dataset you want to download from the server.
+
 ~~~
-git clone git@data.neuro.polymtl.ca:datasets/sci-zurich
-cd sci-zurich
+git clone git@data.neuro.polymtl.ca:datasets/<dataset-name>
+cd <dataset-name>
 git annex get .
 cd ..
 ~~~
  
-### Prepare the data
+### Step 2: Preparing the Data
 
-The data need to be preprocessed before training. The preprocessing crops the input volume to focus on the region-of-interest i.e. the SC and the lesions. The syntax for preprocessing is:
+The best part about this model is that there is **no preprocessing required**! The model is directly trained on the raw data. The only data preparation step is to convert the data to the nnUNet format. The following commands are used for converting the dataset. 
 
-~~~
-sct_run_batch -script preprocessing/preprocess_data.sh -path-data <PATH_TO_DATA>/sci-zurich/ -path-output <PATH_OUTPUT>/sci-zurich-preprocessed -jobs <JOBS>
-~~~
+TODOs: 
+1. add SCT's RPI conversion 
+2. add commands for dataset conversion
 
-where:
-- `<JOBS>`: Number of CPU cores to use
 
 ### Quality control
 
@@ -107,22 +91,7 @@ TODO: add training details
 1. Current preprocessing deals with multiple sessions within the subjects _independently_ (for simplicity), implying that the sessions are not co-registered and treated as separate subjects. Future versions will incorporate the longitudinal aspect of this, meaning that the sessions will be co-registered with each other before feeding as inputs to the model.
 
 ### Inference
-We provide two methods to run inference on a trained model to obtain the segmentations.
 
-1. **On Individual Images**: This accepts a single image or a list of images. Note that in the case of a list of images, each input image must be separated by a space. Run the following command from the terminal:
-
-```bash
-python run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model
-```
-
-2. On a Dataset: This method performs the inference on all the images in the given dataset. Run the following command from the terminal:
-
-```bash
-python run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model
-```
-
-> **Note**
-> The inference scripts also supports inference on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. 
-
+The instructions for running inference can be found [here]().
 
 
