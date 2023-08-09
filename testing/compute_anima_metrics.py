@@ -107,7 +107,9 @@ def get_parser():
                              'append "-region" to the dataset name')
     parser.add_argument('--label-type', required=True, type=str, choices=['sc', 'lesion'],
                         help='Type of prediction and GT label to be used for ANIMA evaluation.'
-                            'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation')
+                            'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation'
+                            'NOTE: when label-type is "lesion", additional lesion detection metrics, namely,'
+                            'Lesion PPV, Lesion Sensitivity, and F1_score are computed')
     # parser.add_argument('-o', '--output-folder', required=True, type=str,
     #                     help='Path to the output folder to save the test metrics results')
 
