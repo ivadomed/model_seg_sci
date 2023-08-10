@@ -47,7 +47,8 @@ def get_parser():
                         help='Path to BIDS datasets (list).')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
     parser.add_argument('--dataset-name', '-dname', default='tSCIAllDatasetsSCPretrain', type=str,
-                        help='Specify the task name - usually the anatomy to be segmented.')
+                        help='Specify the task name - pretrained on SC seg or fine-tuned on lesion seg. '
+                             'Examples: tSCIAllDatasetsSCPretrain, tSCIAllDatasetsLesionFinetune')
     parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
     parser.add_argument('--seed', default=50, type=int,
