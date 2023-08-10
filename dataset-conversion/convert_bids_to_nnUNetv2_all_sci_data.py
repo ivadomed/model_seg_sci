@@ -54,7 +54,7 @@ def get_parser():
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
     parser.add_argument('--dataset-name', '-dname', default='tSCICombinedRegion', type=str,
                         help='Specify the task name.')
-    parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
+    parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
     parser.add_argument('--seed', default=42, type=int, 
                         help='Seed to be used for the random number generator split into training and test sets.')
@@ -82,11 +82,13 @@ def get_region_based_label(subject_labels_path, subject_label_file, subject_imag
         return None
 
     # create region-based label
-    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, sub_ses_name, thr=thr)
+    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, sub_ses_name,
+                                               thr=thr)
     
     if sub_ses_name.startswith('sub-zh'):
         # save the region-based label
-        nib.save(seg_lesion_nii, os.path.join(subject_labels_path, f"{sub_ses_name}_acq-sag_T2w_seg-lesion-manual.nii.gz"))
+        nib.save(seg_lesion_nii, os.path.join(subject_labels_path,
+                                              f"{sub_ses_name}_acq-sag_T2w_seg-lesion-manual.nii.gz"))
 
         # overwrite the original label file with the region-based label
         subject_label_file = os.path.join(subject_labels_path, f"{sub_ses_name}_acq-sag_T2w_seg-lesion-manual.nii.gz")
