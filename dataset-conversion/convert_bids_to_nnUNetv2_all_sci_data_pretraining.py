@@ -3,16 +3,28 @@ Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
+The script allows to specify the mask (SC seg or lesion) to be used for creating labels for pre-training and
+fine-tuning, respectively.
+
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
-Usage example:
+Usage example pre-training:
     python convert_bids_to_nnUNetv2_all_sci_data_pretraining.py
         --path-data sci-zurich_rpi sci-colorado_rpi sci-paris_rpi
         --path-out ./
         --dataset-name tSCIAllDatasetsSCPretrain
         --task-number 540
         --mask_to_use seg
+        --split 0.8 0.2 --seed 50
+
+Usage example fine-tuning:
+    python convert_bids_to_nnUNetv2_all_sci_data_pretraining.py
+        --path-data sci-zurich_rpi sci-colorado_rpi sci-paris_rpi
+        --path-out ./
+        --dataset-name tSCIAllDatasetsLesionFinetune
+        --task-number 541
+        --mask_to_use lesion
         --split 0.8 0.2 --seed 50
 """
 
