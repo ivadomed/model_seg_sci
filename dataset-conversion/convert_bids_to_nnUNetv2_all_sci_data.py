@@ -3,7 +3,7 @@ Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
-An option to create region-based labels for segmentating both lesion and the spinal cord is also provided. 
+An option to create region-based labels for segmenting both lesion and the spinal cord is also provided.
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
@@ -32,7 +32,6 @@ from sklearn.model_selection import train_test_split
 from utils import binarize_label, create_region_based_label
 
 import nibabel as nib
-import numpy as np
 
 
 def get_parser():
@@ -52,10 +51,10 @@ def get_parser():
                         help='If set, the script will create labels for region-based nnUNet training. Default: False')
     # argument that accepts a list of floats as train val test splits
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
-                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: --split 0.8 0.2')
+                        help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
+                             '--split 0.8 0.2')
 
     return parser
-
 
 
 def get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5):
