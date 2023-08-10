@@ -59,9 +59,9 @@ def get_parser():
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. '
                              'Example: --split 0.8 0.2')
-    parser.add_argument('--mask_to_use', default='brainmask', type=str, choices=['seg', 'lesion'],
+    parser.add_argument('--mask_to_use', default='seg', type=str, choices=['seg', 'lesion'],
                         help='Specify the mask to use for creating labels for pre-training and fine-tuning. '
-                             'Default: lesion')
+                             'Default: seg')
 
     return parser
 
