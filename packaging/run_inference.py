@@ -122,13 +122,21 @@ def main():
         path_data_tmp = convert_filenames_to_nnunet_format(args.path_dataset)
         path_out = args.path_out
 
+        # convert all images to RPI orientation
+        path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
+        print(f'Original orientation: {orig_orientation}')
+
     elif args.path_images is not None:
         # NOTE: for individual images, the _0000 suffix is not needed. BUT, the images should be in a list of lists
         # get list of images from input argument
         print(f'Found {len(args.path_images)} images. Running inference on them...')
         # path_data_tmp = [[os.path.basename(f)] for f in args.path_images]
         path_data_tmp = [[f] for f in args.path_images]
-        print(path_data_tmp)
+        # print(path_data_tmp)
+
+        # convert all images to RPI orientation
+        path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
+        print(f'Original orientation: {orig_orientation}')
 
         path_out = args.path_out
         # # add suffix '_pred' to predicted images
