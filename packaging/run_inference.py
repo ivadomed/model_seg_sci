@@ -2,7 +2,6 @@ import os
 import argparse
 import torch
 import glob
-from batchgenerators.utilities.file_and_folder_operations import join
 import time
 import numpy as np
 import nibabel as nib
@@ -46,62 +45,6 @@ def get_parser():
                         'NOTE: nnUNet by default uses the final checkpoint. Default: False')
 
     return parser
-
-
-def splitext(fname):
-        """
-        Split a fname (folder/file + ext) into a folder/file and extension.
-
-        Note: for .nii.gz the extension is understandably .nii.gz, not .gz
-        (``os.path.splitext()`` would want to do the latter, hence the special case).
-        Taken (shamelessly) from: https://github.com/spinalcordtoolbox/manual-correction/blob/main/utils.py
-        """
-        dir, filename = os.path.split(fname)
-        for special_ext in ['.nii.gz', '.tar.gz']:
-            if filename.endswith(special_ext):
-                stem, ext = filename[:-len(special_ext)], special_ext
-                return os.path.join(dir, stem), ext
-        # If no special case, behaves like the regular splitext
-        stem, ext = os.path.splitext(filename)
-        return os.path.join(dir, stem), ext
-
-
-def add_suffix(fname, suffix):
-    """
-    Add suffix between end of file name and extension. Taken (shamelessly) from:
-    https://github.com/spinalcordtoolbox/manual-correction/blob/main/utils.py
-
-    :param fname: absolute or relative file name. Example: t2.nii.gz
-    :param suffix: suffix. Example: _mean
-    :return: file name with suffix. Example: t2_mean.nii
-
-    Examples:
-
-    - add_suffix(t2.nii, _mean) -> t2_mean.nii
-    - add_suffix(t2.nii.gz, a) -> t2a.nii.gz
-    """
-    stem, ext = splitext(fname)
-    return os.path.join(stem + suffix + ext)
-
-
-def convert_filenames_to_nnunet_format(path_dataset):
-
-    # create a temporary folder at the same level as the test folder
-    path_tmp = os.path.join(os.path.dirname(path_dataset), 'tmp')
-    if not os.path.exists(path_tmp):
-        os.makedirs(path_tmp, exist_ok=True)
-
-    for f in os.listdir(path_dataset):
-        if f.endswith('.nii.gz'):
-            # get absolute path to the image
-            f = os.path.join(path_dataset, f)
-            # add suffix
-            f_new = add_suffix(f, '_0000')
-            # copy to tmp folder
-            os.system('cp {} {}'.format(f, os.path.join(path_tmp, os.path.basename(f_new))))
-
-    return path_tmp
-
 
 
 def main():
@@ -167,7 +110,7 @@ def main():
         use_folds=folds_avail,
         tile_step_size=0.5,
         use_gaussian=True,                                      # applies gaussian noise and gaussian blur
-        use_mirroring=True if args.use_mirroring else False,    # test time augmentation by mirroring on all axes
+        use_mirroring=False,                                    # test time augmentation by mirroring on all axes
         perform_everything_on_gpu=True if args.use_gpu else False,
         device=torch.device('cuda', 0) if args.use_gpu else torch.device('cpu'),
         verbose=False,
@@ -258,10 +201,11 @@ def main():
 
             # split the labels
             img_sc_seg = np.zeros_like(img)
-            img_sc_seg[img == 1] = 1
+            img_sc_seg[img == 1] = 1    # NOTE: this is only the SC without the lesion
+            img_sc_seg[img == 2] = 1    # since lesion also has be to be included in the SC
 
             # save the images
-            save_name = os.path.basename(pred).replace('.nii.gz', '_pred_sc.nii.gz')
+            save_name = os.path.basename(pred).replace('.nii.gz', '_pred-sc.nii.gz')
             path_out = os.path.join(out_folder, save_name)
             nib.save(nib.Nifti1Image(img_sc_seg, img_nii.affine, img_nii.header), path_out)
 
@@ -282,7 +226,7 @@ def main():
             img_lesion_seg[img == 2] = 1
 
             # save the images
-            save_name = os.path.basename(pred).replace('.nii.gz', '_pred_lesion.nii.gz')
+            save_name = os.path.basename(pred).replace('.nii.gz', '_pred-lesion.nii.gz')
             path_out = os.path.join(out_folder, os.path.basename(pred))
             nib.save(nib.Nifti1Image(img_lesion_seg, img_nii.affine, img_nii.header), path_out)
 
