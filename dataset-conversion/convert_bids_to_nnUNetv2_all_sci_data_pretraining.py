@@ -26,6 +26,8 @@ Usage example fine-tuning:
         --task-number 541
         --mask_to_use lesion
         --split 0.8 0.2 --seed 50
+
+Authors: Naga Karthik, Jan Valosek
 """
 
 import argparse
