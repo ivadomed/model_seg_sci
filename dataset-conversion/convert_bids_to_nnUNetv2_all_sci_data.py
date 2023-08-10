@@ -160,7 +160,8 @@ def main():
             if subject.startswith('sub-zh'):
                 # Another for loop for going through sessions
                 temp_subject_path = train_subjects[subject]
-                num_sessions_per_subject = sum(os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in os.listdir(temp_subject_path))
+                num_sessions_per_subject = sum(os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in
+                                               os.listdir(temp_subject_path))
 
                 for ses_idx in range(1, num_sessions_per_subject+1):
                     train_ctr += 1
@@ -168,7 +169,8 @@ def main():
                     session = 'ses-0' + str(ses_idx)
 
                     subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
-                    subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives', 'labels', subject, session, 'anat')                    
+                    subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
+                                                       'labels', subject, session, 'anat')
 
                     subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
                     subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
@@ -202,7 +204,8 @@ def main():
             else:
                 train_ctr += 1
                 subject_images_path = os.path.join(train_subjects[subject], 'anat')
-                subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives', 'labels', subject, 'anat')                    
+                subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
+                                                   'labels', subject, 'anat')
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
@@ -215,13 +218,16 @@ def main():
                 # use region-based labels if required
                 if args.region_based:                        
                     # overwritten the subject_label_file with the region-based label
-                    subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_name, thr=0.5)
+                    subject_label_file = get_region_based_label(subject_labels_path, subject_label_file,
+                                                                subject_image_file, sub_name, thr=0.5)
                     if subject_label_file is None:
                         print(f"Skipping since the region-based label could not be generated")
                         continue
 
-                subject_image_file_nnunet = os.path.join(path_out_imagesTr,f"{args.dataset_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
-                subject_label_file_nnunet = os.path.join(path_out_labelsTr,f"{args.dataset_name}_{sub_name}_{train_ctr:03d}.nii.gz")
+                subject_image_file_nnunet = os.path.join(path_out_imagesTr,
+                                                         f"{args.dataset_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
+                subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                         f"{args.dataset_name}_{sub_name}_{train_ctr:03d}.nii.gz")
                 
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
@@ -230,7 +236,6 @@ def main():
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 if not args.region_based:
                     binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-            
 
         elif subject in test_subjects:
 
@@ -245,24 +250,31 @@ def main():
                     session = 'ses-0' + str(ses_idx)
 
                     subject_images_path = os.path.join(test_subjects[subject], session, 'anat')
-                    subject_labels_path = os.path.join(test_subjects[subject].replace(subject, ''), 'derivatives', 'labels', subject, session, 'anat')                    
+                    subject_labels_path = os.path.join(test_subjects[subject].replace(subject, ''),
+                                                       'derivatives', 'labels', subject, session, 'anat')
 
-                    subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
-                    subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
+                    subject_image_file = os.path.join(subject_images_path,
+                                                      f"{subject}_{session}_acq-sag_T2w.nii.gz")
+                    subject_label_file = os.path.join(subject_labels_path,
+                                                      f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
                     # create the new convention names for nnunet
-                    sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + str(Path(subject_image_file).name).split('_')[1]
+                    sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + \
+                                   str(Path(subject_image_file).name).split('_')[1]
 
                     # use region-based labels if required
                     if args.region_based:                        
                         # overwritten the subject_label_file with the region-based label
-                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5)
+                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file,
+                                                                    subject_image_file, sub_ses_name, thr=0.5)
                         if subject_label_file is None:
                             print(f"Skipping since the region-based label could not be generated")
                             continue
 
-                    subject_image_file_nnunet = os.path.join(path_out_imagesTsZur,f"{args.dataset_name}_{sub_ses_name}_{test_ctr_zur:03d}_0000.nii.gz")
-                    subject_label_file_nnunet = os.path.join(path_out_labelsTsZur,f"{args.dataset_name}_{sub_ses_name}_{test_ctr_zur:03d}.nii.gz")
+                    subject_image_file_nnunet = os.path.join(path_out_imagesTsZur,
+                                                             f"{args.dataset_name}_{sub_ses_name}_{test_ctr_zur:03d}_0000.nii.gz")
+                    subject_label_file_nnunet = os.path.join(path_out_labelsTsZur,
+                                                             f"{args.dataset_name}_{sub_ses_name}_{test_ctr_zur:03d}.nii.gz")
                     
                     # copy the files to new structure using symbolic links
                     shutil.copyfile(subject_image_file, subject_image_file_nnunet)
@@ -275,7 +287,8 @@ def main():
             elif re.match(r'sub-\d{4}', subject):
                 test_ctr_col += 1
                 subject_images_path = os.path.join(test_subjects[subject], 'anat')
-                subject_labels_path = os.path.join(test_subjects[subject].replace(subject, ''), 'derivatives', 'labels', subject, 'anat')                    
+                subject_labels_path = os.path.join(test_subjects[subject].replace(subject, ''),
+                                                   'derivatives', 'labels', subject, 'anat')
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
@@ -388,6 +401,7 @@ def main():
     dataset_dict_name = f"dataset.json"
     with open(os.path.join(path_out, dataset_dict_name), "w") as outfile:
         outfile.write(json_object)
+
 
 if __name__ == "__main__":
     main()
