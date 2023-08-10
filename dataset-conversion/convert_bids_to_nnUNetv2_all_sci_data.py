@@ -3,15 +3,27 @@ Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to
 Full details about the format can be found here: 
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
+The script to be used on a single dataset or multiple datasets.
+
 An option to create region-based labels for segmenting both lesion and the spinal cord is also provided.
 Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
 modified to include those as well. 
 
-Usage example:
+Usage example multiple datasets:
     python convert_bids_to_nnUNetv2_all_sci_data.py 
         --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi 
         --path-out ${nnUNet_raw}
         -dname tSCICombinedRegion
+        -dnum 275
+        --split 0.8 0.2
+        --seed 50
+        --region-based
+
+Usage example single dataset:
+    python convert_bids_to_nnUNetv2_all_sci_data.py
+        --path-data ~/datasets/sci-zurich-rpi
+        --path-out ${nnUNet_raw}
+        -dname tSCIZurich
         -dnum 275
         --split 0.8 0.2
         --seed 50
@@ -38,13 +50,12 @@ def get_parser():
     # parse command line arguments
     parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
     parser.add_argument('--path-data', nargs='+', required=True, type=str,
-                        help='Path to BIDS datasets (list).')
+                        help='Path to BIDS dataset(s) (list).')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
-    parser.add_argument('--dataset-name', '-dname', default='MSSpineLesion', type=str,
-                        help='Specify the task name - usually the anatomy to be segmented, e.g. Hippocampus',)
+    parser.add_argument('--dataset-name', '-dname', default='tSCICombinedRegion', type=str,
+                        help='Specify the task name.')
     parser.add_argument('--dataset-number', '-dnum', default=501,type=int, 
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
-
     parser.add_argument('--seed', default=42, type=int, 
                         help='Seed to be used for the random number generator split into training and test sets.')
     parser.add_argument('--region-based', action='store_true', default=False,
