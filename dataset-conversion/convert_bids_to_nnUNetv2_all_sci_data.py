@@ -17,7 +17,7 @@ Usage example:
         --seed 50
         --region-based
 
-Authors: Naga Karthik
+Authors: Naga Karthik, Jan Valosek
 """
 
 import argparse
