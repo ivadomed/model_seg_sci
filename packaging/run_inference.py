@@ -227,14 +227,14 @@ def main():
 
             # save the images
             save_name = os.path.basename(pred).replace('.nii.gz', '_pred-lesion.nii.gz')
-            path_out = os.path.join(out_folder, os.path.basename(pred))
+            path_out = os.path.join(out_folder, save_name)
             nib.save(nib.Nifti1Image(img_lesion_seg, img_nii.affine, img_nii.header), path_out)
 
     else:
         raise ValueError('Invalid value for --pred_type. Valid values are: [all, sc-seg, lesion-seg]')
 
     print('----------------------------------------------------')
-    print('Results can be found in: {}'.format(path_out))
+    print('Results can be found in: {}'.format(args.path_out))
     print('----------------------------------------------------')
 
     total_time = end - start
