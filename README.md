@@ -78,15 +78,17 @@ For uniformity across the multi-site data, all images are converted to RPI orien
 ```bash
 shopt -s globstar; for file in **/*.nii.gz;do sct_image -i ${file} -setorient RPI -o ${file}; done
 ``` 
+
 This should do an in-place conversion of all the images (and labels) to RPI orientation.
 
 #### Step 2.2: Conversion to nnUNet format
 
 The next step is to convert the data to the nnUNet format. Run the following command:
 ```bash
-python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi  --path-out ${nnUNet_raw} 
-          -dname tSCICombinedRegion -dnum 275 --split 0.8 0.2 --seed 50 --region-based
+python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi 
+          --path-out ${nnUNet_raw} -dname tSCICombinedRegion -dnum 275 --split 0.8 0.2 --seed 50 --region-based
 ```
+
 This command takes as inputs the list of RPI-reoriented datasets, the output path to store the converted data, the dataset name, number, the ratio in which train and test subjects are split, the seed and the flag `--region-based` which used to create multiclass labels (SC and lesion).
 
 > **Note**
@@ -127,8 +129,7 @@ CUDA_VISIBLE_DEVICES=1 nnUNetv2_predict -i ${nnUNet_raw}/Dataset<dataset-num>_<d
 
 #### Step 3.4: Evaluating the model performance
 
-Once testing is done, the model's SC and lesion segmentation performance can be evaluated by computing some quantitative metrics. We use [ANIMA]()'s `animaSegPerfAnalyzer`
-for this purpose. The following command can be used to compute the metrics:
+Once testing is done, the model's SC and lesion segmentation performance can be evaluated by computing some quantitative metrics. We use [ANIMA](https://anima.readthedocs.io/en/latest/segmentation.html)'s `animaSegPerfAnalyzer` for this purpose. The following command can be used to compute the metrics:
 
 ```bash
 # compute metrics for zurich test predictions
@@ -142,6 +143,6 @@ python testing/compute_anima_metrics.py --pred-folder ~/nnunet-v2/nnUNet_results
 
 ### Only Inference
 
-The instructions for running inference can be found [here]().
+If you do not want to train the model, you can directly use the trained model for running inference and obtaining the lesion and SC segmentations. The instructions for running inference can be found [here]().
 
 
