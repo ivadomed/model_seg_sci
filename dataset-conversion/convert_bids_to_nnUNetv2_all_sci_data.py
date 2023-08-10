@@ -100,31 +100,32 @@ def main():
     # create individual directories for train and test images and labels
     path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
     path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+    # create the training directories
+    Path(path_out).mkdir(parents=True, exist_ok=True)
+    Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
+    Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
 
     # In case of a single dataset, create test directories only for this dataset
     if len(args.path_data) == 1 and 'zurich' in args.path_data:
         path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
         path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+        Path(path_out_imagesTsZur).mkdir(parents=True, exist_ok=True)
+        Path(path_out_labelsTsZur).mkdir(parents=True, exist_ok=True)
     elif len(args.path_data) == 1 and 'colorado' in args.path_data:
         path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
         path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
+        Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
+        Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
     # In case of multiple datasets, create test directories for both datasets
     else:
         path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
         path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
         path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
         path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
-
-    # make the directories
-    Path(path_out).mkdir(parents=True, exist_ok=True)
-    Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
-    Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
-    
-    Path(path_out_imagesTsZur).mkdir(parents=True, exist_ok=True)
-    Path(path_out_labelsTsZur).mkdir(parents=True, exist_ok=True)
-
-    Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
-    Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
+        Path(path_out_imagesTsZur).mkdir(parents=True, exist_ok=True)
+        Path(path_out_labelsTsZur).mkdir(parents=True, exist_ok=True)
+        Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
+        Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
