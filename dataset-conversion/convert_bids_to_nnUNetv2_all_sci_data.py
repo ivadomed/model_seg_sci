@@ -106,12 +106,12 @@ def main():
     Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
 
     # In case of a single dataset, create test directories only for this dataset
-    if len(args.path_data) == 1 and 'zurich' in args.path_data:
+    if len(args.path_data) == 1 and 'zurich' in args.path_data[0]:
         path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
         path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
         Path(path_out_imagesTsZur).mkdir(parents=True, exist_ok=True)
         Path(path_out_labelsTsZur).mkdir(parents=True, exist_ok=True)
-    elif len(args.path_data) == 1 and 'colorado' in args.path_data:
+    elif len(args.path_data) == 1 and 'colorado' in args.path_data[0]:
         path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
         path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
         Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
