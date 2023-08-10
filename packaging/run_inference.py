@@ -31,11 +31,11 @@ def get_parser():
     parser.add_argument('--path-model', required=True, 
                         help='Path to the model directory. This folder should contain individual folders '
                         'like fold_0, fold_1, etc.',)
+    parser.add_argument('--pred-type', default='lesion-seg', required=True,
+                         choices=['sc-seg', 'lesion-seg', 'all'],
+                        help='Type of prediction to obtain. Default: segmentation')
     parser.add_argument('--use-gpu', action='store_true', default=False,
                         help='Use GPU for inference. Default: False')
-    parser.add_argument('--use-mirroring', action='store_true', default=False,
-                        help='Use mirroring (test-time) augmentation for prediction. '
-                        'NOTE: Inference takes a long time when this is enabled. Default: False')
     parser.add_argument('--use-best-checkpoint', action='store_true', default=False,
                         help='Use the best checkpoint (instead of the final checkpoint) for prediction. '
                         'NOTE: nnUNet by default uses the final checkpoint. Default: False')
@@ -222,6 +222,67 @@ def main():
     print('Deleting the temporary folder...')
     # delete the temporary folder
     os.system('rm -rf {}'.format(path_data_tmp))
+
+    # reorient the images back to original orientation
+    print('Re-orienting the predictions back to original orientation...')
+    for f in os.listdir(path_out):
+        if f.endswith('.nii.gz'):
+            # get absolute path to the image
+            f = os.path.join(path_out, f)
+
+            # reorient the image to RPI using SCT
+            os.system('sct_image -i {} -setorient {} -o {}'.format(f, orig_orientation, f))
+
+    print(f'Reorientation to original orientation {orig_orientation} done.')
+
+    # split the predictions into different sc-seg and lesion-seg
+    if args.pred_type == 'all':
+        # do nothing - keep the predictions as they are
+        pass
+    elif args.pred_type == 'sc-seg':
+        out_folder = os.path.join(args.path_out, 'sc-seg')
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder, exist_ok=True)
+
+        # get all the predictions
+        pred_files = sorted(glob.glob(os.path.join(args.path_out, '*.nii.gz')))
+        for pred in pred_files:
+            # load the image
+            img_nii = nib.load(pred)
+            img = img_nii.get_fdata()
+
+            # split the labels
+            img_sc_seg = np.zeros_like(img)
+            img_sc_seg[img == 1] = 1
+
+            # save the images
+            save_name = os.path.basename(pred).replace('.nii.gz', '_pred_sc.nii.gz')
+            path_out = os.path.join(out_folder, save_name)
+            nib.save(nib.Nifti1Image(img_sc_seg, img_nii.affine, img_nii.header), path_out)
+
+    elif args.pred_type == 'lesion-seg':
+        out_folder = os.path.join(args.path_out, 'lesion-seg')
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder, exist_ok=True)
+
+        # get all the predictions
+        pred_files = sorted(glob.glob(os.path.join(args.path_out, '*.nii.gz')))
+        for pred in pred_files:
+            # load the image
+            img_nii = nib.load(pred)
+            img = img_nii.get_fdata()
+
+            # split the labels
+            img_lesion_seg = np.zeros_like(img)
+            img_lesion_seg[img == 2] = 1
+
+            # save the images
+            save_name = os.path.basename(pred).replace('.nii.gz', '_pred_lesion.nii.gz')
+            path_out = os.path.join(out_folder, os.path.basename(pred))
+            nib.save(nib.Nifti1Image(img_lesion_seg, img_nii.affine, img_nii.header), path_out)
+
+    else:
+        raise ValueError('Invalid value for --pred_type. Valid values are: [all, sc-seg, lesion-seg]')
 
     print('----------------------------------------------------')
     print('Results can be found in: {}'.format(args.path_out))
