@@ -6,7 +6,7 @@ This repository contains the code for deep learning-based segmentation of the sp
 ## Model Overview
 
 <p align="center" width="100%">
-    <img width="85%" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/20e47f31-3d68-4050-bc10-2814f5deb89d">
+    <img width="95%" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/20e47f31-3d68-4050-bc10-2814f5deb89d">
 </p>
 
 ## Getting started
