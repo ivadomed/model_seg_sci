@@ -101,11 +101,19 @@ def main():
     path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
     path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
 
-    path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
-    path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
-
-    path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
-    path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
+    # In case of a single dataset, create test directories only for this dataset
+    if len(args.path_data) == 1 and 'zurich' in args.path_data:
+        path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
+        path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+    elif len(args.path_data) == 1 and 'colorado' in args.path_data:
+        path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
+        path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
+    # In case of multiple datasets, create test directories for both datasets
+    else:
+        path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
+        path_out_labelsTsZur = Path(os.path.join(path_out, 'labelsTsZur'))
+        path_out_imagesTsCol = Path(os.path.join(path_out, 'imagesTsCol'))
+        path_out_labelsTsCol = Path(os.path.join(path_out, 'labelsTsCol'))
 
     # make the directories
     Path(path_out).mkdir(parents=True, exist_ok=True)
