@@ -1,9 +1,12 @@
 import os
 import argparse
 import torch
-from pathlib import Path
+import glob
 from batchgenerators.utilities.file_and_folder_operations import join
 import time
+import numpy as np
+import nibabel as nib
+from packaging_utils import convert_filenames_to_nnunet_format, add_suffix, splitext, convert_to_rpi
 
 from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
 # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
@@ -12,10 +15,12 @@ from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as pr
 """
 Usage example:
 Method 1 (when running on whole dataset):
-    python run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model
+    python run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model 
+                                --pred-type lesion-seg
 
 Method 2 (when running on individual images):
-    python run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model
+    python run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model 
+                                --pred-type lesion-seg                          
 """
 
 def get_parser():
@@ -285,10 +290,12 @@ def main():
         raise ValueError('Invalid value for --pred_type. Valid values are: [all, sc-seg, lesion-seg]')
 
     print('----------------------------------------------------')
-    print('Results can be found in: {}'.format(args.path_out))
+    print('Results can be found in: {}'.format(path_out))
     print('----------------------------------------------------')
 
-    print('Total time elapsed: {:.2f} seconds'.format(end - start))
+    total_time = end - start
+    print('Total time elapsed: {} minute(s) {} seconds'.format(int(total_time // 60), int(round(total_time % 60))))
+    print('----------------------------------------------------')
 
 if __name__ == '__main__':
     main()
