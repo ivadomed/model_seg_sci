@@ -1,107 +1,66 @@
-# Segmentation of T2 hyperintense lesion in acute spinal cord injury
+# Automated Segmentation of Spinal Cord and Hyperintense Lesions in Spinal Cord Injury
 
-Preprocessing pipeline to prepare dataset for training lesion segmentation model in SCI.
+This repository contains the code for deep learning-based segmentation of the spinal cord and hyperintense lesions in spinal cord injury (SCI). The code is based on the [nnUNet framework](https://github.com/MIC-DKFZ/nnUNet).
 
-![Screen Shot 2021-04-28 at 4 15 17 PM](https://user-images.githubusercontent.com/2482071/116466831-f95c1e00-a83c-11eb-9626-d7f668e62d41.png)
 
-## Data
+## Model Overview
 
-Data used for this project hosted on a private repository.
+The model was trained on raw T2-weighted images of SCI patients from multiple sites. The data included images with both axial and sagittal resolutions. To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
 
-Data for this project come from the following sites (in brackets: the name of the dataset at NeuroPoly's internal server):
-- University of Zurich (`sci-zurich`) 🇨🇭
-  - Contrasts: T1w sag, T2w sag, T2w ax
-  - Manual segmentation done on the T2w sag
-  - Multiple sessions (1, 2, 3)
-- University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
-  - Contrasts: T1w ax, T2w ax
-  - Manual segmentation: none
-  - Single session
-
-Data are organized according to the [BIDS](https://bids.neuroimaging.io/) structure, as in the example below:
-
-~~~
-dataset
-├── dataset_description.json
-├── participants.json
-├── participants.tsv
-├── sub-ubc01
-├── sub-ubc02
-├── sub-ubc03
-├── sub-ubc04
-├── sub-ubc05
-├── sub-ubc06
-│   ├── ses-01
-│   └── ses-02
-|       └── anat
-|           ├── sub-ubc06_ses-02_T1w.json
-|           ├── sub-ubc06_ses-02_T1w.nii.gz
-|           ├── sub-ubc06_ses-02_T2w.json
-|           ├── sub-ubc06_ses-02_T2w.nii.gz
-|           ├── sub-ubc06_ses-02_acq-ax_T2w.json
-|           └── sub-ubc06_ses-02_acq-ax_T2w.nii.gz
-|
-└── derivatives
-    └── labels
-        └── sub-ubc06
-                ├── ses-01
-                └── ses-02
-                    └── anat
-                        ├── sub-ubc06_ses-02_T2w_seg-manual.json
-                        ├── sub-ubc06_ses-02_T2w_seg-manual.nii.gz  <------------- manually-corrected spinal cord segmentation
-                        ├── sub-ubc06_ses-02_T2w_lesion-manual.json
-                        └── sub-ubc06_ses-02_T2w_lesion-manual.nii.gz  <---------- manually-created lesion segmentation
-~~~
-
-More details to convert a dataset into BIDS is available from the [spine-generic](https://spine-generic.readthedocs.io/en/latest/data-acquisition.html#data-conversion-dicom-to-bids) project.
+<p align="center" width="100%">
+    <img width="95%" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/38cf629c-52a4-4894-a9bb-b9afa834d320">
+</p>
 
 ## Getting started
 
 ### Dependencies
 
-- [SCT](https://spinalcordtoolbox.com/) commit: 7fd2ea718751dd858840c3823c0830a910d9777c
-- [ivadomed](https://ivadomed.org) commit: XXX
+Install Spinal Cord Toolbox. Instructions can be found [here](https://spinalcordtoolbox.com/user_section/installation.html). 
 
-### Clone this repository
+### Step 1: Cloning the Repository
+
+Open a terminal and clone the repository using the following command:
 
 ~~~
 git clone https://github.com/ivadomed/model_seg_sci.git
 ~~~
 
-### Name and Version of the Data
+### Step 2: Setting up the Environment
 
-- git@data.neuro.polymtl.ca:datasets/sci-zurich
-- Commit: 4ef05bf0b70c04490cd73f433cac4f5f43e5dac3
+The following commands show how to set up the environment. Note that the documentation assumes that the user has `conda` installed on their system. Instructions on installing `conda` can be found [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-### Downloading the Dataset
-~~~
-git clone git@data.neuro.polymtl.ca:datasets/sci-zurich
-cd sci-zurich
-git annex get .
-cd ..
-~~~
+1. Create a conda environment with the following command:
+```
+conda create -n venv_nnunet python=3.9
+```
+
+2. Activate the environment with the following command:
+```
+conda activate venv_nnunet
+```
+
+3. Install the required packages with the following command:
+```
+pip install -r packaging/requirements.txt
+```
  
-### Prepare the data
+### Step 3: Getting the Predictions
 
-The data need to be preprocessed before training. The preprocessing crops the input volume to focus on the region-of-interest i.e. the SC and the lesions. The syntax for preprocessing is:
+We provide two methods to run inference on a trained model to obtain the segmentations. This assumes that the model has been downloaded and is available locally.
 
-~~~
-sct_run_batch -script preprocessing/preprocess_data.sh -path-data <PATH_TO_DATA>/sci-zurich/ -path-output <PATH_OUTPUT>/sci-zurich-preprocessed -jobs <JOBS>
-~~~
+1. **On Individual Images**: This accepts a single image or a list of images. Note that in the case of a list of images, each input image must be separated by a space. Run the following command from the terminal:
 
-where:
-- `<JOBS>`: Number of CPU cores to use
+```bash
+python packaging/run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
+```
 
-### Quality control
+2. **On a Dataset**: This method performs the inference on all the images in the given dataset. Run the following command from the terminal:
 
-After running the preprocessing, it is recommended to check the QC report under `<PATH-OUTPUT>/qc/index.html` and run `preprocessing/qc_preprocess.py` which logs the following statistics as a sanity check: (i) resolutions and sizes for each subject image (both raw and cropped), ii) performs basic shape checks for the cropped SC images and ground-truths (GTs), and most importantly, (iii) checks if any intermediate step during preprocessing (i.e. dilation, cropping) left out any GT lesions.  
+```bash
+python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
+```
 
-TODO: add further details on manual corrections.
-TODO: add training details
+> **Note**
+> The inference scripts also supports inference on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. 
 
-### Literature
 
-[Here](https://intranet.neuro.polymtl.ca/bibliography/spinal-cord-injury.html#) is a list of relevant articles in relation to this project.
-
-### Things To-Do
-1. Current preprocessing deals with multiple sessions within the subjects _independently_ (for simplicity), implying that the sessions are not co-registered and treated as separate subjects. Future versions will incorporate the longitudinal aspect of this, meaning that the sessions will be co-registered with each other before feeding as inputs to the model.
