@@ -54,11 +54,10 @@ We provide two methods to run inference on a trained model to obtain the segment
 python packaging/run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
 ```
 
-2. On a Dataset: This method performs the inference on all the images in the given dataset. Run the following command from the terminal:
+2. **On a Dataset**: This method performs the inference on all the images in the given dataset. Run the following command from the terminal:
 
 ```bash
-python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model
---pred-type {sc-seg, lesion-seg, all}
+python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
 ```
 
 > **Note**
