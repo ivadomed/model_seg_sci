@@ -37,7 +37,8 @@ def get_parser():
                         'like fold_0, fold_1, etc.',)
     parser.add_argument('--pred-type', default='lesion-seg', required=True,
                          choices=['sc-seg', 'lesion-seg', 'all'],
-                        help='Type of prediction to obtain. Default: segmentation')
+                        help='Type of prediction to obtain. If "all", then both spinal cord and lesion '
+                        'segmentations will be obtained in the same nifti file. Default: lesion-seg')
     parser.add_argument('--use-gpu', action='store_true', default=False,
                         help='Use GPU for inference. Default: False')
     parser.add_argument('--use-best-checkpoint', action='store_true', default=False,
