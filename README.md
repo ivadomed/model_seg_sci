@@ -46,7 +46,7 @@ pip install -r packaging/requirements.txt
  
 ### Step 3: Getting the Predictions
 
-We provide two methods to run inference on a trained model to obtain the segmentations.
+We provide two methods to run inference on a trained model to obtain the segmentations. This assumes that the model has been downloaded and is available locally.
 
 1. **On Individual Images**: This accepts a single image or a list of images. Note that in the case of a list of images, each input image must be separated by a space. Run the following command from the terminal:
 
