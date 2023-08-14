@@ -81,5 +81,5 @@ def reorient_to_original(path_out, orig_orientation):
             # get absolute path to the image
             file = os.path.join(path_out, file)
 
-            # reorient the image to RPI using SCT
+            # reorient the image to the original orientation using SCT
             os.system('sct_image -i {} -setorient {} -o {}'.format(file, orig_orientation, file))
