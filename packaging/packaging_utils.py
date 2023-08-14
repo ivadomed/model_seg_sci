@@ -2,21 +2,21 @@ import os
 import subprocess
 
 def splitext(fname):
-        """
-        Split a fname (folder/file + ext) into a folder/file and extension.
+    """
+    Split a fname (folder/file + ext) into a folder/file and extension.
 
-        Note: for .nii.gz the extension is understandably .nii.gz, not .gz
-        (``os.path.splitext()`` would want to do the latter, hence the special case).
-        Taken (shamelessly) from: https://github.com/spinalcordtoolbox/manual-correction/blob/main/utils.py
-        """
-        dir, filename = os.path.split(fname)
-        for special_ext in ['.nii.gz', '.tar.gz']:
-            if filename.endswith(special_ext):
-                stem, ext = filename[:-len(special_ext)], special_ext
-                return os.path.join(dir, stem), ext
-        # If no special case, behaves like the regular splitext
-        stem, ext = os.path.splitext(filename)
-        return os.path.join(dir, stem), ext
+    Note: for .nii.gz the extension is understandably .nii.gz, not .gz
+    (``os.path.splitext()`` would want to do the latter, hence the special case).
+    Taken (shamelessly) from: https://github.com/spinalcordtoolbox/manual-correction/blob/main/utils.py
+    """
+    dir, filename = os.path.split(fname)
+    for special_ext in ['.nii.gz', '.tar.gz']:
+        if filename.endswith(special_ext):
+            stem, ext = filename[:-len(special_ext)], special_ext
+            return os.path.join(dir, stem), ext
+    # If no special case, behaves like the regular splitext
+    stem, ext = os.path.splitext(filename)
+    return os.path.join(dir, stem), ext
 
 
 def add_suffix(fname, suffix):
