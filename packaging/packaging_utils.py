@@ -44,19 +44,22 @@ def convert_filenames_to_nnunet_format(path_dataset):
     :param path_dataset: path to the dataset
     :return: path_dataset: temporary path to the dataset
     """
+    print('Creating temporary folder with proper nnUNet filenames...')
     # create a temporary folder at the same level as the test folder
     path_tmp = os.path.join(os.path.dirname(path_dataset), 'tmp')
     if not os.path.exists(path_tmp):
         os.makedirs(path_tmp, exist_ok=True)
+    print(f'Temporary folder created at {os.path.abspath(path_tmp)}.')
 
-    for f in os.listdir(path_dataset):
-        if f.endswith('.nii.gz'):
+    # copy all files to the tmp folder
+    for file in os.listdir(path_dataset):
+        if file.endswith('.nii.gz'):
             # get absolute path to the image
-            f = os.path.join(path_dataset, f)
+            file = os.path.join(path_dataset, file)
             # add suffix
-            f_new = add_suffix(f, '_0000')
+            file_new = add_suffix(file, '_0000')
             # copy to tmp folder
-            os.system('cp {} {}'.format(f, os.path.join(path_tmp, os.path.basename(f_new))))
+            os.system('cp {} {}'.format(file, os.path.join(path_tmp, os.path.basename(file_new))))
     
     return path_tmp
 
@@ -76,11 +79,10 @@ def get_orientation(file):
     return orig_orientation
 
 
-def convert_to_rpi(path_dataset):
+def reorient_to_rpi(path_dataset):
     """
     Fetch the original orientation of the images in a dataset, then reorient them to RPI
-    :param path_dataset: path to the dataset
-    :return: path_dataset: temporary path to the dataset
+    :param path_dataset: path to the dataset with images to segment
     :return: orig_orientation_dict: dict of original orientations of the images
     """
 
@@ -94,15 +96,16 @@ def convert_to_rpi(path_dataset):
             fname_file = os.path.join(path_dataset, file)
 
             # store original orientation for each file
-            orig_orientation_dict[file] = get_orientation(fname_file)
-            print(f'Original orientation of {file}: {get_orientation(fname_file)}')
+            orig_orientation = get_orientation(fname_file)
+            orig_orientation_dict[file] = orig_orientation
+            print(f'Original orientation of {file}: {orig_orientation}')
 
-        # skip if already in RPI
-        if orig_orientation != 'RPI':
-            # reorient the image to RPI using SCT
-            os.system('sct_image -i {} -setorient RPI -o {}'.format(fname_file, fname_file))
+            # skip if already in RPI
+            if orig_orientation != 'RPI':
+                # reorient the image to RPI using SCT
+                os.system('sct_image -i {} -setorient RPI -o {}'.format(fname_file, fname_file))
 
-    return path_dataset, orig_orientation_dict
+    return orig_orientation_dict
 
 
 def reorient_to_original_orientation(path_out, orig_orientation_dict):
@@ -118,8 +121,8 @@ def reorient_to_original_orientation(path_out, orig_orientation_dict):
             # get absolute path to the image
             fname_file = os.path.join(path_out, file)
 
-            # get original orientation of the image
-            orig_orientation = orig_orientation_dict[file]
+            # fetch the original orientation of the image
+            orig_orientation = orig_orientation_dict[add_suffix(file, '_0000')]
 
             # skip if already in RPI
             if orig_orientation != 'RPI':

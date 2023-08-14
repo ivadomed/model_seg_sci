@@ -5,7 +5,7 @@ import glob
 import time
 import numpy as np
 import nibabel as nib
-from packaging_utils import convert_filenames_to_nnunet_format, convert_to_rpi, reorient_to_original_orientation
+from packaging_utils import convert_filenames_to_nnunet_format, reorient_to_rpi, reorient_to_original_orientation
 
 from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
 # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
@@ -18,14 +18,7 @@ Method 1 (when running on whole dataset):
         --path-dataset /path/to/test-dataset 
         --path-out /path/to/output-directory 
         --path-model /path/to/model
-        --pred-type lesion-seg
-
-Method 2 (when running on individual images):
-    python run_inference.py 
-        --path-images /path/to/image1 /path/to/image2 
-        --path-out /path/to/output-directory 
-        --path-model /path/to/model 
-        --pred-type lesion-seg                          
+        --pred-type lesion-seg                     
 """
 
 
@@ -33,11 +26,7 @@ def get_parser():
     # parse command line arguments
     parser = argparse.ArgumentParser(description='Segment images using nnUNet')
     parser.add_argument('--path-dataset', default=None, type=str,
-                        help='Path to the test dataset folder. Use this argument only if you want '
-                        'predict on a whole dataset.')
-    parser.add_argument('--path-images', default=None, nargs='+', type=str,
-                        help='List of images to segment. Use this argument only if you want '
-                        'predict on a single image or list of individual images.')
+                        help='Path to the folder with images to segment.')
     parser.add_argument('--path-out', help='Path to output directory. If does not exist, it will be created.',
                         required=True)
     parser.add_argument('--path-model', required=True, 
@@ -60,45 +49,23 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
+    # Create output directory if it does not exist
     if not os.path.exists(args.path_out):
         os.makedirs(args.path_out, exist_ok=True)
 
-    if args.path_dataset is not None and args.path_images is not None:
-        raise ValueError('You can only specify either --path-dataset or --path-images (not both). '
-                         'See --help for more info.')
-    
-    if args.path_dataset is not None:
-        print('Found a dataset folder. Running inference on the whole dataset...')
+    # NOTE: nnUNet requires the '_0000' suffix for files contained in a folder (i.e. when inference is run on a
+    # whole dataset). Hence, we create a temporary folder with the proper filenames and delete it after inference
+    # is done.
+    # More info about that naming convention here:
+    # https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format_inference.md
 
-        # NOTE: nnUNet only wants the _0000 suffix for files contained in a folder (i.e. when inference is run on a
-        # whole dataset) hence, we create a temporary folder with the proper filenames and delete it after inference
-        # is done.
-        # More info about that naming convention here: 
-        # https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format_inference.md
-        
-        print('Creating temporary folder with proper filenames...')
-        path_data_tmp = convert_filenames_to_nnunet_format(args.path_dataset)
+    # Create temporary folder with proper nnUNet filenames
+    path_data_tmp = convert_filenames_to_nnunet_format(args.path_dataset)
 
-        # convert all images to RPI orientation
-        path_data_tmp, orig_orientation_dict = convert_to_rpi(path_data_tmp)
+    # Reorient the images to RPI orientation (because the model was trained on RPI orientated images)
+    orig_orientation_dict = reorient_to_rpi(path_data_tmp)
 
-    elif args.path_images is not None:
-        # NOTE: for individual images, the _0000 suffix is not needed. BUT, the images should be in a list of lists
-        # get list of images from input argument
-        print(f'Found {len(args.path_images)} images. Running inference on them...')
-        # path_data_tmp = [[os.path.basename(f)] for f in args.path_images]
-        path_data_tmp = [[f] for f in args.path_images]
-        # print(path_data_tmp)
-
-        # convert all images to RPI orientation
-        path_data_tmp, orig_orientation_dict = convert_to_rpi(path_data_tmp)
-
-        # # add suffix '_pred' to predicted images
-        # for f in args.path_images:
-        #     path_pred = os.path.join(args.path_out, add_suffix(f, '_pred')) 
-        #     path_out.append(path_pred)
-
-    # uses all the folds available in the model folder by default
+    # Use all the folds available in the model folder by default
     folds_avail = [int(f.split('_')[-1]) for f in os.listdir(args.path_model) if f.startswith('fold_')]
 
     # ---------------------------------------------------------------
@@ -110,11 +77,11 @@ def main():
     start = time.time()
     # directly call the predict function
     predictor(
-        list_of_lists_or_source_folder=path_data_tmp, 
+        list_of_lists_or_source_folder=path_data_tmp,
         output_folder=args.path_out,
         model_training_output_dir=args.path_model,
         use_folds=folds_avail,
-        tile_step_size=0.5,
+        tile_step_size=0.9,                                     # changing it from 0.5 to 0.9 makes inference faster
         use_gaussian=True,                                      # applies gaussian noise and gaussian blur
         use_mirroring=False,                                    # test time augmentation by mirroring on all axes
         perform_everything_on_gpu=True if args.use_gpu else False,
@@ -232,7 +199,7 @@ def main():
         raise ValueError('Invalid value for --pred_type. Valid values are: [all, sc-seg, lesion-seg]')
 
     print('----------------------------------------------------')
-    print('Results can be found in: {}'.format(args.path_out))
+    print('Results can be found in: {}'.format(out_folder))
     print('----------------------------------------------------')
 
     total_time = end - start
