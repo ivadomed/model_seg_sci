@@ -5,7 +5,7 @@ import glob
 import time
 import numpy as np
 import nibabel as nib
-from packaging_utils import convert_filenames_to_nnunet_format, convert_to_rpi, reorient_to_original
+from packaging_utils import convert_filenames_to_nnunet_format, convert_to_rpi, reorient_to_original_orientation
 
 from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
 # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
@@ -178,7 +178,7 @@ def main():
 
     print('Re-orienting the predictions back to original orientation...')    
     # reorient the images back to original orientation
-    reorient_to_original(args.path_out, orig_orientation_dict)
+    reorient_to_original_orientation(args.path_out, orig_orientation_dict)
 
     # split the predictions into different sc-seg and lesion-seg
     if args.pred_type == 'all':

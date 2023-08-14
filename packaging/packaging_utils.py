@@ -105,7 +105,7 @@ def convert_to_rpi(path_dataset):
     return path_dataset, orig_orientation_dict
 
 
-def reorient_to_original(path_out, orig_orientation_dict):
+def reorient_to_original_orientation(path_out, orig_orientation_dict):
     """
     Reorient all images in a dataset to the original orientation
     :param path_out: path to the dataset
