@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def splitext(fname):
     """
     Split a fname (folder/file + ext) into a folder/file and extension.
@@ -81,6 +82,7 @@ def convert_to_rpi(path_dataset):
             os.system('sct_image -i {} -setorient RPI -o {}'.format(file, file))
 
     return path_dataset, orig_orientation
+
 
 def reorient_to_original(path_out, orig_orientation):
     """
