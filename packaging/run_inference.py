@@ -5,7 +5,7 @@ import glob
 import time
 import numpy as np
 import nibabel as nib
-from packaging_utils import convert_filenames_to_nnunet_format, add_suffix, splitext, convert_to_rpi
+from packaging_utils import convert_filenames_to_nnunet_format, convert_to_rpi, reorient_to_original
 
 from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
 # from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
@@ -69,7 +69,6 @@ def main():
         
         print('Creating temporary folder with proper filenames...')
         path_data_tmp = convert_filenames_to_nnunet_format(args.path_dataset)
-        path_out = args.path_out
 
         # convert all images to RPI orientation
         path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
@@ -87,7 +86,6 @@ def main():
         path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
         print(f'Original orientation: {orig_orientation}')
 
-        path_out = args.path_out
         # # add suffix '_pred' to predicted images
         # for f in args.path_images:
         #     path_pred = os.path.join(args.path_out, add_suffix(f, '_pred')) 
@@ -106,7 +104,7 @@ def main():
     # directly call the predict function
     predictor(
         list_of_lists_or_source_folder=path_data_tmp, 
-        output_folder=path_out,
+        output_folder=args.path_out,
         model_training_output_dir=args.path_model,
         use_folds=folds_avail,
         tile_step_size=0.5,
@@ -172,16 +170,9 @@ def main():
     # delete the temporary folder
     os.system('rm -rf {}'.format(path_data_tmp))
 
+    print('Re-orienting the predictions back to original orientation...')    
     # reorient the images back to original orientation
-    print('Re-orienting the predictions back to original orientation...')
-    for f in os.listdir(path_out):
-        if f.endswith('.nii.gz'):
-            # get absolute path to the image
-            f = os.path.join(path_out, f)
-
-            # reorient the image to RPI using SCT
-            os.system('sct_image -i {} -setorient {} -o {}'.format(f, orig_orientation, f))
-
+    reorient_to_original(args.path_out, orig_orientation)
     print(f'Reorientation to original orientation {orig_orientation} done.')
 
     # split the predictions into different sc-seg and lesion-seg
