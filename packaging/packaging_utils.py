@@ -61,41 +61,64 @@ def convert_filenames_to_nnunet_format(path_dataset):
     return path_tmp
 
 
+def get_orientation(file):
+    """
+    Get the original orientation of an image
+    :param file: path to the image
+    :return: orig_orientation: original orientation of the image, e.g. LPI
+    """
+
+    # Fetch the original orientation from the output of sct_image
+    sct_command = "sct_image -i {} -header | grep -E qform_[xyz] | awk '{{printf \"%s\", substr($2, 1, 1)}}'".format(
+        file)
+    orig_orientation = subprocess.check_output(sct_command, shell=True).decode('utf-8')
+
+    return orig_orientation
+
+
 def convert_to_rpi(path_dataset):
     """
     Fetch the original orientation of the images in a dataset, then reorient them to RPI
     :param path_dataset: path to the dataset
     :return: path_dataset: temporary path to the dataset
-    :return: orig_orientation: original orientation of the images, e.g. LPI
+    :return: orig_orientation_dict: dict of original orientations of the images
     """
+
+    # initialize dict to store original orientations
+    orig_orientation_dict = {}
+
     # iterate through all files, do in-place reorientation to RPI
     for file in os.listdir(path_dataset):
         if file.endswith('.nii.gz'):
             # get absolute path to the image
-            file = os.path.join(path_dataset, file)
+            fname_file = os.path.join(path_dataset, file)
 
-            # get the original resolution of the image
-            sct_command = "sct_image -i {} -header | grep -E qform_[xyz] | awk '{{printf \"%s\", substr($2, 1, 1)}}'".format(file)
-            orig_orientation = subprocess.check_output(sct_command, shell=True).decode('utf-8')
+            # store original orientation for each file
+            orig_orientation_dict[file] = get_orientation(fname_file)
+            print(f'Original orientation of {file}: {get_orientation(fname_file)}')
 
             # reorient the image to RPI using SCT
-            os.system('sct_image -i {} -setorient RPI -o {}'.format(file, file))
+            os.system('sct_image -i {} -setorient RPI -o {}'.format(fname_file, fname_file))
 
-    return path_dataset, orig_orientation
+    return path_dataset, orig_orientation_dict
 
 
-def reorient_to_original(path_out, orig_orientation):
+def reorient_to_original(path_out, orig_orientation_dict):
     """
     Reorient all images in a dataset to the original orientation
     :param path_out: path to the dataset
-    :param orig_orientation: original orientation of the images, e.g. LPI
+    :param orig_orientation_dict: dict of original orientations of the images
     :return:
     """
-    # iterate through all files, do in-place reorientation to RPI
+    # iterate through all files, do in-place reorientation to the original orientation
     for file in os.listdir(path_out):
         if file.endswith('.nii.gz'):
             # get absolute path to the image
-            file = os.path.join(path_out, file)
+            fname_file = os.path.join(path_out, file)
+
+            # get original orientation of the image
+            orig_orientation = orig_orientation_dict[file]
 
             # reorient the image to the original orientation using SCT
-            os.system('sct_image -i {} -setorient {} -o {}'.format(file, orig_orientation, file))
+            os.system('sct_image -i {} -setorient {} -o {}'.format(fname_file, orig_orientation, fname_file))
+            print(f'Reorientation to original orientation {orig_orientation} done.')

@@ -79,8 +79,7 @@ def main():
         path_data_tmp = convert_filenames_to_nnunet_format(args.path_dataset)
 
         # convert all images to RPI orientation
-        path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
-        print(f'Original orientation: {orig_orientation}')
+        path_data_tmp, orig_orientation_dict = convert_to_rpi(path_data_tmp)
 
     elif args.path_images is not None:
         # NOTE: for individual images, the _0000 suffix is not needed. BUT, the images should be in a list of lists
@@ -91,8 +90,7 @@ def main():
         # print(path_data_tmp)
 
         # convert all images to RPI orientation
-        path_data_tmp, orig_orientation = convert_to_rpi(path_data_tmp)
-        print(f'Original orientation: {orig_orientation}')
+        path_data_tmp, orig_orientation_dict = convert_to_rpi(path_data_tmp)
 
         # # add suffix '_pred' to predicted images
         # for f in args.path_images:
@@ -180,8 +178,7 @@ def main():
 
     print('Re-orienting the predictions back to original orientation...')    
     # reorient the images back to original orientation
-    reorient_to_original(args.path_out, orig_orientation)
-    print(f'Reorientation to original orientation {orig_orientation} done.')
+    reorient_to_original(args.path_out, orig_orientation_dict)
 
     # split the predictions into different sc-seg and lesion-seg
     if args.pred_type == 'all':
