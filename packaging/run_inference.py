@@ -14,12 +14,18 @@ from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as pr
 """
 Usage example:
 Method 1 (when running on whole dataset):
-    python run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output --path-model /path/to/model 
-                                --pred-type lesion-seg
+    python run_inference.py 
+        --path-dataset /path/to/test-dataset 
+        --path-out /path/to/output 
+        --path-model /path/to/model
+        --pred-type lesion-seg
 
 Method 2 (when running on individual images):
-    python run_inference.py --path-images /path/to/image1 /path/to/image2 --path-out /path/to/output --path-model /path/to/model 
-                                --pred-type lesion-seg                          
+    python run_inference.py 
+        --path-images /path/to/image1 /path/to/image2 
+        --path-out /path/to/output 
+        --path-model /path/to/model 
+        --pred-type lesion-seg                          
 """
 
 def get_parser():
