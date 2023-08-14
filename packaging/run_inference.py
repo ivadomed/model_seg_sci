@@ -28,6 +28,7 @@ Method 2 (when running on individual images):
         --pred-type lesion-seg                          
 """
 
+
 def get_parser():
     # parse command line arguments
     parser = argparse.ArgumentParser(description='Segment images using nnUNet')
@@ -36,13 +37,12 @@ def get_parser():
                         'predict on a whole dataset.')
     parser.add_argument('--path-images', default=None, nargs='+', type=str,
                         help='List of images to segment. Use this argument only if you want '
-                        'predict on a single image or list of invidiual images.')
+                        'predict on a single image or list of individual images.')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
     parser.add_argument('--path-model', required=True, 
                         help='Path to the model directory. This folder should contain individual folders '
                         'like fold_0, fold_1, etc.',)
-    parser.add_argument('--pred-type', default='lesion-seg', required=True,
-                         choices=['sc-seg', 'lesion-seg', 'all'],
+    parser.add_argument('--pred-type', default='lesion-seg', required=True, choices=['sc-seg', 'lesion-seg', 'all'],
                         help='Type of prediction to obtain. If "all", then both spinal cord and lesion '
                         'segmentations will be obtained in the same nifti file. Default: lesion-seg')
     parser.add_argument('--use-gpu', action='store_true', default=False,
@@ -63,13 +63,15 @@ def main():
         os.makedirs(args.path_out, exist_ok=True)
 
     if args.path_dataset is not None and args.path_images is not None:
-        raise ValueError('You can only specify either --path-dataset or --path-images (not both). See --help for more info.')
+        raise ValueError('You can only specify either --path-dataset or --path-images (not both). '
+                         'See --help for more info.')
     
     if args.path_dataset is not None:
         print('Found a dataset folder. Running inference on the whole dataset...')
 
-        # NOTE: nnUNet only wants the _0000 suffix for files contained in a folder (i.e. when inference is run on a whole dataset)
-        # hence, we create a temporary folder with the proper filenames and delete it after inference is done
+        # NOTE: nnUNet only wants the _0000 suffix for files contained in a folder (i.e. when inference is run on a
+        # whole dataset) hence, we create a temporary folder with the proper filenames and delete it after inference
+        # is done.
         # More info about that naming convention here: 
         # https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format_inference.md
         
@@ -238,6 +240,7 @@ def main():
     total_time = end - start
     print('Total time elapsed: {} minute(s) {} seconds'.format(int(total_time // 60), int(round(total_time % 60))))
     print('----------------------------------------------------')
+
 
 if __name__ == '__main__':
     main()
