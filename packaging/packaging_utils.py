@@ -72,3 +72,14 @@ def convert_to_rpi(path_dataset):
             os.system('sct_image -i {} -setorient RPI -o {}'.format(file, file))
 
     return path_dataset, orig_orientation
+
+def reorient_to_original(path_out, orig_orientation):
+
+    # iterate through all files, do in-place reorientation to RPI
+    for file in os.listdir(path_out):
+        if file.endswith('.nii.gz'):
+            # get absolute path to the image
+            file = os.path.join(path_out, file)
+
+            # reorient the image to RPI using SCT
+            os.system('sct_image -i {} -setorient {} -o {}'.format(file, orig_orientation, file))
