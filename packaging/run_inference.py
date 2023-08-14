@@ -16,14 +16,14 @@ Usage example:
 Method 1 (when running on whole dataset):
     python run_inference.py 
         --path-dataset /path/to/test-dataset 
-        --path-out /path/to/output 
+        --path-out /path/to/output-directory 
         --path-model /path/to/model
         --pred-type lesion-seg
 
 Method 2 (when running on individual images):
     python run_inference.py 
         --path-images /path/to/image1 /path/to/image2 
-        --path-out /path/to/output 
+        --path-out /path/to/output-directory 
         --path-model /path/to/model 
         --pred-type lesion-seg                          
 """
@@ -38,7 +38,8 @@ def get_parser():
     parser.add_argument('--path-images', default=None, nargs='+', type=str,
                         help='List of images to segment. Use this argument only if you want '
                         'predict on a single image or list of individual images.')
-    parser.add_argument('--path-out', help='Path to output directory.', required=True)
+    parser.add_argument('--path-out', help='Path to output directory. If does not exist, it will be created.',
+                        required=True)
     parser.add_argument('--path-model', required=True, 
                         help='Path to the model directory. This folder should contain individual folders '
                         'like fold_0, fold_1, etc.',)
