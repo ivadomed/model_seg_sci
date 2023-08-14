@@ -38,7 +38,11 @@ def add_suffix(fname, suffix):
 
 
 def convert_filenames_to_nnunet_format(path_dataset):
-
+    """
+    Convert all filenames in a dataset to the nnUNet format
+    :param path_dataset: path to the dataset
+    :return: path_dataset: temporary path to the dataset
+    """
     # create a temporary folder at the same level as the test folder
     path_tmp = os.path.join(os.path.dirname(path_dataset), 'tmp')
     if not os.path.exists(path_tmp):
@@ -57,7 +61,12 @@ def convert_filenames_to_nnunet_format(path_dataset):
 
 
 def convert_to_rpi(path_dataset):
-    
+    """
+    Fetch the original orientation of the images in a dataset, then reorient them to RPI
+    :param path_dataset: path to the dataset
+    :return: path_dataset: temporary path to the dataset
+    :return: orig_orientation: original orientation of the images, e.g. LPI
+    """
     # iterate through all files, do in-place reorientation to RPI
     for file in os.listdir(path_dataset):
         if file.endswith('.nii.gz'):
@@ -74,7 +83,12 @@ def convert_to_rpi(path_dataset):
     return path_dataset, orig_orientation
 
 def reorient_to_original(path_out, orig_orientation):
-
+    """
+    Reorient all images in a dataset to the original orientation
+    :param path_out: path to the dataset
+    :param orig_orientation: original orientation of the images, e.g. LPI
+    :return:
+    """
     # iterate through all files, do in-place reorientation to RPI
     for file in os.listdir(path_out):
         if file.endswith('.nii.gz'):
