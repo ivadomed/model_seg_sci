@@ -97,6 +97,8 @@ def convert_to_rpi(path_dataset):
             orig_orientation_dict[file] = get_orientation(fname_file)
             print(f'Original orientation of {file}: {get_orientation(fname_file)}')
 
+        # skip if already in RPI
+        if orig_orientation != 'RPI':
             # reorient the image to RPI using SCT
             os.system('sct_image -i {} -setorient RPI -o {}'.format(fname_file, fname_file))
 
@@ -119,6 +121,8 @@ def reorient_to_original(path_out, orig_orientation_dict):
             # get original orientation of the image
             orig_orientation = orig_orientation_dict[file]
 
-            # reorient the image to the original orientation using SCT
-            os.system('sct_image -i {} -setorient {} -o {}'.format(fname_file, orig_orientation, fname_file))
-            print(f'Reorientation to original orientation {orig_orientation} done.')
+            # skip if already in RPI
+            if orig_orientation != 'RPI':
+                # reorient the image to the original orientation using SCT
+                os.system('sct_image -i {} -setorient {} -o {}'.format(fname_file, orig_orientation, fname_file))
+                print(f'Reorientation to original orientation {orig_orientation} done.')
