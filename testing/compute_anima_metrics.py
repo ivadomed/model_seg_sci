@@ -48,10 +48,6 @@ unzip Anima-Ubuntu-4.2.zip
 git lfs install
 git clone --depth 1 https://github.com/Inria-Visages/Anima-Scripts-Public.git
 git clone --depth 1 https://github.com/Inria-Visages/Anima-Scripts-Data-Public.git
-cd ~
-mkdir .anima/
-touch .anima/config.txt
-nano .anima/config.txt
 
 ##### STEP 2: Configure directories #####
 # Variable names and section titles should stay the same
@@ -59,12 +55,16 @@ nano .anima/config.txt
 # Make the anima variable point to your Anima public build
 # Make the extra-data-root point to the data folder of Anima-Scripts
 # The last folder separator for each path is crucial, do not forget them
-# Use full paths, nothing relative or using tildes 
+# Use full paths, nothing relative or using tildes
 
-[anima-scripts]
-anima = ${HOME}/anima/Anima-Binaries-4.2/
-anima-scripts-public-root = ${HOME}/anima/Anima-Scripts-Public/
-extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/
+cd ~
+mkdir .anima/
+touch .anima/config.txt
+
+echo "[anima-scripts]" >> .anima/config.txt
+echo "anima = ${HOME}/anima/Anima-Binaries-4.2/" >> .anima/config.txt
+echo "anima-scripts-public-root = ${HOME}/anima/Anima-Scripts-Public/" >> .anima/config.txt
+echo "extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/" >> .anima/config.txt
 
 USAGE:
 python compute_anima_metrics.py --pred_folder <path_to_predictions_folder> 
