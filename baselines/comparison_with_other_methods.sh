@@ -72,7 +72,7 @@ compute_anima_metrics(){
   # -o : output file
   # -d : surface distances evaluation
   # -s : compute metrics to evaluate a segmentation
-  ${anima_binaries_path}/animaSegPerfAnalyzer -i ${FILESEG}_updated_header.nii.gz -g ${FILESEGMANUAL}.nii.gz -o ${PATH_RESULTS}/${FILESEG} -d -s
+  ${anima_binaries_path}/animaSegPerfAnalyzer -i ${FILESEG}_updated_header.nii.gz -r ${file}_seg-manual.nii.gz -o ${PATH_RESULTS}/${FILESEG} -d -s
 
   rm ${FILESEG}_updated_header.nii.gz
 }
