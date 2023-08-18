@@ -77,6 +77,23 @@ compute_anima_metrics(){
   rm ${FILESEG}_updated_header.nii.gz
 }
 
+# Copy GT segmentation
+copy_gt(){
+  local file="$1"
+  # Construct file name to GT segmentation located under derivatives/labels
+  FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_seg-manual.nii.gz"
+  echo ""
+  echo "Looking for manual segmentation: $FILESEGMANUAL"
+  if [[ -e $FILESEGMANUAL ]]; then
+      echo "Found! Copying ..."
+      rsync -avzh $FILESEGMANUAL ${file}_seg-manual.nii.gz
+  else
+      echo "File ${FILESEGMANUAL}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
+      echo "ERROR: Manual GT segmentation ${FILESEGMANUAL}.nii.gz does not exist. Exiting."
+      exit 1
+  fi
+}
+
 # ------------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 # ------------------------------------------------------------------------------
@@ -126,6 +143,9 @@ if [[ $SUBJECT =~ "sub-zh" ]]; then
 else
     file_t2="${SUBJECT}"_T2w
 fi
+
+# Copy GT segmentation
+copy_gt "${file_t2}"
 
 # Check if file_t2 exists
 if [[ ! -e ${file_t2}.nii.gz ]]; then
