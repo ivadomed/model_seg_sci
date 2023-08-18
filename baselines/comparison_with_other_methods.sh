@@ -71,6 +71,17 @@ segment_sc() {
 
 }
 
+# Segment spinal cord using our nnUNet model
+segment_sc_nnUNet(){
+  local file="$1"
+  FILESEG="${file}_seg_nnunet"
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL} -pred-type sc
+  # Generate QC report
+  sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
+  # Compute ANIMA segmentation performance metrics
+  compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
+}
+
 # Compute ANIMA segmentation performance metrics
 compute_anima_metrics(){
   # We have to copy qform matrix from seg-manual to the automatically generated segmentation to avoid ITK error:
@@ -157,4 +168,5 @@ else
     segment_sc "${file_t2}" 't2' 'deepseg' '2d'
     segment_sc "${file_t2}" 't2' 'deepseg' '3d'
     segment_sc "${file_t2}" 't2' 'propseg'
+    segment_sc_nnUNet "${file_t2}"
 fi
