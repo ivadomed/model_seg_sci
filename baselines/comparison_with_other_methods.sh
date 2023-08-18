@@ -111,7 +111,13 @@ cd $PATH_DATA_PROCESSED
 
 # Copy source T2w images
 # Note: we use '/./' in order to include the sub-folder 'ses-0X'
-rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*T2w.* .
+# We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
+if [[ $SUBJECT =~ "sub-zh" ]]; then
+  # for sci-zurich, copy only sagittal T2w to save space
+  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT//[\/]/_}_*sag_T2w.* .
+else
+  rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT//[\/]/_}_*T2w.* .
+fi
 
 # Go to subject folder for source images
 cd ${SUBJECT}/anat
