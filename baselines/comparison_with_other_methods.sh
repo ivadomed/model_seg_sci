@@ -117,22 +117,6 @@ rsync -Ravzh ${PATH_DATA}/./${SUBJECT}/anat/${SUBJECT}_*T2w.* .
 cd ${SUBJECT}/anat
 
 # ------------------------------------------------------------------------------
-# Copy GT segmentation
-# ------------------------------------------------------------------------------
-# Construct file name to GT segmentation located under derivatives/labels
-FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file_t2}_seg-manual.nii.gz"
-echo ""
-echo "Looking for manual segmentation: $FILESEGMANUAL"
-if [[ -e $FILESEGMANUAL ]]; then
-    echo "Found! Copying ..."
-    rsync -avzh $FILESEGMANUAL ${file_t2}_seg-manual.nii.gz
-else
-    echo "File ${FILESEGMANUAL}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
-    echo "ERROR: Manual GT segmentation ${FILESEGMANUAL}.nii.gz does not exist. Exiting."
-    exit 1
-fi
-
-# ------------------------------------------------------------------------------
 # T2w
 # ------------------------------------------------------------------------------
 # sci-zurich
