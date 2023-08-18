@@ -1,6 +1,6 @@
 
-Compare our nnUNet model with other methods (sct_propseg, sct_deepseg_sc 2d, sct_deepseg_sc 3d) on `sci-zurich` and 
-`sci-colorado` datasets
+Compare our nnUNet model with other methods (`sct_propseg`, `sct_deepseg_sc -kernel 2d`, `sct_deepseg_sc -kernel 3d`) on 
+`sci-zurich` and `sci-colorado` datasets.
 
 ## Data structure
 
