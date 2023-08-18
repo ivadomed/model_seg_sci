@@ -33,6 +33,14 @@ echo "PATH_RESULTS: ${PATH_RESULTS}"
 echo "PATH_LOG: ${PATH_LOG}"
 echo "PATH_QC: ${PATH_QC}"
 
+SUBJECT=$1
+PATH_NNUNET_SCRIPT=$2
+PATH_NNUNET_MODEL=$3
+
+echo "SUBJECT: ${SUBJECT}"
+echo "PATH_NNUNET_SCRIPT: ${PATH_NNUNET_SCRIPT}"
+echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
+
 # ------------------------------------------------------------------------------
 # CONVENIENCE FUNCTIONS
 # ------------------------------------------------------------------------------
@@ -102,9 +110,6 @@ copy_gt(){
 # ------------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 # ------------------------------------------------------------------------------
-# Retrieve input params and other params
-SUBJECT=$1
-
 # get starting time:
 start=`date +%s`
 
