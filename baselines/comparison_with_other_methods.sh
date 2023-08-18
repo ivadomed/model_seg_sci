@@ -68,7 +68,6 @@ segment_sc() {
       # Compute ANIMA segmentation performance metrics
       compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
   fi
-
 }
 
 # Segment spinal cord using our nnUNet model
