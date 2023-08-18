@@ -50,11 +50,15 @@ segment_sc() {
   if [[ $method == 'deepseg' ]];then
       FILESEG="${file}_seg_${method}_${kernel}"
       sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -kernel ${kernel} -qc ${PATH_QC} -qc-subject ${SUBJECT}
-      compute_anima_metrics ${FILESEG} ${FILESEGMANUAL}
+      # Compute ANIMA segmentation performance metrics
+      compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
   elif [[ $method == 'propseg' ]]; then
       FILESEG="${file}_seg_${method}"
       sct_propseg -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -qc ${PATH_QC} -qc-subject ${SUBJECT}
-      compute_anima_metrics ${FILESEG} ${FILESEGMANUAL}
+      # Remove centerline (we don't need it)
+      rm ${file}_centerline.nii.gz
+      # Compute ANIMA segmentation performance metrics
+      compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
   fi
 
 }
@@ -64,7 +68,7 @@ compute_anima_metrics(){
   # We have to copy qform matrix from seg-manual to the automatically generated segmentation to avoid ITK error:
   # "Description: ITK ERROR: SegmentationMeasuresImageFilter(): Inputs do not occupy the same physical space!"
   # Related to the following issue : https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4135
-  sct_image -i ${FILESEGMANUAL} -copy-header ${FILESEG}.nii.gz -o ${FILESEG}_updated_header.nii.gz
+  sct_image -i ${file}_seg-manual.nii.gz -copy-header ${FILESEG}.nii.gz -o ${FILESEG}_updated_header.nii.gz
 
   # Compute ANIMA segmentation performance metrics
   # -i : input segmentation
