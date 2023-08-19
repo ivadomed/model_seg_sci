@@ -111,8 +111,10 @@ segment_sc() {
 # Segment spinal cord using our nnUNet model
 segment_sc_nnUNet(){
   local file="$1"
-  FILESEG="${file}_seg_nnunet"
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL} -pred-type sc
+  local kernel="$2"     # 2d or 3d
+
+  FILESEG="${file}_seg_nnunet_${kernel}"
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
   # Compute ANIMA segmentation performance metrics
@@ -205,5 +207,6 @@ else
     segment_sc "${file_t2}" 't2' 'deepseg' '2d'
     segment_sc "${file_t2}" 't2' 'deepseg' '3d'
     segment_sc "${file_t2}" 't2' 'propseg'
-    segment_sc_nnUNet "${file_t2}"
+    segment_sc_nnUNet "${file_t2}" '2d'
+    segment_sc_nnUNet "${file_t2}" '3d'
 fi
