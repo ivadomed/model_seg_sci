@@ -33,6 +33,12 @@ Subjects from both datasets have to be located in the same BIDS-like folder, exa
          └── sub-zh01_ses-01_acq-sag_T2w.nii.gz
 ```
 
+You can create this folder structure using the `create_combined_dataset_for_inference.sh` script:
+
+```
+create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_folder> <output_folder>
+```
+
 ## Dependencies
 
 ### nnUNet
