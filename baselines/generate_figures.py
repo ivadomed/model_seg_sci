@@ -18,7 +18,8 @@ METHOD_TO_LABEL = {
     'propseg': 'sct_propseg',
     'deepseg_2d': 'sct_deepseg_sc 2D',
     'deepseg_3d': 'sct_deepseg_sc 3D',
-    'nnunet': 'nnUNet'
+    'nnunet_2d': 'nnUNet 2D',
+    'nnunet_3d': 'nnUNet 3D',
     }
 
 
@@ -108,7 +109,7 @@ def create_rainplot(df, path_figures):
     """
     for metric in ['Jaccard', 'Dice', 'Sensitivity', 'Specificity', 'PPV', 'NPV', 'RelativeVolumeError',
                    'HausdorffDistance', 'ContourMeanDistance', 'SurfaceDistance']:
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(10, 5))
         ax = pt.RainCloud(data=df,
                           x='method',
                           y=metric,
