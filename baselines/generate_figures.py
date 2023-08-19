@@ -14,6 +14,14 @@ import matplotlib.pyplot as plt
 import ptitprince as pt
 
 
+METHOD_TO_LABEL = {
+    'propseg': 'sct_propseg',
+    'deepseg_2d': 'sct_deepseg_sc 2D',
+    'deepseg_3d': 'sct_deepseg_sc 3D',
+    'nnunet': 'nnUNet'
+    }
+
+
 def get_parser():
     """
     parser function
@@ -75,17 +83,20 @@ def parse_xml_file(file_path):
     return filename, segmentation_metrics
 
 
-def fetch_filename_and_method(input_string):
+def fetch_site_and_method(input_string):
     """
     Fetch the file and method from the input string
     :param input_string: input string, e.g. 'sub-5416_T2w_seg_nnunet'
-    :return file: file name, e.g. 'sub-5416_T2w'
+    :return site: site name, e.g. 'zurich' or 'colorado'
     :return method: segmentation method, e.g. 'nnunet'
     """
-    file = input_string.split('_seg_')[0]
+    if 'sub-zh' in input_string:
+        site = 'zurich'
+    else:
+        site = 'colorado'
     method = input_string.split('_seg_')[1]
 
-    return file, method
+    return site, method
 
 
 def create_rainplot(df, path_figures):
@@ -97,10 +108,13 @@ def create_rainplot(df, path_figures):
     """
     for metric in ['Jaccard', 'Dice', 'Sensitivity', 'Specificity', 'PPV', 'NPV', 'RelativeVolumeError',
                    'HausdorffDistance', 'ContourMeanDistance', 'SurfaceDistance']:
+        fig, ax = plt.subplots(figsize=(8, 5))
         ax = pt.RainCloud(data=df,
                           x='method',
                           y=metric,
-                          order=['propseg', 'deepseg_2d', 'deepseg_3d', 'nnunet'],
+                          hue='site',
+                          order=METHOD_TO_LABEL.keys(),
+                          dodge=True,       # move boxplots next to each other
                           linewidth=0,      # violionplot border line (0 - no line)
                           width_viol=.5,    # violionplot width
                           width_box=.3,     # boxplot width
@@ -110,6 +124,11 @@ def create_rainplot(df, path_figures):
                           box_meanprops={'marker': '^', 'markerfacecolor': 'black', 'markeredgecolor': 'black',
                                          'markersize': '6'}
                           )
+
+        # Remove x-axis label
+        ax.set_xlabel('')
+        # Modify x-ticks labels
+        ax.set_xticklabels(METHOD_TO_LABEL.values())
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
         # Add horizontal grid lines
@@ -118,7 +137,7 @@ def create_rainplot(df, path_figures):
 
         # save figure
         fname_fig = os.path.join(path_figures, f'rainplot_{metric}.png')
-        plt.savefig(fname_fig, dpi=300)
+        plt.savefig(fname_fig, dpi=300, bbox_inches='tight')
         plt.close()
         print(f'Created: {fname_fig}\n')
 
@@ -152,9 +171,9 @@ def main():
     df = pd.DataFrame(parsed_data)
 
     # Apply the fetch_filename_and_method function to each row using a lambda function
-    df[['file', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_filename_and_method(x)))
+    df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x)))
     # Reorder the columns
-    df = df[['filename', 'file', 'method'] + [col for col in df.columns if col not in ['filename', 'file', 'method']]]
+    df = df[['filename', 'site', 'method'] + [col for col in df.columns if col not in ['filename', 'site', 'method']]]
 
     # Make figure directory in dir_path
     path_figures = os.path.join(dir_path, 'figures')
