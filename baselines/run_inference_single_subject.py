@@ -43,7 +43,8 @@ def get_parser():
     parser.add_argument('-i', help='Input image to segment. Example: sub-001_T2w.nii.gz', required=True)
     parser.add_argument('-o', help='Output filename. Example: sub-001_T2w_seg_nnunet.nii.gz', required=True)
     parser.add_argument('-path-model', help='Path to the model directory. This folder should contain individual '
-                                            'folders like fold_0, fold_1, etc.', required=True, type=str)
+                                            'folders like fold_0, fold_1, etc. and dataset.json, '
+                                            'dataset_fingerprint.json and plans.json files.', required=True, type=str)
     parser.add_argument('-pred-type', choices=['sc', 'lesion'],
                         help='Type of prediction to obtain. sc: spinal cord segmentation; lesion: lesion segmentation.',
                         required=True, type=str)
