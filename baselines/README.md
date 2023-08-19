@@ -37,8 +37,7 @@ Subjects from both datasets have to be located in the same BIDS-like folder, exa
 
 ### nnUNet
 
-`conda` environment with nnUNetV2 is required to run this script. See installation instructions [here](https://github.
-com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
+`conda` environment with nnUNetV2 is required to run this script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
 
 ### ANIMA
 
