@@ -125,6 +125,12 @@ def create_rainplot(df, path_figures):
                                          'markersize': '6'}
                           )
 
+        # Change boxplot opacity (.0 means transparent)
+        # https://github.com/mwaskom/seaborn/issues/979#issuecomment-1144615001
+        for patch in ax.patches:
+            r, g, b, a = patch.get_facecolor()
+            patch.set_facecolor((r, g, b, .0))
+
         # Remove x-axis label
         ax.set_xlabel('')
         # Modify x-ticks labels
