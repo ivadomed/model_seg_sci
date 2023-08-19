@@ -1,3 +1,5 @@
+#!/bin/bash
+#
 # Combine subjects from sci-zurich and sci-colorado datasets into a single BIDS-like folder, example output:
 #
 # ├── derivatives
@@ -39,17 +41,20 @@ ZURICH_FOLDER=$2
 COLORADO_FOLDER=$3
 OUTPUT_FOLDER=$4
 
+mkdir -p $OUTPUT_FOLDER/derivatives/labels/
+
 # Loop across subjects in test_subjects_sci_seed50.json
 for subject in $(cat ${JSON_FILE} | jq -r 'keys[]'); do
+    echo $subject
     # sci-zurich
-    if [[ $subject == *"sub-zh"* ]]; then
-        cp -r $ZURICH_FOLDER/$subject $OUTPUT_FOLDER/$subject
-        cp -r $ZURICH_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/$subject
-        echo "Copied $subject from sci-zurich"
+    if [[ $subject =~ "sub-zh" ]]; then
+        cp -r $ZURICH_FOLDER/$subject $OUTPUT_FOLDER/
+        cp -r $ZURICH_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/
+        echo "Copied $subject from sci-zurich to $OUTPUT_FOLDER"
     else
         # sci-colorado
-        cp -r $COLORADO_FOLDER/$subject $OUTPUT_FOLDER/$subject
-        cp -r $COLORADO_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/$subject
-        echo "Copied $subject from sci-colorado"
+        cp -r $COLORADO_FOLDER/$subject $OUTPUT_FOLDER/
+        cp -r $COLORADO_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/
+        echo "Copied $subject from sci-colorado $OUTPUT_FOLDER"
     fi
 done
