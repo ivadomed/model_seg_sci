@@ -45,9 +45,11 @@ for subject in $(cat ${JSON_FILE} | jq -r 'keys[]'); do
     if [[ $subject == *"sub-zh"* ]]; then
         cp -r $ZURICH_FOLDER/$subject $OUTPUT_FOLDER/$subject
         cp -r $ZURICH_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/$subject
+        echo "Copied $subject from sci-zurich"
     else
         # sci-colorado
         cp -r $COLORADO_FOLDER/$subject $OUTPUT_FOLDER/$subject
         cp -r $COLORADO_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/$subject
+        echo "Copied $subject from sci-colorado"
     fi
 done
