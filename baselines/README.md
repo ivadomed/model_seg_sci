@@ -43,7 +43,7 @@ create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_f
 
 ### nnUNet
 
-`conda` environment with nnUNetV2 is required to run this script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
+`conda` environment with nnUNetV2 is required to run the `comparison_with_other_methods.sh` script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
 
 ### ANIMA
 
@@ -53,7 +53,7 @@ ANIMA is used to compute segmentation performance metrics. See installation inst
 
 Follow installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox#installation).
 
-## Running the script
+## Running the `comparison_with_other_methods.sh` script
 
 ```bash
 sct_run_batch -config config.json
