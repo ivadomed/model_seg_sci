@@ -69,3 +69,6 @@ Example of the `config.json` file:
   "script_args" : "<PATH_TO_REPO>/model_seg_sci/baselines/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
  }
 ```
+
+`script_args` argument is used to pass arguments to the `comparison_with_other_methods.sh` script. 
+In this case, we pass the path to the `run_inference_single_subject.py` script and the path to the nnUNet model.
