@@ -95,12 +95,32 @@ segment_sc() {
   # Segment spinal cord
   if [[ $method == 'deepseg' ]];then
       FILESEG="${file}_seg_${method}_${kernel}"
+
+      # Get the start time
+      start_time=$(date +%s.%N)
+      # Run SC segmentation
       sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -kernel ${kernel} -qc ${PATH_QC} -qc-subject ${SUBJECT}
+      # Get the end time
+      end_time=$(date +%s.%N)
+      # Calculate the time difference
+      execution_time=$(echo "$end_time - $start_time" | bc)
+      echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+
       # Compute ANIMA segmentation performance metrics
       compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
   elif [[ $method == 'propseg' ]]; then
       FILESEG="${file}_seg_${method}"
+
+      # Get the start time
+      start_time=$(date +%s.%N)
+      # Run SC segmentation
       sct_propseg -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -qc ${PATH_QC} -qc-subject ${SUBJECT}
+      # Get the end time
+      end_time=$(date +%s.%N)
+      # Calculate the time difference
+      execution_time=$(echo "$end_time - $start_time" | bc)
+      echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+
       # Remove centerline (we don't need it)
       rm ${file}_centerline.nii.gz
       # Compute ANIMA segmentation performance metrics
@@ -114,7 +134,17 @@ segment_sc_nnUNet(){
   local kernel="$2"     # 2d or 3d
 
   FILESEG="${file}_seg_nnunet_${kernel}"
+
+  # Get the start time
+  start_time=$(date +%s.%N)
+  # Run SC segmentation
   python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
+  # Get the end time
+  end_time=$(date +%s.%N)
+  # Calculate the time difference
+  execution_time=$(echo "$end_time - $start_time" | bc)
+  echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
   # Compute ANIMA segmentation performance metrics
