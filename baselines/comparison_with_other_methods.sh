@@ -103,7 +103,7 @@ segment_sc() {
       # Get the end time
       end_time=$(date +%s.%N)
       # Calculate the time difference
-      execution_time=$(echo "$end_time - $start_time" | bc)
+      execution_time=$(python3 -c "print($end_time - $start_time)")
       echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
 
       # Compute ANIMA segmentation performance metrics
@@ -118,7 +118,7 @@ segment_sc() {
       # Get the end time
       end_time=$(date +%s.%N)
       # Calculate the time difference
-      execution_time=$(echo "$end_time - $start_time" | bc)
+      execution_time=$(python3 -c "print($end_time - $start_time)")
       echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
 
       # Remove centerline (we don't need it)
@@ -142,7 +142,7 @@ segment_sc_nnUNet(){
   # Get the end time
   end_time=$(date +%s.%N)
   # Calculate the time difference
-  execution_time=$(echo "$end_time - $start_time" | bc)
+  execution_time=$(python3 -c "print($end_time - $start_time)")
   echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
 
   # Generate QC report
