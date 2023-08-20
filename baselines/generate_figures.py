@@ -1,5 +1,5 @@
 #
-# Parse the xml files with segmentation metrics and create a rainplot
+# Parse the xml files with segmentation metrics and execution_time.csv and create a rainplot.
 #
 # Authors: Jan Valosek
 #
@@ -29,7 +29,7 @@ def get_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='Parse the xml files with segmentation metrics and create a rainplot',
+        description='Parse the xml files with segmentation metrics and execution_time.csv file and create a rainplot.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
@@ -108,7 +108,7 @@ def create_rainplot(df, path_figures):
     :return:
     """
     for metric in ['Jaccard', 'Dice', 'Sensitivity', 'Specificity', 'PPV', 'NPV', 'RelativeVolumeError',
-                   'HausdorffDistance', 'ContourMeanDistance', 'SurfaceDistance']:
+                   'HausdorffDistance', 'ContourMeanDistance', 'SurfaceDistance', 'ExecutionTime[s]']:
         fig, ax = plt.subplots(figsize=(10, 5))
         ax = pt.RainCloud(data=df,
                           x='method',
@@ -176,6 +176,12 @@ def main():
 
     # Create a pandas DataFrame from the parsed data
     df = pd.DataFrame(parsed_data)
+
+    # Read execution_time.csv file and name first column as 'filename' and the second column as 'execution_time'
+    df_execution_time = pd.read_csv(os.path.join(dir_path, 'execution_time.csv'), header=None,
+                                    names=['filename', 'ExecutionTime[s]'])
+    # Merge the two dataframes
+    df = pd.merge(df, df_execution_time, on='filename')
 
     # Apply the fetch_filename_and_method function to each row using a lambda function
     df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x)))
