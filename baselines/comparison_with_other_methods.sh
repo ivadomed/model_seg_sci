@@ -104,7 +104,7 @@ segment_sc() {
       end_time=$(date +%s)
       # Calculate the time difference
       execution_time=$(python3 -c "print($end_time - $start_time)")
-      echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+      echo "${FILESEG},${execution_time}" >> ${PATH_RESULTS}/execution_time.csv
 
       # Compute ANIMA segmentation performance metrics
       compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
@@ -119,7 +119,7 @@ segment_sc() {
       end_time=$(date +%s)
       # Calculate the time difference
       execution_time=$(python3 -c "print($end_time - $start_time)")
-      echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+      echo "${FILESEG},${execution_time}" >> ${PATH_RESULTS}/execution_time.csv
 
       # Remove centerline (we don't need it)
       rm ${file}_centerline.nii.gz
@@ -143,7 +143,7 @@ segment_sc_nnUNet(){
   end_time=$(date +%s)
   # Calculate the time difference
   execution_time=$(python3 -c "print($end_time - $start_time)")
-  echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
+  echo "${FILESEG},${execution_time}" >> ${PATH_RESULTS}/execution_time.csv
 
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
