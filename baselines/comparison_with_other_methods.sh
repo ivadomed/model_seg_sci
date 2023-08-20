@@ -97,11 +97,11 @@ segment_sc() {
       FILESEG="${file}_seg_${method}_${kernel}"
 
       # Get the start time
-      start_time=$(date +%s.%N)
+      start_time=$(date +%s)
       # Run SC segmentation
       sct_deepseg_sc -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -kernel ${kernel} -qc ${PATH_QC} -qc-subject ${SUBJECT}
       # Get the end time
-      end_time=$(date +%s.%N)
+      end_time=$(date +%s)
       # Calculate the time difference
       execution_time=$(python3 -c "print($end_time - $start_time)")
       echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
@@ -112,11 +112,11 @@ segment_sc() {
       FILESEG="${file}_seg_${method}"
 
       # Get the start time
-      start_time=$(date +%s.%N)
+      start_time=$(date +%s)
       # Run SC segmentation
       sct_propseg -i ${file}.nii.gz -o ${FILESEG}.nii.gz -c ${contrast} -qc ${PATH_QC} -qc-subject ${SUBJECT}
       # Get the end time
-      end_time=$(date +%s.%N)
+      end_time=$(date +%s)
       # Calculate the time difference
       execution_time=$(python3 -c "print($end_time - $start_time)")
       echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
@@ -136,11 +136,11 @@ segment_sc_nnUNet(){
   FILESEG="${file}_seg_nnunet_${kernel}"
 
   # Get the start time
-  start_time=$(date +%s.%N)
+  start_time=$(date +%s)
   # Run SC segmentation
   python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
   # Get the end time
-  end_time=$(date +%s.%N)
+  end_time=$(date +%s)
   # Calculate the time difference
   execution_time=$(python3 -c "print($end_time - $start_time)")
   echo "${FILESEG}, ${execution_time}" >> ${PATH_RESULTS}/execution_time.txt
