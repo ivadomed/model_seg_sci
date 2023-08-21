@@ -150,8 +150,11 @@ def main():
 
     # split the predictions into different sc-seg and lesion-seg
     if args.pred_type == 'all':
-        # do nothing - keep the predictions as they are
-        pass
+        out_folder = os.path.join(args.path_out)
+        # rename the files to add _pred suffix
+        pred_files = sorted(glob.glob(os.path.join(args.path_out, '*.nii.gz')))
+        for pred in pred_files:
+            os.rename(pred, pred.replace('.nii.gz', '_pred.nii.gz'))
     elif args.pred_type == 'sc-seg':
         out_folder = os.path.join(args.path_out, 'sc-seg')
         if not os.path.exists(out_folder):
