@@ -62,8 +62,8 @@ sct_run_batch -config config.json
 Example of the `config.json` file:
 ```json
  {
-  "path_data"   : "<PATH_TO_DATASET>",
-  "path_output" : "<PATH_TO_DATASET>_2023-08-18",
+  "path_data"   : "<PATH_TO_COMBINED_DATASET>",
+  "path_output" : "<PATH_TO_COMBINED_DATASET>_2023-08-18",
   "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/comparison_with_other_methods.sh",
   "jobs"        : 8,
   "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
