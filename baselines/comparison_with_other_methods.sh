@@ -240,3 +240,17 @@ else
     segment_sc_nnUNet "${file_t2}" '2d'
     segment_sc_nnUNet "${file_t2}" '3d'
 fi
+
+# ------------------------------------------------------------------------------
+# End
+# ------------------------------------------------------------------------------
+
+# Display results (to easily compare integrity across SCT versions)
+end=`date +%s`
+runtime=$((end-start))
+echo
+echo "~~~"
+echo "SCT version: `sct_version`"
+echo "Ran on:      `uname -nsr`"
+echo "Duration:    $(($runtime / 3600))hrs $((($runtime / 60) % 60))min $(($runtime % 60))sec"
+echo "~~~"
