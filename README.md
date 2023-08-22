@@ -52,13 +52,13 @@ To segment a single image using the trained model, run the following command fro
 For lesion segmentation:
 
 ```bash
-python run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_lesion_seg_nnunet.nii.gz -path-model /path/to/model -pred-type lesion
+python packaging/run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_lesion_seg_nnunet.nii.gz -path-model /path/to/model -pred-type lesion
 ```
 
 For spinal cord segmentation:
 
 ```bash
-python run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_seg_nnunet.nii.gz -path-model /path/to/model -pred-type sc
+python packaging/run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_seg_nnunet.nii.gz -path-model /path/to/model -pred-type sc
 ```
 
 For segmenting a dataset of multiple subjects (instead of a single subject), run the following command from the 
