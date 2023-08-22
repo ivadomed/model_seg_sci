@@ -192,10 +192,13 @@ def main():
     list_of_metrics.remove('filename')
 
     # Read execution_time.csv file and name first column as 'filename' and the second column as 'execution_time'
-    df_execution_time = pd.read_csv(os.path.join(dir_path, 'execution_time.csv'), header=None,
-                                    names=['filename', 'ExecutionTime[s]'])
-    # Merge the two dataframes
-    df = pd.merge(df, df_execution_time, on='filename')
+    fname_execution_time = os.path.join(dir_path, 'execution_time.csv')
+    if os.path.isfile(fname_execution_time):
+        df_execution_time = pd.read_csv(fname_execution_time, header=None, names=['filename', 'ExecutionTime[s]'])
+        # Merge the two dataframes
+        df = pd.merge(df, df_execution_time, on='filename')
+        # Add execution time to the list of metrics
+        list_of_metrics.append('ExecutionTime[s]')
 
     # Apply the fetch_filename_and_method function to each row using a lambda function
     df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x)))
