@@ -47,7 +47,22 @@ pip install -r packaging/requirements.txt
  
 ### Step 3: Getting the Predictions
 
-To segment the image(s) using the trained model, run the following command from the terminal. This assumes that the model has been downloaded and is available locally.
+To segment a single image using the trained model, run the following command from the terminal. This assumes that the model has been downloaded and is available locally.
+
+For lesion segmentation:
+
+```bash
+python run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_lesion_seg_nnunet.nii.gz -path-model /path/to/model -pred-type lesion
+```
+
+For spinal cord segmentation:
+
+```bash
+python run_inference_single_subject.py -i sub-001_T2w.nii.gz -o sub-001_T2w_seg_nnunet.nii.gz -path-model /path/to/model -pred-type sc
+```
+
+For segmenting a dataset of multiple subjects (instead of a single subject), run the following command from the 
+terminal.
 
 ```bash
 python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output-directory --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
