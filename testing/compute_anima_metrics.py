@@ -93,6 +93,10 @@ import nibabel as nib
 from test_utils import fetch_filename_details
 
 
+REGION_BASED_DATASETS = ["sci-zurich-region", "sci-colorado-region"]
+STANDARD_DATASETS = ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]
+
+
 def get_parser():
     # parse command line arguments
     parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
@@ -122,7 +126,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
     and GT images by running the "animaSegPerfAnalyzer" command
     """
     
-    if data_set == "sci-zurich-region" or data_set == "sci-colorado-region":
+    if data_set in REGION_BASED_DATASETS:
 
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
@@ -189,7 +193,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
         
         return subject_sc_filepaths, subject_lesion_filepaths
 
-    elif data_set in ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]:
+    elif data_set in STANDARD_DATASETS:
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
         gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
@@ -275,7 +279,7 @@ def main():
         os.makedirs(output_folder, exist_ok=True)
     print(f"Saving ANIMA performance metrics to {output_folder}")
 
-    if dataset_name not in ["sci-zurich-region", "sci-colorado-region"]:
+    if dataset_name not in REGION_BASED_DATASETS:
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
