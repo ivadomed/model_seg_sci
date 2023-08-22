@@ -100,15 +100,15 @@ def fetch_site_and_method(input_string):
     return site, method
 
 
-def create_rainplot(df, path_figures):
+def create_rainplot(df, list_of_metrics, path_figures):
     """
     Create raincloud plots (violionplot + boxplot + individual points)
-    :param df:
-    :param path_figures:
+    :param df: dataframe with segmentation metrics
+    :param list_of_metrics: list of metrics to be plotted
+    :param path_figures: path to the folder where the figures will be saved
     :return:
     """
-    for metric in ['Jaccard', 'Dice', 'Sensitivity', 'Specificity', 'PPV', 'NPV', 'RelativeVolumeError',
-                   'HausdorffDistance', 'ContourMeanDistance', 'SurfaceDistance', 'ExecutionTime[s]']:
+    for metric in list_of_metrics:
         fig, ax = plt.subplots(figsize=(10, 5))
         ax = pt.RainCloud(data=df,
                           x='method',
@@ -187,6 +187,10 @@ def main():
     # Create a pandas DataFrame from the parsed data
     df = pd.DataFrame(parsed_data)
 
+    # Get list of ANIMA metrics
+    list_of_metrics = list(df.columns)
+    list_of_metrics.remove('filename')
+
     # Read execution_time.csv file and name first column as 'filename' and the second column as 'execution_time'
     df_execution_time = pd.read_csv(os.path.join(dir_path, 'execution_time.csv'), header=None,
                                     names=['filename', 'ExecutionTime[s]'])
@@ -203,7 +207,7 @@ def main():
     if not os.path.exists(path_figures):
         os.makedirs(path_figures)
 
-    create_rainplot(df, path_figures)
+    create_rainplot(df, list_of_metrics, path_figures)
 
 
 if __name__ == '__main__':
