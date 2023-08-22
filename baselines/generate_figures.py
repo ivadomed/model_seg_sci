@@ -132,6 +132,16 @@ def create_rainplot(df, path_figures):
             r, g, b, a = patch.get_facecolor()
             patch.set_facecolor((r, g, b, .0))
 
+        # Include number of subjects for each site into the legend
+        handles, labels = ax.get_legend_handles_labels()
+        for i, label in enumerate(labels):
+            n = len(df[(df['site'] == label) & (df['method'] == 'nnunet_3d')]['filename'])
+            labels[i] = f'{label} (n={n})'
+        # Since the figure contains violionplot + boxplot + scatterplot we are keeping only last two legend entries
+        handles = handles[-2:]
+        labels = labels[-2:]
+        ax.legend(handles, labels)
+
         # Remove x-axis label
         ax.set_xlabel('')
         # Modify x-ticks labels
