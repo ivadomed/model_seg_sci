@@ -1,8 +1,11 @@
-#
-# Parse the xml files with segmentation metrics and execution_time.csv and create a rainplot.
-#
-# Authors: Jan Valosek
-#
+"""
+Parse the xml files with segmentation metrics and execution_time.csv and create a rainplot.
+
+Authors: Jan Valosek
+
+Example:
+    python generate_figures.py -i sci-zurich_sci-colorado_combined_sc_inference_2023-08-20/results
+"""
 
 import os
 import glob
