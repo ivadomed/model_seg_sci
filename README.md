@@ -47,6 +47,14 @@ pip install -r packaging/requirements.txt
  
 ### Step 3: Getting the Predictions
 
+ℹ️ To temporarily suppress warnings raised by the nnUNet, you can run the following three commands in the same terminal session as the above command:
+
+```bash
+export nnUNet_raw="${HOME}/nnUNet_raw"
+export nnUNet_preprocessed="${HOME}/nnUNet_preprocessed"
+export nnUNet_results="${HOME}/nnUNet_results"
+```
+
 To segment a single image using the trained model, run the following command from the terminal. This assumes that the model has been downloaded and is available locally.
 
 For lesion segmentation:
