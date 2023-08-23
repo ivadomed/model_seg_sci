@@ -76,8 +76,6 @@ terminal.
 python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-out /path/to/output-directory --path-model /path/to/model --pred-type {sc-seg, lesion-seg, all}
 ```
 
-> **Note**
-> The script also supports getting segmentations on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. 
-> It is useful to note that obtaining the predictions from the GPU is significantly faster than the CPU.
+ℹ️ The script also supports getting segmentations on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. It is useful to note that obtaining the predictions from the GPU is significantly faster than the CPU.
 
 
