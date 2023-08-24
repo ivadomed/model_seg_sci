@@ -2,3 +2,4 @@ numpy
 nibabel
 nnunetv2==2.1
 torch==2.0.1
+ptitprince==0.2.6
