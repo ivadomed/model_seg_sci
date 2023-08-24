@@ -193,6 +193,9 @@ fi
 # Copy GT segmentation
 copy_gt "${file_t2}"
 
+# binarize the GT with thr 0.5
+sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0.5 -o ${file_t2}_lesion-manual.nii.gz
+
 # Check if file_t2 exists
 if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "File ${file_t2}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
