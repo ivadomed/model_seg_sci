@@ -31,6 +31,9 @@ METHODS_TO_LABEL_LESION = {
     'nnunet_3d': 'nnUNet 3D',
     }
 
+LABEL_FONT_SIZE = 16
+TICK_FONT_SIZE = 12
+
 
 def get_parser():
     """
@@ -167,7 +170,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Since the figure contains violionplot + boxplot + scatterplot we are keeping only last two legend entries
         handles = handles[-2:]
         labels = labels[-2:]
-        ax.legend(handles, labels)
+        ax.legend(handles, labels, fontsize=TICK_FONT_SIZE)
 
         # Make legend box's frame color black and remove transparency
         legend = ax.get_legend()
@@ -183,7 +186,13 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Remove x-axis label
         ax.set_xlabel('')
         # Modify x-ticks labels
-        ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values())
+        ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values(),
+                           fontsize=TICK_FONT_SIZE)
+        # Increase y-axis label font size
+        ax.set_ylabel(metric, fontsize=LABEL_FONT_SIZE)
+        # Increase y-ticks font size
+        ax.tick_params(axis='y', labelsize=TICK_FONT_SIZE)
+
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
         # Add horizontal grid lines and change its opacity
