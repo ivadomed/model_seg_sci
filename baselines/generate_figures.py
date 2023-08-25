@@ -18,10 +18,15 @@ import matplotlib.pyplot as plt
 import ptitprince as pt
 
 
-METHOD_TO_LABEL = {
+METHODS_TO_LABEL_SC = {
     'propseg': 'sct_propseg',
     'deepseg_2d': 'sct_deepseg_sc 2D',
     'deepseg_3d': 'sct_deepseg_sc 3D',
+    'nnunet_2d': 'nnUNet 2D',
+    'nnunet_3d': 'nnUNet 3D',
+    }
+
+METHODS_TO_LABEL_LESION = {
     'nnunet_2d': 'nnUNet 2D',
     'nnunet_3d': 'nnUNet 3D',
     }
@@ -42,6 +47,13 @@ def get_parser():
         required=True,
         type=str,
         help='Path to the folder containing the xml files.'
+    )
+    parser.add_argument(
+        '-pred-type',
+        required=True,
+        type=str,
+        choices=['sc', 'lesion'],
+        help='Type of prediction to create plots for. sc: spinal cord segmentation; lesion: lesion segmentation.'
     )
 
     return parser
@@ -88,7 +100,7 @@ def parse_xml_file(file_path):
     return filename, segmentation_metrics
 
 
-def fetch_site_and_method(input_string):
+def fetch_site_and_method(input_string, pred_type):
     """
     Fetch the file and method from the input string
     :param input_string: input string, e.g. 'sub-5416_T2w_seg_nnunet'
@@ -99,12 +111,18 @@ def fetch_site_and_method(input_string):
         site = 'zurich'
     else:
         site = 'colorado'
-    method = input_string.split('_seg_')[1]
+    
+    if pred_type == 'sc':
+        method = input_string.split('_seg_')[1]
+    elif pred_type == 'lesion':
+        method = input_string.split('_lesion_')[1]
+    else:
+        raise ValueError(f'Unknown pred_type: {pred_type}')
 
     return site, method
 
 
-def create_rainplot(df, list_of_metrics, path_figures):
+def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     """
     Create raincloud plots (violionplot + boxplot + individual points)
     :param df: dataframe with segmentation metrics
@@ -113,12 +131,13 @@ def create_rainplot(df, list_of_metrics, path_figures):
     :return:
     """
     for metric in list_of_metrics:
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig_size = (10, 5) if pred_type == 'sc' else (7, 5)
+        fig, ax = plt.subplots(figsize=fig_size)
         ax = pt.RainCloud(data=df,
                           x='method',
                           y=metric,
                           hue='site',
-                          order=METHOD_TO_LABEL.keys(),
+                          order=METHODS_TO_LABEL_SC.keys() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.keys(),
                           dodge=True,       # move boxplots next to each other
                           linewidth=0,      # violionplot border line (0 - no line)
                           width_viol=.5,    # violionplot width
@@ -149,7 +168,7 @@ def create_rainplot(df, list_of_metrics, path_figures):
         # Remove x-axis label
         ax.set_xlabel('')
         # Modify x-ticks labels
-        ax.set_xticklabels(METHOD_TO_LABEL.values())
+        ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values())
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
         # Add horizontal grid lines
@@ -173,6 +192,7 @@ def main():
     args = parser.parse_args()
 
     dir_path = os.path.abspath(args.i)
+    pred_type = args.pred_type
 
     if not os.path.isdir(dir_path):
         print(f'ERROR: {args.i} does not exist.')
@@ -209,7 +229,7 @@ def main():
         list_of_metrics.append('ExecutionTime[s]')
 
     # Apply the fetch_filename_and_method function to each row using a lambda function
-    df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x)))
+    df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x, pred_type)))
     # Reorder the columns
     df = df[['filename', 'site', 'method'] + [col for col in df.columns if col not in ['filename', 'site', 'method']]]
 
@@ -218,7 +238,7 @@ def main():
     if not os.path.exists(path_figures):
         os.makedirs(path_figures)
 
-    create_rainplot(df, list_of_metrics, path_figures)
+    create_rainplot(df, list_of_metrics, path_figures, pred_type)
 
 
 if __name__ == '__main__':
