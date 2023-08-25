@@ -10,6 +10,7 @@ Example:
 import os
 import glob
 import argparse
+import numpy as np
 
 import xml.etree.ElementTree as ET
 import pandas as pd
@@ -153,6 +154,10 @@ def create_rainplot(df, list_of_metrics, path_figures):
         ax.set_axisbelow(True)
         # Add horizontal grid lines
         ax.yaxis.grid(True)
+        # modify the y-axis ticks
+        if metric == "Dice":
+            ax.set_yticks(np.arange(0, 1.1, 0.1))
+
         plt.tight_layout()
 
         # save figure
