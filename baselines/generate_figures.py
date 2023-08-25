@@ -169,6 +169,17 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         labels = labels[-2:]
         ax.legend(handles, labels)
 
+        # Make legend box's frame color black and remove transparency
+        legend = ax.get_legend()
+        legend.legendPatch.set_facecolor('white')
+        legend.legendPatch.set_edgecolor('black')
+
+        # Remove spines
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(True)
+
         # Remove x-axis label
         ax.set_xlabel('')
         # Modify x-ticks labels
