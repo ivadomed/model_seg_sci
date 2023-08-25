@@ -130,6 +130,9 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     :param path_figures: path to the folder where the figures will be saved
     :return:
     """
+
+    mpl.rcParams['font.family'] = 'Arial'
+
     for metric in list_of_metrics:
         fig_size = (10, 5) if pred_type == 'sc' else (7, 5)
         fig, ax = plt.subplots(figsize=fig_size)
