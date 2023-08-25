@@ -146,6 +146,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           width_viol=.5,    # violionplot width
                           width_box=.3,     # boxplot width
                           rain_alpha=.7,    # individual points transparency - https://github.com/pog87/PtitPrince/blob/23debd9b70fca94724a06e72e049721426235f50/ptitprince/PtitPrince.py#L707
+                          rain_s=4,         # individual points size
                           alpha=.7,         # violin plot transparency
                           box_showmeans=True,  # show mean value inside the boxplots
                           box_meanprops={'marker': '^', 'markerfacecolor': 'black', 'markeredgecolor': 'black',
