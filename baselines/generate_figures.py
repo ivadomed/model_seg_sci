@@ -175,8 +175,8 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values())
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
-        # Add horizontal grid lines
-        ax.yaxis.grid(True)
+        # Add horizontal grid lines and change its opacity
+        ax.yaxis.grid(True, alpha=0.3)
         # modify the y-axis ticks
         if metric == "Dice":
             ax.set_yticks(np.arange(0, 1.1, 0.1))
