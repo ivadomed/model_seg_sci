@@ -11,6 +11,7 @@ import os
 import glob
 import argparse
 import numpy as np
+import matplotlib as mpl
 
 import xml.etree.ElementTree as ET
 import pandas as pd
