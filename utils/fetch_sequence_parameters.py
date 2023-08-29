@@ -105,6 +105,7 @@ def main():
 
     # Save the DataFrame to a CSV file
     df.to_csv(os.path.join(dir_path, 'parsed_data.csv'), index=False)
+    print(f'Parsed data saved to {os.path.join(dir_path, "parsed_data.csv")}')
 
 
 if __name__ == '__main__':
