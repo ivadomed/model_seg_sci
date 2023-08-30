@@ -59,6 +59,8 @@ def parse_json_file(file_path):
     :return:
     """
 
+    file_path = file_path.replace('.nii.gz', '.json')
+
     # Read the JSON file, return dict with n/a if the file is empty
     try:
         with open(file_path) as f:
@@ -94,8 +96,6 @@ def parse_nii_file(file_path):
     :return:
     """
 
-    file_path = file_path.replace('.json', '.nii.gz')
-
     # Read the nii file, return dict with n/a if the file is empty
     try:
         img = nib.load(file_path)
@@ -129,8 +129,8 @@ def main():
     parsed_data = []
 
     # Loop across JSON sidecar files in the input path
-    for file in sorted(glob.glob(os.path.join(dir_path, '**', '*' + contrast + '.json'), recursive=True)):
-        if file.endswith('.json'):
+    for file in sorted(glob.glob(os.path.join(dir_path, '**', '*' + contrast + '.nii.gz'), recursive=True)):
+        if file.endswith('.nii.gz'):
             print(f'Parsing {file} ...')
             file_path = os.path.join(dir_path, file)
             parsed_json = parse_json_file(file_path)
@@ -145,21 +145,26 @@ def main():
     df.to_csv(os.path.join(dir_path, 'parsed_data.csv'), index=False)
     print(f'Parsed data saved to {os.path.join(dir_path, "parsed_data.csv")}')
 
-    # Remove rows with n/a values for MagneticFieldStrength
-    df = df[df['MagneticFieldStrength'] != 'n/a']
+    # For sci-paris, we do not have JSON sidecars --> we can fetch only PixDim and SliceThickness from nii header
+    if 'sci-paris' in dir_path:
+        # Print the min and max values of the PixDim, and SliceThickness
+        print(df[['PixDim', 'SliceThickness']].agg([np.min, np.max]))
+    else:
+        # Remove rows with n/a values for MagneticFieldStrength
+        df = df[df['MagneticFieldStrength'] != 'n/a']
 
-    # Convert MagneticFieldStrength to float
-    df['MagneticFieldStrength'] = df['MagneticFieldStrength'].astype(float)
+        # Convert MagneticFieldStrength to float
+        df['MagneticFieldStrength'] = df['MagneticFieldStrength'].astype(float)
 
-    # Print the min and max values of the MagneticFieldStrength, PixDim, and SliceThickness
-    print(df[['MagneticFieldStrength', 'PixDim', 'SliceThickness']].agg([np.min, np.max]))
+        # Print the min and max values of the MagneticFieldStrength, PixDim, and SliceThickness
+        print(df[['MagneticFieldStrength', 'PixDim', 'SliceThickness']].agg([np.min, np.max]))
 
-    # Print unique values of the Manufacturer and ManufacturerModelName
-    print(df[['Manufacturer', 'ManufacturerModelName']].drop_duplicates())
-    # Print number of filenames for unique values of the Manufacturer
-    print(df.groupby('Manufacturer')['filename'].nunique())
-    # Print number of filenames for unique values of the MagneticFieldStrength
-    print(df.groupby('MagneticFieldStrength')['filename'].nunique())
+        # Print unique values of the Manufacturer and ManufacturerModelName
+        print(df[['Manufacturer', 'ManufacturerModelName']].drop_duplicates())
+        # Print number of filenames for unique values of the Manufacturer
+        print(df.groupby('Manufacturer')['filename'].nunique())
+        # Print number of filenames for unique values of the MagneticFieldStrength
+        print(df.groupby('MagneticFieldStrength')['filename'].nunique())
 
 
 if __name__ == '__main__':
