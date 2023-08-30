@@ -1,10 +1,10 @@
 """
-Loop across JSON sidecar files in the input path and parse from them the following information:
+Loop across JSON sidecar files and nii headers in the input path and parse from them the following information:
     MagneticFieldStrength
     Manufacturer
     ManufacturerModelName
     ProtocolName
-    PixelSpacing
+    PixDim
     SliceThickness
 
 Example usage:
