@@ -41,12 +41,12 @@ def get_parser():
         '-i',
         required=True,
         type=str,
-        help='Path to BIDS dataset. For example: sci-zurich'
+        help='Path to BIDS dataset. For example: sci-zurich or sci-colorado'
     )
     parser.add_argument(
         '-contrast',
         type=str,
-        help='Image contrast. For example: acq-sag_T2w',
+        help='Image contrast. For example: T2w or acq-sag_T2w',
         default='acq-sag_T2w'
     )
 
@@ -71,10 +71,16 @@ def parse_json_file(file_path):
     # Initialize an empty dictionary to store the parsed information
     parsed_info = {}
 
+    if 'zurich' in file_path:
+        # For sci-zurich, JSON file contains a list of dictionaries, each dictionary contains a list of dictionaries
+        data = data['acqpar'][0]
+    elif 'colorado' in file_path:
+        data = data
+
     # Loop across the parameters
     for param in LIST_OF_PARAMETERS:
         try:
-            parsed_info[param] = data['acqpar'][0][param]
+            parsed_info[param] = data[param]
         except:
             parsed_info[param] = "n/a"
 
