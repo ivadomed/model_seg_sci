@@ -115,6 +115,8 @@ def main():
     print(df[['Manufacturer', 'ManufacturerModelName']].drop_duplicates())
     # Print number of filenames for unique values of the Manufacturer
     print(df.groupby('Manufacturer')['filename'].nunique())
+    # Print number of filenames for unique values of the MagneticFieldStrength
+    print(df.groupby('MagneticFieldStrength')['filename'].nunique())
 
 
 if __name__ == '__main__':
