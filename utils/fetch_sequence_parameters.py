@@ -113,6 +113,8 @@ def main():
 
     # Print unique values of the Manufacturer and ManufacturerModelName
     print(df[['Manufacturer', 'ManufacturerModelName']].drop_duplicates())
+    # Print number of filenames for unique values of the Manufacturer
+    print(df.groupby('Manufacturer')['filename'].nunique())
 
 
 if __name__ == '__main__':
