@@ -60,9 +60,13 @@ def parse_json_file(file_path):
     :return:
     """
 
-    # Read the JSON file
-    with open(file_path, 'r') as f:
-        data = json.load(f)
+    # Read the JSON file, return dict with n/a if the file is empty
+    try:
+        with open(file_path) as f:
+            data = json.load(f)
+    except:
+        print(f'WARNING: {file_path} is empty.')
+        return {param: "n/a" for param in LIST_OF_PARAMETERS}
 
     # Initialize an empty dictionary to store the parsed information
     parsed_info = {}
