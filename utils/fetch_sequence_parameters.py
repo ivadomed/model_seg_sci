@@ -145,8 +145,14 @@ def main():
     df.to_csv(os.path.join(dir_path, 'parsed_data.csv'), index=False)
     print(f'Parsed data saved to {os.path.join(dir_path, "parsed_data.csv")}')
 
-    # Print the min and max values of the MagneticFieldStrength, PixelSpacing, and SliceThickness
-    print(df[['MagneticFieldStrength', 'PixelSpacing', 'SliceThickness']].agg([np.min, np.max]))
+    # Remove rows with n/a values for MagneticFieldStrength
+    df = df[df['MagneticFieldStrength'] != 'n/a']
+
+    # Convert MagneticFieldStrength to float
+    df['MagneticFieldStrength'] = df['MagneticFieldStrength'].astype(float)
+
+    # Print the min and max values of the MagneticFieldStrength, PixDim, and SliceThickness
+    print(df[['MagneticFieldStrength', 'PixDim', 'SliceThickness']].agg([np.min, np.max]))
 
     # Print unique values of the Manufacturer and ManufacturerModelName
     print(df[['Manufacturer', 'ManufacturerModelName']].drop_duplicates())
