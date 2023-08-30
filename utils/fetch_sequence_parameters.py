@@ -17,15 +17,14 @@ import argparse
 
 import numpy as np
 import pandas as pd
+import nibabel as nib
 
 LIST_OF_PARAMETERS = [
     'MagneticFieldStrength',
     'Manufacturer',
     'ManufacturerModelName',
-    'ProtocolName',
-    'PixelSpacing',
-    'SliceThickness',
-]
+    'ProtocolName'
+    ]
 
 
 def get_parser():
@@ -87,6 +86,33 @@ def parse_json_file(file_path):
     return parsed_info
 
 
+def parse_nii_file(file_path):
+    """
+    Read nii file header using nibabel and to get PixDim and SliceThickness.
+    We are doing this because 'PixelSpacing' and 'SliceThickness' can be missing from the JSON file.
+    :param file_path:
+    :return:
+    """
+
+    file_path = file_path.replace('.json', '.nii.gz')
+
+    # Read the nii file, return dict with n/a if the file is empty
+    try:
+        img = nib.load(file_path)
+        header = img.header
+    except:
+        print(f'WARNING: {file_path} is empty. Did you run git-annex get .?')
+        return {param: "n/a" for param in ['PixDim', 'SliceThickness']}
+
+    # Initialize an empty dictionary to store the parsed information
+    parsed_info = {
+        'PixDim': list(header['pixdim'][1:3]),
+        'SliceThickness': float(header['pixdim'][3])
+    }
+
+    return parsed_info
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -107,9 +133,10 @@ def main():
         if file.endswith('.json'):
             print(f'Parsing {file} ...')
             file_path = os.path.join(dir_path, file)
-            parsed_info = parse_json_file(file_path)
+            parsed_json = parse_json_file(file_path)
+            parsed_header = parse_nii_file(file_path)
             # Note: **metrics is used to unpack the key-value pairs from the metrics dictionary
-            parsed_data.append({'filename': file, **parsed_info})
+            parsed_data.append({'filename': file, **parsed_json, **parsed_header})
 
     # Create a pandas DataFrame from the parsed data
     df = pd.DataFrame(parsed_data)
