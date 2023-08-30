@@ -7,6 +7,9 @@ Loop across JSON sidecar files in the input path and parse from them the followi
     PixelSpacing
     SliceThickness
 
+Example usage:
+    python utils/fetch_sequence_parameters.py -i /path/to/dataset -contrast T2w
+
 Author: Jan Valosek
 """
 
