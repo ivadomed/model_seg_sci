@@ -56,9 +56,10 @@ def get_parser():
                         help='Use the best checkpoint (instead of the final checkpoint) for prediction. '
                              'NOTE: nnUNet by default uses the final checkpoint. Default: False')
     parser.add_argument('-tile-step-size', default=0.5, type=float,
-                        help='Tile step size defining the overlap between images patches during inference. Default: 0.5 '
-                                'NOTE: changing it from 0.5 to 0.9 makes inference faster but there is a small drop in '
-                                'performance.')
+                        help='Tile step size defining the overlap between images patches during inference. '
+                             'Default: 0.5 '
+                             'NOTE: changing it from 0.5 to 0.9 makes inference faster but there is a small drop in '
+                             'performance.')
     return parser
 
 
