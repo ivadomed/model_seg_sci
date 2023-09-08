@@ -18,7 +18,8 @@ Method 1 (when running on whole dataset):
         --path-dataset /path/to/test-dataset 
         --path-out /path/to/output-directory 
         --path-model /path/to/model
-        --pred-type lesion-seg                     
+        --pred-type lesion-seg
+        --tile-step-size 0.5           
 """
 
 
@@ -40,6 +41,10 @@ def get_parser():
     parser.add_argument('--use-best-checkpoint', action='store_true', default=False,
                         help='Use the best checkpoint (instead of the final checkpoint) for prediction. '
                         'NOTE: nnUNet by default uses the final checkpoint. Default: False')
+    parser.add_argument('--tile-step-size', default=0.5, type=float,
+                        help='Tile step size defining the overlap between images patches during inference. Default: 0.5 '
+                                'NOTE: changing it from 0.5 to 0.9 makes inference faster but there is a small drop in '
+                                'performance.')
 
     return parser
 
@@ -81,7 +86,7 @@ def main():
         output_folder=args.path_out,
         model_training_output_dir=args.path_model,
         use_folds=folds_avail,
-        tile_step_size=0.9,                                     # changing it from 0.5 to 0.9 makes inference faster
+        tile_step_size=args.tile_step_size,                     # changing it from 0.5 to 0.9 makes inference faster
         use_gaussian=True,                                      # applies gaussian noise and gaussian blur
         use_mirroring=False,                                    # test time augmentation by mirroring on all axes
         perform_everything_on_gpu=True if args.use_gpu else False,
