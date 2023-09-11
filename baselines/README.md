@@ -75,6 +75,8 @@ Example of the `config.json` file:
 `script_args` argument is used to pass arguments to the `comparison_with_other_methods_<sc/lesion>.sh` script. 
 In this case, we pass the path to the `run_inference_single_subject.py` script and the path to the nnUNet model.
 
+ℹ️ Make sure that the input dataset (`path_data`) corresponds with the seed of the nnUNet model (`script_args`). 
+
 ## Figures
 
 To generate raincloud plots, run the `generate_figures.py` script:
