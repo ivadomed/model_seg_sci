@@ -1,13 +1,16 @@
 """
 Parse the xml files with segmentation metrics and execution_time.csv and create a rainplot.
 
-Authors: Jan Valosek
+Authors: Jan Valosek, Naga Karthik
 
 Example:
-    python generate_figures.py -i sci-zurich_sci-colorado_combined_sc_inference_2023-08-20/results
+    python generate_figures.py
+    -i sci-multisite-test-data_seed42_sc_inference_2023-09-11/results sci-multisite-test-data_seed123_sc_inference_2023-09-11/results
+    -pred-type sc
 """
 
 import os
+import re
 import glob
 import argparse
 import numpy as np
@@ -47,10 +50,12 @@ def get_parser():
     )
     parser.add_argument(
         '-i',
-        metavar="<folder>",
         required=True,
-        type=str,
-        help='Path to the folder containing the xml files.'
+        nargs='+',
+        help='Path to the folder(s) containing the xml files. You can provide multiple folders using a list separated '
+             'by spaces.'
+             'Example: sci-multisite-test-data_seed42_sc_inference_2023-09-11/results '
+             'sci-multisite-test-data_seed123_sc_inference_2023-09-11/results'
     )
     parser.add_argument(
         '-pred-type',
@@ -58,6 +63,12 @@ def get_parser():
         type=str,
         choices=['sc', 'lesion'],
         help='Type of prediction to create plots for. sc: spinal cord segmentation; lesion: lesion segmentation.'
+    )
+    parser.add_argument(
+        '-o',
+        required=False,
+        default='figures',
+        help='Path to the output folder where figures will be saved. Default: ./figures'
     )
 
     return parser
@@ -150,7 +161,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           width_viol=.5,    # violionplot width
                           width_box=.3,     # boxplot width
                           rain_alpha=.7,    # individual points transparency - https://github.com/pog87/PtitPrince/blob/23debd9b70fca94724a06e72e049721426235f50/ptitprince/PtitPrince.py#L707
-                          rain_s=4,         # individual points size
+                          rain_s=2,         # individual points size
                           alpha=.7,         # violin plot transparency
                           box_showmeans=True,  # show mean value inside the boxplots
                           box_meanprops={'marker': '^', 'markerfacecolor': 'black', 'markeredgecolor': 'black',
@@ -194,6 +205,13 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Increase y-ticks font size
         ax.tick_params(axis='y', labelsize=TICK_FONT_SIZE)
 
+        # Set title
+        num_of_seeds = len(df['seed'].unique())
+        if pred_type == 'sc':
+            ax.set_title(f'Test {metric} for Spinal Cord Segmentation across {num_of_seeds} seeds')
+        else:
+            ax.set_title(f'Test {metric} for Lesion Segmentation across {num_of_seeds} seeds')
+
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
         # Add horizontal grid lines and change its opacity
@@ -208,7 +226,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         fname_fig = os.path.join(path_figures, f'rainplot_{metric}.png')
         plt.savefig(fname_fig, dpi=300, bbox_inches='tight')
         plt.close()
-        print(f'Created: {fname_fig}\n')
+        print(f'Created: {fname_fig}')
 
 
 def main():
@@ -216,54 +234,75 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    dir_path = os.path.abspath(args.i)
     pred_type = args.pred_type
 
-    if not os.path.isdir(dir_path):
-        print(f'ERROR: {args.i} does not exist.')
+    # Output directory where the figures will be saved
+    output_dir = os.path.join(os.getcwd(), args.o)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-    # Get all the xml files in the directory
-    xml_files = glob.glob(os.path.join(dir_path, '*.xml'))
-    # if xml_files is empty, exit
-    if len(xml_files) == 0:
-        print(f'ERROR: No xml files found in {dir_path}')
+    # Parse input paths
+    dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
 
-    # Initialize an empty list to store the parsed data
-    parsed_data = []
+    # Check if the input path exists
+    for dir_path in dir_paths:
+        if not os.path.exists(dir_path):
+            raise ValueError(f'ERROR: {dir_path} does not exist.')
 
-    # Loop across xml files, parse them and aggregate the results into pandas dataframe
-    for xml_file in xml_files:
-        filename, segmentation_metrics = parse_xml_file(xml_file)
-        # Note: **metrics is used to unpack the key-value pairs from the metrics dictionary
-        parsed_data.append({'filename': filename, **segmentation_metrics})
+    # Initialize an empty list to store the parsed dataframes from each directory
+    list_of_df = list()
 
-    # Create a pandas DataFrame from the parsed data
-    df = pd.DataFrame(parsed_data)
+    for dir_path in dir_paths:
+        # Get all the xml files in the directory
+        xml_files = glob.glob(os.path.join(dir_path, '*.xml'))
+        # if xml_files is empty, exit
+        if len(xml_files) == 0:
+            print(f'ERROR: No xml files found in {dir_path}')
 
-    # Get list of ANIMA metrics
-    list_of_metrics = list(df.columns)
-    list_of_metrics.remove('filename')
+        # Fetch train-test split seed (e.g., 42) from the directory path
+        seed = re.search(r'seed(\d+)', dir_path).group(1)
 
-    # Read execution_time.csv file and name first column as 'filename' and the second column as 'execution_time'
-    fname_execution_time = os.path.join(dir_path, 'execution_time.csv')
-    if os.path.isfile(fname_execution_time):
-        df_execution_time = pd.read_csv(fname_execution_time, header=None, names=['filename', 'ExecutionTime[s]'])
-        # Merge the two dataframes
-        df = pd.merge(df, df_execution_time, on='filename')
-        # Add execution time to the list of metrics
-        list_of_metrics.append('ExecutionTime[s]')
+        # Initialize an empty list to store the parsed data
+        parsed_data = []
 
-    # Apply the fetch_filename_and_method function to each row using a lambda function
-    df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x, pred_type)))
-    # Reorder the columns
-    df = df[['filename', 'site', 'method'] + [col for col in df.columns if col not in ['filename', 'site', 'method']]]
+        # Loop across xml files, parse them and aggregate the results into pandas dataframe
+        for xml_file in xml_files:
+            filename, segmentation_metrics = parse_xml_file(xml_file)
+            # Note: **metrics is used to unpack the key-value pairs from the metrics dictionary
+            parsed_data.append({'filename': filename, 'seed': seed, **segmentation_metrics})
 
-    # Make figure directory in dir_path
-    path_figures = os.path.join(dir_path, 'figures')
-    if not os.path.exists(path_figures):
-        os.makedirs(path_figures)
+        # Create a pandas DataFrame from the parsed data
+        df = pd.DataFrame(parsed_data)
 
-    create_rainplot(df, list_of_metrics, path_figures, pred_type)
+        print(f'Parsed {len(df)} files for seed {seed} from {dir_path}.')
+
+        # Get list of ANIMA metrics
+        list_of_metrics = list(df.columns)
+        list_of_metrics.remove('filename')
+        list_of_metrics.remove('seed')
+
+        # Read execution_time.csv file and name first column as 'filename' and the second column as 'execution_time'
+        fname_execution_time = os.path.join(dir_path, 'execution_time.csv')
+        if os.path.isfile(fname_execution_time):
+            df_execution_time = pd.read_csv(fname_execution_time, header=None, names=['filename', 'ExecutionTime[s]'])
+            # Merge the two dataframes
+            df = pd.merge(df, df_execution_time, on='filename')
+            # Add execution time to the list of metrics
+            list_of_metrics.append('ExecutionTime[s]')
+
+        # Apply the fetch_filename_and_method function to each row using a lambda function
+        df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x, pred_type)))
+        # Reorder the columns
+        df = df[['filename', 'site', 'method'] + [col for col in df.columns if col not in ['filename', 'site', 'method']]]
+
+        list_of_df.append(df)
+
+    # Concatenate the list of dataframes into a single dataframe
+    df_concat = pd.concat(list_of_df, ignore_index=True)
+
+    print("")
+    # Create rainplot for each metric
+    create_rainplot(df_concat, list_of_metrics, output_dir, pred_type)
 
 
 if __name__ == '__main__':
