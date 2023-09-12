@@ -66,6 +66,9 @@ def get_fnames(dir_paths):
 
         fname_files_all.extend(fname_files)
 
+    # Sort the list of file names (to make the list the same when provided the input folders in different order)
+    fname_files_all.sort()
+
     # Convert fname_files_all into pandas dataframe
     df = pd.DataFrame(fname_files_all, columns=['fname_sc'])
 
