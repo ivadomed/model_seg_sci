@@ -202,16 +202,18 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values(),
                            fontsize=TICK_FONT_SIZE)
         # Increase y-axis label font size
-        ax.set_ylabel(metric, fontsize=LABEL_FONT_SIZE)
+        ax.set_ylabel(metric, fontsize=TICK_FONT_SIZE)
         # Increase y-ticks font size
         ax.tick_params(axis='y', labelsize=TICK_FONT_SIZE)
 
         # Set title
         num_of_seeds = len(df['seed'].unique())
         if pred_type == 'sc':
-            ax.set_title(f'Test {metric} for Spinal Cord Segmentation across {num_of_seeds} seeds')
+            ax.set_title(f'Test {metric} for Spinal Cord Segmentation across {num_of_seeds} seeds',
+                         fontsize=LABEL_FONT_SIZE)
         else:
-            ax.set_title(f'Test {metric} for Lesion Segmentation across {num_of_seeds} seeds')
+            ax.set_title(f'Test {metric} for Lesion Segmentation across {num_of_seeds} seeds',
+                         fontsize=LABEL_FONT_SIZE)
 
         # Move grid to background (i.e. behind other elements)
         ax.set_axisbelow(True)
