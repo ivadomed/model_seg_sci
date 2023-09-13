@@ -149,7 +149,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     mpl.rcParams['font.family'] = 'Arial'
 
     for metric in list_of_metrics:
-        fig_size = (10, 5) if pred_type == 'sc' else (7, 5)
+        fig_size = (10, 5) if pred_type == 'sc' else (8, 5)
         fig, ax = plt.subplots(figsize=fig_size)
         ax = pt.RainCloud(data=df,
                           x='method',
@@ -165,7 +165,8 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           alpha=.7,         # violin plot transparency
                           box_showmeans=True,  # show mean value inside the boxplots
                           box_meanprops={'marker': '^', 'markerfacecolor': 'black', 'markeredgecolor': 'black',
-                                         'markersize': '6'}
+                                         'markersize': '6'},
+                          hue_order=['zurich', 'colorado'],
                           )
 
         # Change boxplot opacity (.0 means transparent)
