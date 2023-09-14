@@ -71,3 +71,8 @@ This command takes as inputs the list of RPI-reoriented datasets, the output pat
 
 > **Note**
 > This assumes the nnUNet has been successfully installed and the necessary nnUNet-related environment variables have been set. Please refer to the [nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/installation_instructions.md) for more details.
+
+#### Cropping around the spinal cord
+
+The cropping of the input images, spinal cord GT, and lesion GT around the spinal cord segmentation can be done using 
+the `crop_around_sc.sh` script. The cropping is done based on the dilated spinal cord GT.
