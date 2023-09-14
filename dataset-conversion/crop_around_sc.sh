@@ -141,7 +141,7 @@ sct_crop_image -i ${file_t2}_lesion-manual.nii.gz -m ${file_t2}_seg-manual_dilat
 
 # Generate QC to assess the cropping
 sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -d ${file_t2}_seg-manual_crop.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
-sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -d ${file_t2}_lesion-manual_crop.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+#sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -d ${file_t2}_lesion-manual_crop.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # ------------------------------------------------------------------------------
 # End
