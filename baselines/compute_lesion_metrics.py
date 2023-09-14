@@ -34,7 +34,8 @@ def get_parser():
         '-i',
         required=True,
         nargs='+',
-        help='Space separated list of paths to the \'data_processed\' folders containing the spinal cord predictions. '
+        help='Space separated list of paths to the \'data_processed\' folders containing the spinal cord (sc) '
+             'predictions. '
              'Note: The lesion predictions are fetched automatically from the corresponding \'data_processed\' folder. '
              'Example: sci-multisite-inference_sc_seed123_2023-09-08/data_processed '
              'sci-multisite-inference_sc_seed42_2023-09-06/data_processed'
@@ -103,6 +104,7 @@ def main():
     output_dir = os.path.join(os.getcwd(), args.o)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+        print(f'Created {output_dir}')
 
     # Parse input paths
     dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
@@ -112,7 +114,7 @@ def main():
         if not os.path.exists(dir_path):
             raise ValueError(f'ERROR: {dir_path} does not exist.')
 
-    # Get the lesion and spinal cord file names
+    # Fo each participant_id, get the lesion and spinal cord file names
     df = get_fnames(dir_paths)
 
     # Run sct_analyze_lesion to compute the lesion metrics:
