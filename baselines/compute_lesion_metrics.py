@@ -13,8 +13,10 @@ Example:
 """
 
 import os
+import re
 import glob
 import argparse
+import subprocess
 
 import pandas as pd
 
@@ -119,9 +121,22 @@ def main():
     # - maximum axial damage ratio
     for row in df.itertuples():
         print(f'Processing {row.fname_lesion}')
-        os.system(f'sct_analyze_lesion -m {row.fname_lesion} -s {row.fname_sc} -o {output_dir}')
+        # Run sct_analyze_lesion bash command and read the output using subprocess
+        result = subprocess.run(['sct_analyze_lesion', '-m', row.fname_lesion, '-s', row.fname_sc, '-o', output_dir],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Fetch the "Lesion count = " str from the result.stdout using regex
+        pattern = r"Lesion count = (\d+)"  # This pattern captures one or more digits after "Lesion count = "
+        match = re.search(pattern, result.stdout.decode('utf-8'))
 
-    print('here')
+        # Check if the pattern was found
+        if match:
+            lesion_count_str = match.group(0)  # Get the entire matched string
+            lesion_count = int(match.group(1))  # Get the lesion count as integer
+            print(f"Lesion count: {lesion_count}")
+            if lesion_count > 1:
+                print(f'WARNING: {row.fname_lesion} has more than one lesion.')
+        else:
+            print("Lesion count not found in the output")
 
 
 if __name__ == '__main__':
