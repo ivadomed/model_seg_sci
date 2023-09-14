@@ -131,16 +131,17 @@ copy_gt_lesion "${file_t2}"
 sct_maths -i ${file_t2}_seg.nii.gz -dilate 5 -shape ball -o ${file_sag}_seg-manual_dilate.nii.gz
 
 # Use the dilated mask to crop the original image
-sct_crop_image -i ${file_t2}.nii.gz -m ${file_sag}_seg-manual_dilate.nii.gz -o ${file_t2}_crop.nii.gz
+sct_crop_image -i ${file_t2}.nii.gz -m ${file_t2}_seg-manual_dilate.nii.gz -o ${file_t2}_crop.nii.gz
 
 # Use the dilated mask to crop the spinal cord GT
-sct_crop_image -i ${file_t2}_seg-manual.nii.gz -m ${file_sag}_seg-manual_dilate.nii.gz -o ${file_t2}_seg-manual_crop.nii.gz
+sct_crop_image -i ${file_t2}_seg-manual.nii.gz -m ${file_t2}_seg-manual_dilate.nii.gz -o ${file_t2}_seg-manual_crop.nii.gz
 
 # Use the dilated mask to crop the lesion GT
-sct_crop_image -i ${file_t2}_lesion-manual.nii.gz -m ${file_sag}_seg-manual_dilate.nii.gz -o ${file_t2}_lesion-manual_crop.nii.gz
+sct_crop_image -i ${file_t2}_lesion-manual.nii.gz -m ${file_t2}_seg-manual_dilate.nii.gz -o ${file_t2}_lesion-manual_crop.nii.gz
 
 # Generate QC to assess the cropping
-sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -p sct_deepseg_sc -qc-subject ${SUBJECT} -qc-dataset ${DATASET}
+sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -d ${file_t2}_seg-manual_crop.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+sct_qc -i ${file_t2}_crop.nii.gz -s ${file_t2}_seg-manual_crop.nii.gz -d ${file_t2}_lesion-manual_crop.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # ------------------------------------------------------------------------------
 # End
