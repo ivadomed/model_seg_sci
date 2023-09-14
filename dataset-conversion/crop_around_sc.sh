@@ -128,7 +128,7 @@ copy_gt_sc "${file_t2}"
 copy_gt_lesion "${file_t2}"
 
 # Dilate spinal cord mask
-sct_maths -i ${file_t2}_seg.nii.gz -dilate 5 -shape ball -o ${file_sag}_seg-manual_dilate.nii.gz
+sct_maths -i ${file_t2}_seg-manual.nii.gz -dilate 10 -shape ball -o ${file_t2}_seg-manual_dilate.nii.gz
 
 # Use the dilated mask to crop the original image
 sct_crop_image -i ${file_t2}.nii.gz -m ${file_t2}_seg-manual_dilate.nii.gz -o ${file_t2}_crop.nii.gz
