@@ -3,6 +3,10 @@
 # The script crops the input image, spinal cord GT, and lesion GT around the spinal cord segmentation (based on the
 # dilated spinal cord GT)
 #
+#
+# Note that the script outputs the cropped images (images, SC GT, lesion GT) in the data_processed folder, which is
+# not BIDS-compatible.
+#
 # Usage:
 #     sct_run_batch -config config.json
 #
@@ -13,6 +17,8 @@
 #  "script"      : "<PATH_TO_REPO>/model_seg_sci/dataset-conversion/crop_around_sc.sh",
 #  "jobs"        : 8
 # }
+#
+# Note that <PATH_TO_DATASET> has to have both SC and lesion GT in the derivatives/labels folder.
 #
 # The following global variables are retrieved from the caller sct_run_batch
 # but could be overwritten by uncommenting the lines below:
