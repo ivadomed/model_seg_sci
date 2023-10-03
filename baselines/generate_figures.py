@@ -1,5 +1,6 @@
 """
-Parse the xml files with segmentation metrics and execution_time.csv and create a rainplot.
+Parse the xml files with segmentation metrics and execution_time.csv and create Raincloud plot.
+Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
 
 Authors: Jan Valosek, Naga Karthik
 
@@ -45,7 +46,9 @@ def get_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='Parse the xml files with segmentation metrics and execution_time.csv file and create a rainplot.',
+        description='Parse the xml files with segmentation metrics and execution_time.csv file and create Raincloud '
+                    'plot. '
+                    'Raincloud plot are saved in the folder defined by the \'-o\' flag (Default: ./figures).',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
@@ -139,7 +142,7 @@ def fetch_site_and_method(input_string, pred_type):
 
 def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     """
-    Create raincloud plots (violionplot + boxplot + individual points)
+    Create Raincloud plots (violionplot + boxplot + individual points)
     :param df: dataframe with segmentation metrics
     :param list_of_metrics: list of metrics to be plotted
     :param path_figures: path to the folder where the figures will be saved
@@ -305,7 +308,7 @@ def main():
     df_concat = pd.concat(list_of_df, ignore_index=True)
 
     print("")
-    # Create rainplot for each metric
+    # Create Raincloud plot for each metric
     create_rainplot(df_concat, list_of_metrics, output_dir, pred_type)
 
 
