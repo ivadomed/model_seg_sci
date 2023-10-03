@@ -143,6 +143,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     :param df: dataframe with segmentation metrics
     :param list_of_metrics: list of metrics to be plotted
     :param path_figures: path to the folder where the figures will be saved
+    :param pred_type: type of prediction to create plots for; sc: spinal cord segmentation; lesion: lesion segmentation
     :return:
     """
 
@@ -226,7 +227,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         plt.tight_layout()
 
         # save figure
-        fname_fig = os.path.join(path_figures, f'rainplot_{metric}.png')
+        fname_fig = os.path.join(path_figures, f'{pred_type}_rainplot_{metric}.png')
         plt.savefig(fname_fig, dpi=300, bbox_inches='tight')
         plt.close()
         print(f'Created: {fname_fig}')
