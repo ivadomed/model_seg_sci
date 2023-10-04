@@ -201,11 +201,11 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "File ${file_t2}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
     echo "ERROR: File ${file_t2}.nii.gz does not exist. Exiting."
     exit 1
-else
-    # Segment lesion using different methods and compute ANIMA segmentation performance metrics
-    segment_lesion_nnUNet "${file_t2}" '2d'
-    segment_lesion_nnUNet "${file_t2}" '3d'
 fi
+
+# Segment lesion using different methods and compute ANIMA segmentation performance metrics
+segment_lesion_nnUNet "${file_t2}" '2d'
+segment_lesion_nnUNet "${file_t2}" '3d'
 
 # ------------------------------------------------------------------------------
 # End

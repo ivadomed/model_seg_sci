@@ -232,14 +232,14 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "File ${file_t2}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
     echo "ERROR: File ${file_t2}.nii.gz does not exist. Exiting."
     exit 1
-else
-    # Segment SC using different methods and compute ANIMA segmentation performance metrics
-    segment_sc "${file_t2}" 't2' 'deepseg' '2d'
-    segment_sc "${file_t2}" 't2' 'deepseg' '3d'
-    segment_sc "${file_t2}" 't2' 'propseg'
-    segment_sc_nnUNet "${file_t2}" '2d'
-    segment_sc_nnUNet "${file_t2}" '3d'
 fi
+
+# Segment SC using different methods and compute ANIMA segmentation performance metrics
+segment_sc "${file_t2}" 't2' 'deepseg' '2d'
+segment_sc "${file_t2}" 't2' 'deepseg' '3d'
+segment_sc "${file_t2}" 't2' 'propseg'
+segment_sc_nnUNet "${file_t2}" '2d'
+segment_sc_nnUNet "${file_t2}" '3d'
 
 # ------------------------------------------------------------------------------
 # End
