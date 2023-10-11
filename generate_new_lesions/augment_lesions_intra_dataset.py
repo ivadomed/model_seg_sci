@@ -49,8 +49,8 @@ def get_parser():
     return parser
 
 
-def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_dil_data, patho_lesion_data, 
-                  im_healthy_sc_data, coords, new_position, lesion_sc_ratio_patho):
+def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, patho_lesion_data, 
+                  im_healthy_sc_data, coords, new_position):
     """"
     Insert lesion from the bounding box to the im_augmented
     """
@@ -73,41 +73,43 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
                 if patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
                     # ensure that patho_lesion does not overlap with an existing lesion in label
                     if im_augmented_lesion[x + x_step, y + y_step, z + z_step] == 0:
-                        # Simply copy the lesion voxels
-                        im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor]
-                                                                
+                        # replace the healthy SC voxels with the lesion voxels
+                        im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * patho_lesion_data[x_cor, y_cor, z_cor] \
+                                                                            + im_augmented[x + x_step, y + y_step, z + z_step] * (1 - patho_lesion_data[x_cor, y_cor, z_cor])
+
                         # Lesion mask
                         im_augmented_lesion[x + x_step, y + y_step, z + z_step] = patho_lesion_data[x_cor, y_cor, z_cor]
                     else: 
                         continue
 
-    # dilate the augmented lesion mask same as before
-    im_augmented_lesion_dilated = im_augmented_lesion.copy()
-    im_augmented_lesion_dilated = binary_dilation(im_augmented_lesion_dilated, structure=generate_binary_structure(3, 5), iterations=3)
-    # extract only the dilated region of the lesion from the healthy SC
-    im_healthy_sc_dil_data = im_healthy_sc_data * im_augmented_lesion_dilated
-    # print(f"non zero elements in healthy SC after dilation: {np.count_nonzero(im_healthy_sc_data)}")
+    return im_augmented, im_augmented_lesion #, im_healthy_sc_dil_data
 
-    # compute the intensity ratio of the SCs of the patho and healthy image
-    intensity_ratio_scs = np.mean(im_augmented[(im_healthy_sc_dil_data > 0) & (im_augmented_lesion == 0)]) / \
-                                    np.mean(im_patho_data[(im_patho_sc_dil_data > 0) & (patho_lesion_data == 0)])  # without lesion
-    # print(f"Mean Intensity ratio of augmented/patho SC: {intensity_ratio_scs}")
 
-    # modify the augmented lesion voxels with the intensity ratio
-    im_augmented[im_augmented_lesion > 0] = im_augmented[im_augmented_lesion > 0] * intensity_ratio_scs
+def correct_for_pve(im_augmented_data, im_augmented_lesion_data):
 
-    # compute the lesion/SC intensity ratio in the augmented image
-    lesion_sc_ratio_augmented = np.mean(im_augmented[im_augmented_lesion > 0]) / np.mean(im_augmented[(im_healthy_sc_dil_data > 0) & (im_augmented_lesion == 0)])   # without lesion
-    print(f"Mean Lesion/SC Intensity Ratio of Augmented Subject (AFTER LESION INSERTION): {lesion_sc_ratio_augmented}")
+    # Create a binary boundary mask by eroding the lesion mask
+    # boundary_mask = binary_dilation(im_augmented_lesion, structure=generate_binary_structure(3, 3), iterations=2) - im_augmented_lesion
+    boundary_mask = binary_dilation(im_augmented_lesion_data) - im_augmented_lesion_data
+    # apply gaussian filter to the boundary mask
+    boundary_mask_gaussian = gaussian_filter(boundary_mask, sigma=0.5)
+    # threshold the mask
+    boundary_mask_gaussian[boundary_mask_gaussian < 0.5] = 0
 
-    # modify the intensity ratio of augmented lesion to be similar to that of the patho lesion
-    im_augmented[im_augmented_lesion > 0] = im_augmented[im_augmented_lesion > 0] * lesion_sc_ratio_patho / lesion_sc_ratio_augmented
+    # apply the gaussian boundary mask to the image
+    im_augmented_data = (im_augmented_data + im_augmented_data * (1 - boundary_mask_gaussian)) / 2.0
 
-    # recompute the lesion/SC intensity ratio in the augmented image
-    lesion_sc_ratio_augmented = np.mean(im_augmented[im_augmented_lesion > 0]) / np.mean(im_augmented[(im_healthy_sc_dil_data > 0) & (im_augmented_lesion == 0)])
-    print(f"Mean Lesion/SC Intensity Ratio of Augmented Subject (AFTER INTENSITY MODIFICATION): {lesion_sc_ratio_augmented}")
+    # update the lesion mask by applying the boundary mask
+    im_augmented_lesion_data = im_augmented_lesion_data + boundary_mask_gaussian
 
-    return im_augmented, im_augmented_lesion, im_healthy_sc_dil_data
+    # modify the intensities of the image by doing a weighted sum of the values in the boundary mask
+    # im_augmented = im_augmented * (1 - boundary_mask_gaussian) + im_patho_data * boundary_mask_gaussian   # method 1
+    # im_augmented = im_augmented + (im_patho_data - im_augmented) * boundary_mask_gaussian                 # method 2
+    # im_augmented = im_augmented - (im_augmented * boundary_mask_gaussian)
+    # apply the boundary mask to the augmented image
+    # im_augmented = im_augmented * boundary_mask_gaussian
+
+    return im_augmented_data, im_augmented_lesion_data
+
 
 
 def generate_new_sample(sub_healthy, sub_patho, args, index):
@@ -266,9 +268,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
             print(f"Trying to insert lesion at {new_position}")
 
             # Insert lesion from the bounding box to the im_augmented
-            im_augmented_data_new, im_augmented_lesion_data_new, _ = insert_lesion(im_augmented_data_new, im_augmented_lesion_data_new, im_patho_data,
-                                                            im_patho_sc_dil_data, patho_lesion_data, im_healthy_sc_data,
-                                                            lesion_coords, new_position, lesion_sc_ratio_patho)
+            im_augmented_data_new, im_augmented_lesion_data_new = insert_lesion(im_augmented_data_new, im_augmented_lesion_data_new, im_patho_data,
+                                                            patho_lesion_data, im_healthy_sc_data,
+                                                            lesion_coords, new_position)
+
 
             # check if im_augmented_lesion_data is empty and if so, try again (with a different position)
             if not im_augmented_lesion_data_new.any():
@@ -297,6 +300,8 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         im_augmented_data = np.copy(im_augmented_data_new)
         im_augmented_lesion_data = np.copy(im_augmented_lesion_data_new)
 
+    # TODO: correct for pve here
+    im_augmented_data, im_augmented_lesion_data = correct_for_pve(im_augmented_data, im_augmented_lesion_data)
         
     # Insert newly created target and lesion into Image instances
     im_augmented.data = im_augmented_data
