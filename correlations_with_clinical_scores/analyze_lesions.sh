@@ -2,7 +2,7 @@
 #
 # Run sct_analyze_lesion on:
 #     - GT lesion and SC segmentations (located under derivatives/labels)
-#     - predicted lesion and SC segmentations (using our nnUNet model)
+#     - predicted lesion and SC segmentations (using our nnUNet 3D model)
 #
 # Note: subjects from both datasets have to be located in the same BIDS-like folder, example:
 # ├── derivatives
@@ -212,7 +212,7 @@ sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_
 sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -ofolder ${PATH_RESULTS}
 
 # ------------------------------------
-# nnUNet
+# nnUNet 3D
 # ------------------------------------
 
 # Segment SC and lesion using our nnUNet model
