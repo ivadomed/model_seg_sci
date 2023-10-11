@@ -26,11 +26,9 @@ import numpy as np
 from scipy.ndimage import binary_dilation, generate_binary_structure
 import nibabel as nib
 
-from spinalcordtoolbox.image import Image, zeros_like
-from spinalcordtoolbox.resampling import resample_nib
-
+from image import Image, zeros_like
 from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session, \
-    generate_histogram
+    generate_histogram, resample_nib
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
