@@ -206,7 +206,7 @@ fi
 copy_gt "${file_t2}" "seg"
 copy_gt "${file_t2}" "lesion"
 
-# Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask)
+# Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask until https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4120 is fixed)
 sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_bin.nii.gz
 # Analyze GT SCI lesion segmentation
 sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -ofolder ${PATH_RESULTS}
