@@ -17,14 +17,13 @@ import yaml
 import argparse
 import numpy as np
 import pandas as pd
-from scipy.ndimage import binary_dilation, generate_binary_structure
+from scipy.ndimage import binary_dilation, generate_binary_structure, binary_erosion, gaussian_filter
 from sklearn.model_selection import train_test_split
 
-from spinalcordtoolbox.image import Image, zeros_like
-from spinalcordtoolbox.resampling import resample_nib
+from image import Image, zeros_like
 
 from utils import get_centerline, get_lesion_volume, fetch_subject_and_session, \
-    generate_histogram, extract_lesions
+    generate_histogram, extract_lesions, resample_nib
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -46,9 +45,6 @@ def get_parser():
                         help='Ratios of training, validation and test splits lying between 0-1. Example: --split 0.6 0.2 0.2')
     parser.add_argument("-qc", default=False, action='store_true', 
                         help="Perform QC using sct_qc. QC will be saved under -path-out. Default: False")
-    # parser.add_argument("-histogram", default=False, action='store_true', help="Create histograms. Default: False")
-    # parser.add_argument("-min-lesion-vol", "--min-lesion-volume", default=200, type=float,
-    #                     help="Minimum lesion volume in mm^3. Default: 200")
 
     return parser
 
@@ -248,18 +244,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         Get intensity ratio between healthy and pathological SC and normalize images.
         The ratio is used to multiply the lesion in the healthy image.
         """    
-        # Extract SC mask in the neighbourhood of the lesion
-        patho_lesion_data_dilated = binary_dilation(patho_lesion_data, structure=generate_binary_structure(3, 5), iterations=3)
-        im_patho_sc_dil_data = im_patho_sc_data * patho_lesion_data_dilated
-        
-        # compute the ratio of intensities between lesion and SC in the pathological image
-        lesion_sc_ratio_patho = np.mean(im_patho_data[patho_lesion_data > 0]) / np.mean(im_patho_data[(im_patho_sc_dil_data > 0) & (patho_lesion_data == 0)])    # without lesion
-        print(f"Mean lesion/SC Intensity Ratio of Patho Subject {sub_patho}: {lesion_sc_ratio_patho}")
-        # Make sure the intensity ratio is always < 1 (i.e. the lesion is always darker (because mp2rage) than the healthy SC)
-        if lesion_sc_ratio_patho > 1:
-            lesion_sc_ratio_patho = 1 / lesion_sc_ratio_patho
-            print(f"Mean lesion/SC Intensity Ratio of Patho Subject {sub_patho} (after inversion): {lesion_sc_ratio_patho}")
-
         # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
         lesion_coords = np.argwhere(patho_lesion_data > 0)
 
@@ -326,31 +310,10 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     """
     Save im_augmented and im_augmented_lesion
     """
-    # # Get subject and session IDs from the healthy image
-    # subjectID_healthy, sessionID_healthy, _ = fetch_subject_and_session(sub_healthy)
-    # # Get subject and session IDs from the patho image
-    # subjectID_patho, sessionID_patho, _ = fetch_subject_and_session(sub_patho)
-
-    # if sessionID_patho is None:
-    #     subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_augmented'
-    # # NOTE: Zurich also has sessions (e.g. sub-zh11_ses-01)
-    # else:
-    #     subject_name_out = subjectID_healthy + '_' + subjectID_patho + '_' + sessionID_patho + '_augmented'
-
     subject_name_out = sub_healthy + '_' + sub_patho
-
-    # if args.histogram:
-    #     # Generate healthy-patho pair histogram
-    #     generate_histogram(im_healthy_data, im_healthy_sc_data, im_healthy_sc_dil_data,
-    #                        im_patho_data, im_patho_sc_data, im_patho_sc_dil_data, im_patho_lesion_data,
-    #                        im_augmented_data, im_augmented_lesion_data, new_sc.data,
-    #                        sub_healthy, sub_patho, subject_name_out,
-    #                        output_dir=args.dir_save.replace("labelsTr", "histograms"))
 
     # if subjectID_patho.startswith('sub-zh'):
     qc_plane = 'sagittal'
-    # else:
-    #     qc_plane = 'axial'
     
     # save the augmented data in a separate folder with the seed used
     dataset_name = args.path_data.split('/')[-1]
