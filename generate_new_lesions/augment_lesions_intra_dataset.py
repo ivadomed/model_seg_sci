@@ -52,6 +52,24 @@ def get_parser():
 def insert_lesion(im_target, mask_lesion_target, im_source, individual_lesion_mask_source, 
                   mask_healthy_sc, lesion_coords_individual, new_position_target):
     """
+    Insert lesion from the source image (pathological subject) to the target image (healthy subject). 
+    The lesion is inserted at the new_position_target.
+
+    Inputs:
+        im_target: numpy array of the target image
+        mask_lesion_target: numpy array of the target lesion mask
+        im_source: numpy array of the source image
+        individual_lesion_mask_source: numpy array of each lesion in the source lesion mask 
+            (i.e., extracted_lesions_source[i] - each lesion is inserted individually)
+        mask_healthy_sc: numpy array of the healthy spinal cord mask (to ensure that the lesion is inserted within the SC)
+        lesion_coords_individual: numpy array of the coordinates of the individual lesions in the source lesion mask
+        new_position_target: list containing (x,y,z) coordinates where the lesion will be inserted in the target image
+    
+    Outputs:
+        im_target: numpy array of the target image with the lesion inserted
+        mask_lesion_target: numpy array of the target lesion mask with the lesion inserted
+
+    """
     # Get bounding box coordinates
     x0, y0, z0 = lesion_coords_individual.min(axis=0)
     x1, y1, z1 = lesion_coords_individual.max(axis=0) + 1  # slices are exclusive at the top
@@ -86,6 +104,18 @@ def insert_lesion(im_target, mask_lesion_target, im_source, individual_lesion_ma
 
 
 def correct_for_pve(im_target, mask_lesion_target):
+    """
+    Correct for partial volume effect (PVE) by applying a Gaussian filter on the augmented lesion mask and apply it to the augmented image.
+
+    Inputs:
+        im_target: numpy array of the target (augmented) image with the lesion inserted
+        mask_lesion_target: numpy array of the target (augmented) lesion mask
+
+    Outputs:
+        im_target: numpy array of the target (augmented) image corrected for PVE
+        mask_lesion_target: numpy array of the target (augmented) lesion mask corrected for PVE
+    """
+
     # Create a boundary mask by dilating the lesion and subtracting it
     # boundary_mask = binary_dilation(im_augmented_lesion, structure=generate_binary_structure(3, 3), iterations=2) - im_augmented_lesion
     boundary_mask = binary_dilation(mask_lesion_target) - mask_lesion_target
