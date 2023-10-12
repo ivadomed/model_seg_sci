@@ -49,57 +49,56 @@ def get_parser():
     return parser
 
 
-def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, patho_lesion_data, 
-                  im_healthy_sc_data, coords, new_position):
-    """"
-    Insert lesion from the bounding box to the im_augmented
+def insert_lesion(im_target, mask_lesion_target, im_source, individual_lesion_mask_source, 
+                  mask_healthy_sc, lesion_coords_individual, new_position_target):
     """
     # Get bounding box coordinates
-    x0, y0, z0 = coords.min(axis=0)
-    x1, y1, z1 = coords.max(axis=0) + 1  # slices are exclusive at the top
+    x0, y0, z0 = lesion_coords_individual.min(axis=0)
+    x1, y1, z1 = lesion_coords_individual.max(axis=0) + 1  # slices are exclusive at the top
 
     # Get coordinates where to insert the lesion
-    x, y, z = new_position
+    x, y, z = new_position_target
 
     # Compute the shift to the center of the bounding box
+    # NOTE: This is done to start lesion pasting from the center of the bbox instead of the bottom left
     shift_x, shift_y, shift_z = (x1 - x0) // 2, (y1 - y0) // 2, (z1 - z0) // 2
 
-    # The new origin is shifted to the center of the bounding box (unlike the bottom left earlier)
+    # Now, the new origin is shifted to the center of the bounding box
     for x_step, x_cor in zip(range(-shift_x, shift_x + 1), range(x0, x1)):
         for y_step, y_cor in zip(range(-shift_y, shift_y + 1 ), range(y0, y1)):
             for z_step, z_cor in zip(range(-shift_z, shift_z + 1), range(z0, z1)):
 
-                # make sure that the new lesion is not projected outside of the SC
-                if patho_lesion_data[x_cor, y_cor, z_cor] > 0 and im_healthy_sc_data[x + x_step, y + y_step, z + z_step] > 0:
-                    # ensure that patho_lesion does not overlap with an existing lesion in label
-                    if im_augmented_lesion[x + x_step, y + y_step, z + z_step] == 0:
-                        # replace the healthy SC voxels with the lesion voxels
-                        im_augmented[x + x_step, y + y_step, z + z_step] = im_patho_data[x_cor, y_cor, z_cor] * patho_lesion_data[x_cor, y_cor, z_cor] \
-                                                                            + im_augmented[x + x_step, y + y_step, z + z_step] * (1 - patho_lesion_data[x_cor, y_cor, z_cor])
+                # make sure that the source lesion is not projected outside of the SC in the target image
+                if individual_lesion_mask_source[x_cor, y_cor, z_cor] > 0 and mask_healthy_sc[x + x_step, y + y_step, z + z_step] > 0:
+                    # ensure that incoming source lesion does not overlap with an existing (pasted) lesion in the target mask
+                    if mask_lesion_target[x + x_step, y + y_step, z + z_step] == 0:
+                        # replace the (healthy) voxels in the target image with the lesion voxels in the source image
+                        im_target[x + x_step, y + y_step, z + z_step] = im_source[x_cor, y_cor, z_cor] * individual_lesion_mask_source[x_cor, y_cor, z_cor] \
+                                                                            + im_target[x + x_step, y + y_step, z + z_step] \
+                                                                                  * (1 - individual_lesion_mask_source[x_cor, y_cor, z_cor])
 
-                        # Lesion mask
-                        im_augmented_lesion[x + x_step, y + y_step, z + z_step] = patho_lesion_data[x_cor, y_cor, z_cor]
+                        # create the target lesion mask 
+                        mask_lesion_target[x + x_step, y + y_step, z + z_step] = individual_lesion_mask_source[x_cor, y_cor, z_cor]
                     else: 
                         continue
 
-    return im_augmented, im_augmented_lesion #, im_healthy_sc_dil_data
+    return im_target, mask_lesion_target
 
 
-def correct_for_pve(im_augmented_data, im_augmented_lesion_data):
-
-    # Create a binary boundary mask by eroding the lesion mask
+def correct_for_pve(im_target, mask_lesion_target):
+    # Create a boundary mask by dilating the lesion and subtracting it
     # boundary_mask = binary_dilation(im_augmented_lesion, structure=generate_binary_structure(3, 3), iterations=2) - im_augmented_lesion
-    boundary_mask = binary_dilation(im_augmented_lesion_data) - im_augmented_lesion_data
+    boundary_mask = binary_dilation(mask_lesion_target) - mask_lesion_target
     # apply gaussian filter to the boundary mask
     boundary_mask_gaussian = gaussian_filter(boundary_mask, sigma=0.5)
     # threshold the mask
     boundary_mask_gaussian[boundary_mask_gaussian < 0.5] = 0
 
     # apply the gaussian boundary mask to the image
-    im_augmented_data = (im_augmented_data + im_augmented_data * (1 - boundary_mask_gaussian)) / 2.0
+    im_target = (im_target + im_target * (1 - boundary_mask_gaussian)) / 2.0
 
     # update the lesion mask by applying the boundary mask
-    im_augmented_lesion_data = im_augmented_lesion_data + boundary_mask_gaussian
+    mask_lesion_target = mask_lesion_target + boundary_mask_gaussian
 
     # modify the intensities of the image by doing a weighted sum of the values in the boundary mask
     # im_augmented = im_augmented * (1 - boundary_mask_gaussian) + im_patho_data * boundary_mask_gaussian   # method 1
@@ -108,7 +107,7 @@ def correct_for_pve(im_augmented_data, im_augmented_lesion_data):
     # apply the boundary mask to the augmented image
     # im_augmented = im_augmented * boundary_mask_gaussian
 
-    return im_augmented_data, im_augmented_lesion_data
+    return im_target, mask_lesion_target
 
 
 
@@ -125,32 +124,31 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     path_mask_sc_patho = os.path.join(args.path_data, "derivatives", "labels", sub_patho, "anat", f"{sub_patho}_UNIT1_label-SC_seg.nii.gz")
 
     # Load image_patho, label_patho, and mask_sc_patho
-    im_patho = Image(path_image_patho)
-    im_patho_sc = Image(path_mask_sc_patho)
-    im_patho_lesion = Image(path_label_patho)
+    im_source_class = Image(path_image_patho)
+    mask_sc_source_class = Image(path_mask_sc_patho)
+    mask_lesion_source_class = Image(path_label_patho)
 
-    im_patho_orientation_native = im_patho.orientation
-    print(f"Pathological subject {path_image_patho}: {im_patho_orientation_native}, {im_patho.dim[0:3]}, {im_patho.dim[4:7]}")
+    print(f"Source (Pathological) subject {path_image_patho}: {im_source_class.orientation}, {im_source_class.dim[0:3]}, {im_source_class.dim[4:7]}")
     # TODO: consider reorienting back to native orientation
 
     # Reorient to RPI
-    im_patho.change_orientation("RPI")
-    im_patho_sc.change_orientation("RPI")
-    im_patho_lesion.change_orientation("RPI")
+    im_source_class.change_orientation("RPI")
+    mask_sc_source_class.change_orientation("RPI")
+    mask_lesion_source_class.change_orientation("RPI")
     print("Reoriented to RPI")
 
     # Get numpy arrays
-    im_patho_data = im_patho.data
-    im_patho_sc_data = im_patho_sc.data
-    im_patho_lesion_data = im_patho_lesion.data
+    im_source = im_source_class.data
+    mask_sc_source = mask_sc_source_class.data
+    mask_lesion_source = mask_lesion_source_class.data
 
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
-    if im_patho_data.shape != im_patho_sc_data.shape:
+    if im_source.shape != mask_sc_source.shape:
         print("WARNING: image_patho and label_patho have different shapes --> skipping subject\n")
         return False
 
     # Check if the patho subject has a lesion, if not, skip this subject
-    if not np.any(im_patho_lesion_data):
+    if not np.any(mask_lesion_source):
         print("WARNING: no lesion in image_patho --> skipping subject\n")
         return False
 
@@ -169,14 +167,13 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     path_mask_sc_healthy = os.path.join(args.path_data, "derivatives", "labels", sub_healthy, "anat", f"{sub_healthy}_UNIT1_label-SC_seg.nii.gz")
 
     # Load image_healthy and mask_sc
-    im_healthy, im_healthy_sc = Image(path_image_healthy), Image(path_mask_sc_healthy)
+    im_healthy_class, mask_healthy_sc_class = Image(path_image_healthy), Image(path_mask_sc_healthy)
 
-    im_healthy_orientation_native = im_healthy.orientation
-    print(f"Healthy subject {path_image_healthy}: {im_healthy_orientation_native}, {im_healthy.dim[0:3]}, {im_healthy.dim[4:7]}")
+    print(f"Healthy subject {path_image_healthy}: {im_healthy_class.orientation}, {im_healthy_class.dim[0:3]}, {im_healthy_class.dim[4:7]}")
 
     # Reorient to RPI
-    im_healthy.change_orientation("RPI")
-    im_healthy_sc.change_orientation("RPI")
+    im_healthy_class.change_orientation("RPI")
+    mask_healthy_sc_class.change_orientation("RPI")
     print("Reoriented to RPI")
 
 
@@ -193,61 +190,58 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
         # Fetch voxel size of pathology subject (will be used for resampling)
         # Note: get_zooms() is nibabel function that returns voxel size in mm (same as SCT's im_patho.dim[4:7])
-        im_patho_voxel_size = im_patho.header.get_zooms()
+        im_source_voxel_size = im_source_class.header.get_zooms()
 
         # Resample
         # Note: we cannot use 'image_dest=' option because we do not want to introduce padding or cropping
-        im_healthy = resample_nib(im_healthy, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        im_healthy_class = resample_nib(im_healthy_class, new_size=im_source_voxel_size, new_size_type='mm', interpolation='linear')
         # new_lesion = resample_nib(new_lesion, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
-        im_healthy_sc = resample_nib(im_healthy_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
+        mask_healthy_sc_class = resample_nib(mask_healthy_sc_class, new_size=im_source_voxel_size, new_size_type='mm', interpolation='linear')
         # new_sc = resample_nib(new_sc, new_size=im_patho_voxel_size, new_size_type='mm', interpolation='linear')
 
-        print(f'After resampling - Image Shape: {im_healthy.dim[0:3]}, Image Resolution: {im_healthy.dim[4:7]}')
+        print(f'After resampling - Image Shape: {im_healthy_class.dim[0:3]}, Image Resolution: {im_healthy_class.dim[4:7]}')
 
     # Get numpy arrays
-    im_healthy_data = im_healthy.data
-    im_healthy_sc_data = im_healthy_sc.data
+    im_healthy = im_healthy_class.data
+    mask_healthy_sc = mask_healthy_sc_class.data
 
     # Check if image and spinal cord mask have the same shape, if not, skip this subject
-    if im_healthy_data.shape != im_healthy_sc_data.shape:
+    if im_healthy.shape != mask_healthy_sc.shape:
         print("Warning: image_healthy and mask_sc have different shapes --> skipping subject")
         return False
 
     # Extract all individual lesions from the pathological image
-    extracted_patho_lesions = extract_lesions(im_patho_lesion_data)
+    extracted_lesions_source = extract_lesions(mask_lesion_source)
 
 
     """
     Main logic - copy lesion from pathological image to healthy image
     """
     # Initialize Image instances for the new target and lesion
-    im_augmented = zeros_like(im_healthy)
-    im_augmented_lesion = zeros_like(im_healthy)
+    im_target_class = zeros_like(im_healthy_class)
+    mask_lesion_target_class = zeros_like(im_healthy_class)
 
     # Create a copy of the healthy SC mask. The mask will have the proper output name and will be saved under masksTr
     # folder. The mask is useful for lesion QC (using sct_qc) or nnU-Net region-based training
     # (https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md)
-    new_sc = im_healthy_sc.copy()
+    new_sc_class = mask_healthy_sc_class.copy()
 
     # Get centerline from healthy SC seg. The centerline is used to project the lesion from the pathological image
-    healthy_centerline = get_centerline(im_healthy_sc_data)
+    healthy_centerline = get_centerline(mask_healthy_sc)
 
     # Initialize numpy arrays with the same shape as the healthy image once
-    im_augmented_data = np.copy(im_healthy_data)
-    im_augmented_lesion_data = np.zeros_like(im_healthy_data)
+    im_target = np.copy(im_healthy)
+    mask_lesion_target = np.zeros_like(im_healthy)
 
     # Select random coordinate on the centerline
     # index is used to have different seed for every subject to have different lesion positions across different subjects
     rng = np.random.default_rng(args.seed + index)
 
-    for i, patho_lesion_data in enumerate(extracted_patho_lesions):
-        print(f"Inserting Lesion {i+1} out of {len(extracted_patho_lesions)}")
-        """
-        Get intensity ratio between healthy and pathological SC and normalize images.
-        The ratio is used to multiply the lesion in the healthy image.
-        """    
+    for i, individual_lesion_mask_source in enumerate(extracted_lesions_source):
+        print(f"Inserting Lesion {i+1} out of {len(extracted_lesions_source)}")
+        
         # Create 3D bounding box around non-zero pixels (i.e., around the lesion)
-        lesion_coords = np.argwhere(patho_lesion_data > 0)
+        individual_lesion_coords = np.argwhere(individual_lesion_mask_source > 0)
 
         # NOTE: This loop is required because the lesion from the original patho image could be cropped if it is going
         # outside of the SC in the healthy image. So, the loop continues until the lesion inserted in the healthy image
@@ -255,40 +249,39 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
         j = 0
         while True:            
             # Initialize numpy arrays with the same shape as the healthy image
-            im_augmented_data_new = np.copy(im_augmented_data)
-            im_augmented_lesion_data_new = np.copy(im_augmented_lesion_data)
+            im_target_new = np.copy(im_target)
+            mask_lesion_target_new = np.copy(mask_lesion_target)
 
             # get the volume of the augmented lesion first
-            lesion_vol_aug_init = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
+            lesion_vol_aug_init = get_lesion_volume(mask_lesion_target_new, mask_lesion_target_class.dim[4:7], debug=False)
 
-            # New position for the lesion (on the centerline)
-            new_position = healthy_centerline[rng.integers(0, len(healthy_centerline) - 1)]
+            # Choose a random coordinate on the target centerline. This will be the position of the new lesion on the target image
+            new_position_target = healthy_centerline[rng.integers(0, len(healthy_centerline) - 1)]
             # # New position for the lesion (randomly selected from the lesion coordinates)
             # new_position = new_coords[rng.integers(0, len(new_coords) - 1)]
-            print(f"Trying to insert lesion at {new_position}")
+            print(f"Trying to insert lesion at {new_position_target}")
 
             # Insert lesion from the bounding box to the im_augmented
-            im_augmented_data_new, im_augmented_lesion_data_new = insert_lesion(im_augmented_data_new, im_augmented_lesion_data_new, im_patho_data,
-                                                            patho_lesion_data, im_healthy_sc_data,
-                                                            lesion_coords, new_position)
+            im_target_new, mask_lesion_target_new = insert_lesion(im_target_new, mask_lesion_target_new, im_source, individual_lesion_mask_source, 
+                                                                  mask_healthy_sc, individual_lesion_coords, new_position_target)
 
 
             # check if im_augmented_lesion_data is empty and if so, try again (with a different position)
-            if not im_augmented_lesion_data_new.any():
-                print(f"Lesion inserted at {new_position} is empty. Trying again...")
+            if not mask_lesion_target_new.any():
+                print(f"Lesion inserted at {new_position_target} is empty. Trying again...")
                 continue
             
             # NOTE: Keeping largest component for MS lesions suppresses a lot of small lesions. Hence, unlike in SCI, we 
             # don't use it here. 
 
             # Check if volume of inserted lesion is similar to that of the original one 
-            lesion_vol_aug_final = get_lesion_volume(im_augmented_lesion_data_new, im_augmented_lesion.dim[4:7], debug=False)
+            lesion_vol_aug_final = get_lesion_volume(mask_lesion_target_new, mask_lesion_target_class.dim[4:7], debug=False)
             print(f"Volume of lesion after augmentation: {lesion_vol_aug_final - lesion_vol_aug_init}")
-            lesion_vol_orig = get_lesion_volume(patho_lesion_data, im_patho_lesion.dim[4:7], debug=False)
+            lesion_vol_orig = get_lesion_volume(individual_lesion_mask_source, mask_lesion_source_class.dim[4:7], debug=False)
             print(f"Volume of lesion {i+1} in original image: {lesion_vol_orig}")
             # keep the augmented lesion if it is greater than X % of the original lesion
             if (lesion_vol_aug_final - lesion_vol_aug_init) >= 0.9 * lesion_vol_orig:
-                print(f"Lesion inserted at {new_position}")
+                print(f"Lesion inserted at {new_position_target}")
                 break
 
             if j == 10:
@@ -296,19 +289,19 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
                 break
             j += 1
 
-        # re-use im_augmented_data for the next lesion
-        im_augmented_data = np.copy(im_augmented_data_new)
-        im_augmented_lesion_data = np.copy(im_augmented_lesion_data_new)
+        # re-use im_target for pasting the next lesion
+        im_target = np.copy(im_target_new)
+        mask_lesion_target = np.copy(mask_lesion_target_new)
 
-    # TODO: correct for pve here
-    im_augmented_data, im_augmented_lesion_data = correct_for_pve(im_augmented_data, im_augmented_lesion_data)
+    # correct for pve
+    im_target, mask_lesion_target = correct_for_pve(im_target, mask_lesion_target)
         
     # Insert newly created target and lesion into Image instances
-    im_augmented.data = im_augmented_data
-    im_augmented_lesion.data = im_augmented_lesion_data
+    im_target_class.data = im_target
+    mask_lesion_target_class.data = mask_lesion_target
 
     # Add a final check to ensure that the im_augmented_lesion is not empty
-    if np.sum(im_augmented_lesion.data) == 0:
+    if np.sum(mask_lesion_target_class.data) == 0:
         print(f"WARNING: (augmented) im_augmented_lesion is empty. Check code again. Gracefully exiting....")
         sys.exit(1)
 
@@ -328,28 +321,28 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     sub_save_path = os.path.join(save_path, subject_name_out)
     os.makedirs(sub_save_path, exist_ok=True)
     # save the augmented data in the subject folder
-    im_augmented_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_augmented.nii.gz")
-    im_augmented_lesion_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
+    im_target_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_augmented.nii.gz")
+    mask_lesion_target_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_lesion-augmented.nii.gz")
     new_sc_path = os.path.join(sub_save_path, f"{subject_name_out}_UNIT1_label-SC_seg-augmented.nii.gz")
 
-    im_augmented.save(im_augmented_path)
-    print(f'Saving {im_augmented_path}; {im_augmented.orientation, im_augmented.dim[4:7]}')
-    im_augmented_lesion.save(im_augmented_lesion_path)
-    print(f'Saving {im_augmented_lesion_path}; {im_augmented_lesion.orientation, im_augmented_lesion.dim[4:7]}')
-    new_sc.save(new_sc_path)
-    print(f'Saving {new_sc_path}; {new_sc.orientation, new_sc.dim[4:7]}')
+    im_target_class.save(im_target_path)
+    print(f'Saving {im_target_path}; {im_target_class.orientation, im_target_class.dim[4:7]}')
+    mask_lesion_target_class.save(mask_lesion_target_path)
+    print(f'Saving {mask_lesion_target_path}; {mask_lesion_target_class.orientation, mask_lesion_target_class.dim[4:7]}')
+    new_sc_class.save(new_sc_path)    # this is just a copy of the healthy SC mask
+    print(f'Saving {new_sc_path}; {new_sc_class.orientation, new_sc_class.dim[4:7]}')
     print('')
 
     # Generate QC
     if args.qc:
         # Binarize im_augmented_lesion (sct_qc supports only binary masks)
-        im_augmented_lesion_bin_path = im_augmented_lesion_path.replace('.nii.gz', '_bin.nii.gz')
-        os.system(f'sct_maths -i {im_augmented_lesion_path} -bin 0 -o {im_augmented_lesion_bin_path}')
+        mask_lesion_target_bin_path = mask_lesion_target_path.replace('.nii.gz', '_bin.nii.gz')
+        os.system(f'sct_maths -i {mask_lesion_target_path} -bin 0 -o {mask_lesion_target_bin_path}')
         # Example: sct_qc -i t2.nii.gz -s t2_seg.nii.gz -d t2_lesion.nii.gz -p sct_deepseg_lesion -plane axial
-        os.system(f'sct_qc -i {im_augmented_path} -s {new_sc_path} -d {im_augmented_lesion_bin_path} -p sct_deepseg_lesion '
+        os.system(f'sct_qc -i {im_target_path} -s {new_sc_path} -d {mask_lesion_target_bin_path} -p sct_deepseg_lesion '
                   f'-plane {qc_plane} -qc {os.path.join(save_path, "qc")} -qc-subject {subject_name_out}')
         # Remove binarized lesion
-        os.remove(im_augmented_lesion_bin_path)
+        os.remove(mask_lesion_target_bin_path)
 
     return True
 
