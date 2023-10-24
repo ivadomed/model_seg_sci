@@ -140,6 +140,35 @@ def fetch_site_and_method(input_string, pred_type):
     return site, method
 
 
+def print_mean_and_std(df, list_of_metrics, pred_type):
+    """
+    Print the mean and std for each metric
+    :param df: dataframe with segmentation metrics
+    :param list_of_metrics: list of metrics
+    :param pred_type: type of prediction to create plots for; sc: spinal cord segmentation; lesion: lesion segmentation
+    :return:
+    """
+    # Loop across metrics
+    for metric in list_of_metrics:
+        print(f'{metric}:')
+        # Loop across methods (e.g., nnUNet 2D, nnUNet 3D, etc.)
+        for method in df['method'].unique():
+            # Mean +- std across sites
+            if pred_type == 'sc':
+                print(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                      f'{df[df["method"] == method][metric].std():.2f}')
+            elif pred_type == 'lesion':
+                print(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                      f'{df[df["method"] == method][metric].std():.2f}')
+            # Loop across sites
+            for site in df['site'].unique():
+                df_tmp = df[(df['method'] == method) & (df['site'] == site)]
+                if pred_type == 'sc':
+                    print(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                elif pred_type == 'lesion':
+                    print(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+
+
 def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     """
     Create Raincloud plots (violionplot + boxplot + individual points)
@@ -306,6 +335,9 @@ def main():
 
     # Concatenate the list of dataframes into a single dataframe
     df_concat = pd.concat(list_of_df, ignore_index=True)
+
+    # Print mean and std for each metric
+    print_mean_and_std(df_concat, list_of_metrics, pred_type)
 
     print("")
     # Create Raincloud plot for each metric
