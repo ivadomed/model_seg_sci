@@ -202,6 +202,8 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           hue_order=['zurich', 'colorado'],
                           )
 
+        # TODO: include mean +- std for each boxplot above the mean value
+
         # Change boxplot opacity (.0 means transparent)
         # https://github.com/mwaskom/seaborn/issues/979#issuecomment-1144615001
         for patch in ax.patches:
