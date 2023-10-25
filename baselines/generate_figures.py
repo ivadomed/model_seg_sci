@@ -253,6 +253,12 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Increase y-ticks font size
         ax.tick_params(axis='y', labelsize=TICK_FONT_SIZE)
 
+        # Adjust y-lim for 'RelativeVolumeError' metric
+        if metric == 'RelativeVolumeError' and pred_type == 'sc':
+            ax.set_ylim(-95, 62)
+        elif metric == 'RelativeVolumeError' and pred_type == 'lesion':
+            ax.set_ylim(-105, 105)
+
         # Set title
         num_of_seeds = len(df['seed'].unique())
         if pred_type == 'sc':
