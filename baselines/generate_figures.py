@@ -169,6 +169,15 @@ def print_mean_and_std(df, list_of_metrics, pred_type):
                     print(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
 
 
+def split_string_by_capital_letters(s):
+    """
+    Split a string by capital letters
+    :param s: e.g., 'RelativeVolumeError'
+    :return: e.g., 'Relative Volume Error'
+    """
+    return re.sub(r'([a-z])([A-Z])', r'\1 \2', s)
+
+
 def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     """
     Create Raincloud plots (violionplot + boxplot + individual points)
@@ -237,17 +246,20 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         ax.set_xticklabels(METHODS_TO_LABEL_SC.values() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.values(),
                            fontsize=TICK_FONT_SIZE)
         # Increase y-axis label font size
-        ax.set_ylabel(metric, fontsize=TICK_FONT_SIZE)
+        if metric == 'RelativeVolumeError':
+            ax.set_ylabel(split_string_by_capital_letters(metric) + ' [%]', fontsize=TICK_FONT_SIZE)
+        else:
+            ax.set_ylabel(metric, fontsize=TICK_FONT_SIZE)
         # Increase y-ticks font size
         ax.tick_params(axis='y', labelsize=TICK_FONT_SIZE)
 
         # Set title
         num_of_seeds = len(df['seed'].unique())
         if pred_type == 'sc':
-            ax.set_title(f'Test {metric} for Spinal Cord Segmentation across {num_of_seeds} seeds',
+            ax.set_title(f'Test {split_string_by_capital_letters(metric)} for Spinal Cord Segmentation across {num_of_seeds} seeds',
                          fontsize=LABEL_FONT_SIZE)
         else:
-            ax.set_title(f'Test {metric} for Lesion Segmentation across {num_of_seeds} seeds',
+            ax.set_title(f'Test {split_string_by_capital_letters(metric)} for Lesion Segmentation across {num_of_seeds} seeds',
                          fontsize=LABEL_FONT_SIZE)
 
         # Move grid to background (i.e. behind other elements)
