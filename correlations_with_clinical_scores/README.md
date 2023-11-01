@@ -3,7 +3,7 @@
 This section explains how to run the `analyze_lesions.sh` script across all subjects.
 
 The `analyze_lesions.sh` calls the SCT's `sct_analyze_lesion` function on:
-- GT lesion and SC segmentations (located under derivatives/labels)
+- GT lesion and spinal cord segmentations (located under `derivatives/labels`)
 - predicted lesion and SC segmentations (using our nnUNet 3D model)
 
 Outputs are saved under the `/results` directory (`${PATH_RESULTS}` variable retrieved from the caller `sct_run_batch`).
