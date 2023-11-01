@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Run sct_analyze_lesion on:
-#     - GT lesion and SC segmentations (located under derivatives/labels)
-#     - predicted lesion and SC segmentations (using our nnUNet 3D model)
+#     - GT lesion and spinal cord segmentations (located under derivatives/labels)
+#     - predicted lesion and spinal cord segmentations (using our nnUNet 3D model)
 #
 # Note: subjects from both datasets have to be located in the same BIDS-like folder, example:
 # ├── derivatives
@@ -202,7 +202,7 @@ fi
 # GT
 # ------------------------------------
 
-# Copy GT SC and lesion segmentations
+# Copy GT SC and lesion segmentations from derivatives/labels
 copy_gt "${file_t2}" "seg"
 copy_gt "${file_t2}" "lesion"
 
