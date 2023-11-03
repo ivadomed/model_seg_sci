@@ -249,7 +249,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
     """
     # Initialize Image instances for the new target and lesion
     im_target_class = zeros_like(im_healthy_class)
-    mask_lesion_target_class = zeros_like(im_healthy_class)
+    mask_lesion_target_class = zeros_like(im_healthy_class, dtype=np.float32)
 
     # Create a copy of the healthy SC mask. The mask will have the proper output name and will be saved under masksTr
     # folder. The mask is useful for lesion QC (using sct_qc) or nnU-Net region-based training
@@ -261,7 +261,7 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
 
     # Initialize numpy arrays with the same shape as the healthy image once
     im_target = np.copy(im_healthy)
-    mask_lesion_target = np.zeros_like(im_healthy)
+    mask_lesion_target = np.zeros_like(im_healthy, dtype=np.float32)
 
     # Select random coordinate on the centerline
     # index is used to have different seed for every subject to have different lesion positions across different subjects
@@ -301,8 +301,6 @@ def generate_new_sample(sub_healthy, sub_patho, args, index):
                 print(f"Lesion inserted at {new_position_target} is empty. Trying again...")
                 continue
             
-            # NOTE: Keeping largest component for MS lesions suppresses a lot of small lesions. Hence, unlike in SCI, we 
-            # don't use it here. 
 
             # Check if volume of inserted lesion is similar to that of the original one 
             lesion_vol_aug_final = get_lesion_volume(mask_lesion_target_new, mask_lesion_target_class.dim[4:7], debug=False)
