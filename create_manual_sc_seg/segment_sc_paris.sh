@@ -127,7 +127,7 @@ if [[ -f ${file_t2w}.nii.gz ]];then
     # Spinal cord segmentation
     segment_if_does_not_exist ${file_t2w} 't2'
 
-    # Automatic SC seg fails at the lesion, so we add the lesion to the segmentation (to save time with manual corrections)
+    # Automatic spinal cord segmentation might fail at the lesion site, so we add the lesion to the spinal cord segmentation (to save time with manual corrections)
     # Copy SCI lesion
     copy_lesion ${file_t2w}
     # Add lesion to SC segmentation
