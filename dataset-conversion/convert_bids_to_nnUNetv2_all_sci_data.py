@@ -38,6 +38,7 @@ import json
 import os
 import re
 import shutil
+import yaml
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
@@ -64,6 +65,9 @@ def get_parser():
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
                              '--split 0.8 0.2')
+    # input yaml file containing list of axial subjects to include for active learning
+    parser.add_argument('--include-axial', type=str, default=None,
+                        help='Path to yaml file containing list of axial subjects to include for active learning.')
 
     return parser
 
@@ -140,6 +144,15 @@ def main():
         Path(path_out_imagesTsCol).mkdir(parents=True, exist_ok=True)
         Path(path_out_labelsTsCol).mkdir(parents=True, exist_ok=True)
 
+    # load the yaml file and convert to a list
+    if args.include_axial is not None:
+        with open(args.include_axial) as f:
+            axial_subjects = yaml.load(f, Loader=yaml.FullLoader)
+            # convert to a list
+            axial_subjects = list(axial_subjects.values())[0]
+
+    logger.info(f"Number of axial subjects in the YAML file: {len(axial_subjects)}")
+
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
     for dataset in args.path_data:
@@ -183,43 +196,85 @@ def main():
                                                os.listdir(temp_subject_path))
 
                 for ses_idx in range(1, num_sessions_per_subject+1):
-                    train_ctr += 1
-                    # Get paths with session numbers
-                    session = 'ses-0' + str(ses_idx)
-
-                    subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
-                    subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
-                                                       'labels', subject, session, 'anat')
-
-                    subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
-                    subject_label_file = os.path.join(subject_labels_path, f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
-
-                    # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
-                    # nnunet convention names
-
-                    # create the new convention names for nnunet
-                    sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + str(Path(subject_image_file).name).split('_')[1]
                     
-                    # use region-based labels if required
-                    if args.region_based:                        
-                        # overwritten the subject_label_file with the region-based label
-                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5)
-                        if subject_label_file is None:
-                            print(f"Skipping since the region-based label could not be generated")
-                            continue
+                    if args.include_axial is not None and subject in train_ax_subs:
+                        
+                        orientations = ["sag", "ax"]
+                        for orientation in orientations:
+                            
+                            train_ctr += 1
+                            # Get paths with session numbers
+                            session = 'ses-0' + str(ses_idx)
 
-                    subject_image_file_nnunet = os.path.join(path_out_imagesTr,f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
-                    subject_label_file_nnunet = os.path.join(path_out_labelsTr,f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
-                    
-                    # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
-                    shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                    shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+                            subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
+                            subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
+                                                            'labels', subject, session, 'anat')
+
+                            subject_image_file = os.path.join(subject_images_path, 
+                                                              f"{subject}_{session}_acq-{orientation}_T2w.nii.gz")
+                            subject_label_file = os.path.join(subject_labels_path, 
+                                                              f"{subject}_{session}_acq-{orientation}_T2w_lesion-manual.nii.gz")
+
+                            # create the new convention names for nnunet
+                            sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
+                            
+                            # use region-based labels if required
+                            if args.region_based:                        
+                                # overwritten the subject_label_file with the region-based label
+                                subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
+                                                                            subject_image_file, sub_ses_name, thr=0.5)
+                                if subject_label_file is None:
+                                    print(f"Skipping since the region-based label could not be generated")
+                                    continue
+
+                            subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
+                                                                     f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
+                            subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                                     f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                            # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
+                            shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+                            shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+                                                
+                    else:                        
+                        train_ctr += 1
+                        # Get paths with session numbers
+                        session = 'ses-0' + str(ses_idx)
+
+                        subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
+                        subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
+                                                        'labels', subject, session, 'anat')
+
+                        # only take the sagittal orientation (as default)
+                        subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
+                        subject_label_file = os.path.join(subject_labels_path, 
+                                                          f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
+
+                        # create the new convention names for nnunet
+                        sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
+                        
+                        # use region-based labels if required
+                        if args.region_based:                        
+                            # overwritten the subject_label_file with the region-based label
+                            subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
+                                                                        subject_image_file, sub_ses_name, thr=0.5)
+                            if subject_label_file is None:
+                                print(f"Skipping since the region-based label could not be generated")
+                                continue
+
+                        subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
+                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
+                        subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                        
+                        # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
+                        shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+                        shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-            
-            # subject is from sci-colorado or sci-paris
+
+
             else:
                 train_ctr += 1
                 subject_images_path = os.path.join(train_subjects[subject], 'anat')
