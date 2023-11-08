@@ -114,7 +114,7 @@ def main():
         if not os.path.exists(dir_path):
             raise ValueError(f'ERROR: {dir_path} does not exist.')
 
-    # Fo each participant_id, get the lesion and spinal cord file names
+    # For each participant_id, get the lesion and spinal cord file names
     df = get_fnames(dir_paths)
 
     # Run sct_analyze_lesion to compute the lesion metrics:
