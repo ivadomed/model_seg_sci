@@ -74,11 +74,8 @@ def get_parser():
 
 def get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5):
     
-    if sub_ses_name.startswith('sub-zh'):
-        # define path for sc seg file
-        subject_seg_file = os.path.join(subject_labels_path, f"{sub_ses_name}_acq-sag_T2w_seg-manual.nii.gz")
-    else:
-        subject_seg_file = os.path.join(subject_labels_path, f"{sub_ses_name}_T2w_seg-manual.nii.gz")
+    # define path for sc seg file
+    subject_seg_file = os.path.join(subject_labels_path, f"{sub_ses_name}_seg-manual.nii.gz")
     
     # check if the seg file exists
     if not os.path.exists(subject_seg_file):
@@ -86,22 +83,14 @@ def get_region_based_label(subject_labels_path, subject_label_file, subject_imag
         return None
 
     # create region-based label
-    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, sub_ses_name,
-                                               thr=thr)
+    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, 
+                                               sub_ses_name, thr=thr)
     
-    if sub_ses_name.startswith('sub-zh'):
-        # save the region-based label
-        nib.save(seg_lesion_nii, os.path.join(subject_labels_path,
-                                              f"{sub_ses_name}_acq-sag_T2w_seg-lesion-manual.nii.gz"))
+    # save the region-based label
+    nib.save(seg_lesion_nii, os.path.join(subject_labels_path, f"{sub_ses_name}_seg-lesion-manual.nii.gz"))
 
-        # overwrite the original label file with the region-based label
-        subject_label_file = os.path.join(subject_labels_path, f"{sub_ses_name}_acq-sag_T2w_seg-lesion-manual.nii.gz")
-    else:
-        # save the region-based label
-        nib.save(seg_lesion_nii, os.path.join(subject_labels_path, f"{sub_ses_name}_T2w_seg-lesion-manual.nii.gz"))
-
-        # overwrite the original label file with the region-based label
-        subject_label_file = os.path.join(subject_labels_path, f"{sub_ses_name}_T2w_seg-lesion-manual.nii.gz")
+    # overwrite the original label file with the region-based label
+    subject_label_file = os.path.join(subject_labels_path, f"{sub_ses_name}_seg-lesion-manual.nii.gz")
 
     return subject_label_file
 
@@ -275,6 +264,7 @@ def main():
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
 
+            # subject is from sci-colorado
             else:
                 train_ctr += 1
                 subject_images_path = os.path.join(train_subjects[subject], 'anat')
@@ -283,11 +273,9 @@ def main():
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
-                # NOTE: if adding more contrasts, add them here by creating image-label files and the corresponding 
-                # nnunet convention names
 
                 # create the new convention names for nnunet
-                sub_name = str(Path(subject_image_file).name).split('_')[0]
+                sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
                 # use region-based labels if required
                 if args.region_based:                        
@@ -333,8 +321,7 @@ def main():
                                                       f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
                     # create the new convention names for nnunet
-                    sub_ses_name = str(Path(subject_image_file).name).split('_')[0] + '_' + \
-                                   str(Path(subject_image_file).name).split('_')[1]
+                    sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
                     # use region-based labels if required
                     if args.region_based:                        
@@ -368,7 +355,7 @@ def main():
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
 
                 # create the new convention names for nnunet
-                sub_name = str(Path(subject_image_file).name).split('_')[0] # + '_' + str(Path(subject_image_file).name).split('_')[1]
+                sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
                 # use region-based labels if required
                 if args.region_based:                        
