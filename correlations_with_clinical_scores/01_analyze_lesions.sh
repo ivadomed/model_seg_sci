@@ -41,7 +41,7 @@
 # {
 #  "path_data"   : "<PATH_TO_DATASET>",
 #  "path_output" : "<PATH_TO_DATASET>_2023-08-18",
-#  "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/analyze_lesions.sh",
+#  "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/01_analyze_lesions.sh",
 #  "jobs"        : 8,
 #  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
 # }
