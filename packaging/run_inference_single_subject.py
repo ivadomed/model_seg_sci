@@ -36,7 +36,9 @@ import glob
 import time
 import tempfile
 
-from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
+# from nnunetv2.inference.predict_from_raw_data import predict_from_raw_data as predictor
+from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+from batchgenerators.utilities.file_and_folder_operations import join
 
 
 def get_parser():
@@ -158,24 +160,64 @@ def main():
     # Run nnUNet prediction
     print('Starting inference...')
     start = time.time()
-    # directly call the predict function
-    predictor(
-        list_of_lists_or_source_folder=fname_file_tmp_list,
-        output_folder=tmpdir_nnunet,
-        model_training_output_dir=args.path_model,
-        use_folds=folds_avail,
+    # # directly call the predict function
+    # predictor(
+    #     list_of_lists_or_source_folder=fname_file_tmp_list,
+    #     output_folder=tmpdir_nnunet,
+    #     model_training_output_dir=args.path_model,
+    #     use_folds=folds_avail,
+    #     tile_step_size=args.tile_step_size,     # changing it from 0.5 to 0.9 makes inference faster
+    #     use_gaussian=True,                      # applies gaussian noise and gaussian blur
+    #     use_mirroring=False,                    # test time augmentation by mirroring on all axes
+    #     perform_everything_on_gpu=True if args.use_gpu else False,
+    #     device=torch.device('cuda', 0) if args.use_gpu else torch.device('cpu'),
+    #     verbose=False,
+    #     save_probabilities=False,
+    #     overwrite=True,
+    #     checkpoint_name='checkpoint_final.pth' if not args.use_best_checkpoint else 'checkpoint_best.pth',
+    #     num_processes_preprocessing=3,
+    #     num_processes_segmentation_export=3
+    # )
+
+    # instantiate the nnUNetPredictor
+    predictor = nnUNetPredictor(
         tile_step_size=args.tile_step_size,     # changing it from 0.5 to 0.9 makes inference faster
-        use_gaussian=True,                      # applies gaussian noise and gaussian blur
-        use_mirroring=False,                    # test time augmentation by mirroring on all axes
+        use_gaussian=True,
+        use_mirroring=False,
         perform_everything_on_gpu=True if args.use_gpu else False,
-        device=torch.device('cuda', 0) if args.use_gpu else torch.device('cpu'),
+        device=torch.device('cuda') if args.use_gpu else torch.device('cpu'),
         verbose=False,
+        verbose_preprocessing=False,
+        allow_tqdm=True
+    )
+    print('Running inference on device: {}'.format(predictor.device))
+
+    # initializes the network architecture, loads the checkpoint
+    predictor.initialize_from_trained_model_folder(
+        join(args.path_model),
+        use_folds=folds_avail,
+        checkpoint_name='checkpoint_final.pth' if not args.use_best_checkpoint else 'checkpoint_best.pth',
+    )
+    print('Model loaded successfully. Fetching test data...')
+
+    # NOTE: for individual files, the image should be in a list of lists
+    predictor.predict_from_files(
+        list_of_lists_or_source_folder=fname_file_tmp_list,
+        output_folder_or_list_of_truncated_output_files=tmpdir_nnunet,
         save_probabilities=False,
         overwrite=True,
-        checkpoint_name='checkpoint_final.pth' if not args.use_best_checkpoint else 'checkpoint_best.pth',
-        num_processes_preprocessing=3,
-        num_processes_segmentation_export=3
+        num_processes_preprocessing=8,
+        num_processes_segmentation_export=8,
+        folder_with_segs_from_prev_stage=None,
+        num_parts=1,
+        part_id=0
     )
+    # predictor.predict_from_list_of_files(
+    #     fname_file_tmp_list, args.path_out,
+    #                                         save_probabilities=False, overwrite=False,
+    #                                         num_processes_preprocessing=2, num_processes_segmentation_export=2,
+    #                                         folder_with_segs_from_prev_stage=None, num_parts=1, part_id=0)
+
     end = time.time()
 
     print('Inference done.')
