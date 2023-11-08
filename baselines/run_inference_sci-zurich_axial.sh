@@ -140,7 +140,7 @@ else
 
     # Segment lesion
     # Note: SC seg is passed to generate QC report
-    segment_lesion_nnUNet "${file_t2}" '2d' "${file_t2}_seg_nnunet_3d"
+    segment_lesion_nnUNet "${file_t2}" '2d' "${file_t2}_seg_nnunet_2d"
     segment_lesion_nnUNet "${file_t2}" '3d' "${file_t2}_seg_nnunet_3d"
 fi
 
