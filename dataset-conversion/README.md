@@ -8,18 +8,15 @@ The data used for training the model are hosted on a private repository accordin
   - Manual segmentations for both spinal cord (SC) and lesion only available for Sagittal T2w
   - Mix of single and multiple (up to 3) sessions
   - Number of subjects: 97
+  - Lesion etiology: Mix of traumatic and ischemic lesions
+  - Surgery: Mix of operated and non-operated subjects
 - University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
   - Contrasts available: Axial T1w, Axial T2w
   - Contrasts used for training: Axial T2w
   - Manual segmentations for both SC and lesion only available for Axial T2w
   - Single session
   - Number of subjects: 80
-- XXX (`sci-paris`) 🇫🇷
-  - Contrasts available: Axial T2w
-  - Contrasts used for training: Axial T2w
-  - Manual segmentations for both SC and lesion available for Axial T2w
-  - Single session
-  - Number of subjects: 14
+  - Post-operative subjects only
 
 
 ### Names and Versions of the Datasets
@@ -30,7 +27,7 @@ The data used for training the model are hosted on a private repository accordin
 - `sci-colorado`
   - Name: git@data.neuro.polymtl.ca:datasets/sci-colorado
   - Commit: 1518ecd
-- `sci-paris`
+- `sci-paris`   (not used for training)
   - Name: git@data.neuro.polymtl.ca:datasets/sci-paris
   - Commit: c4e3bf7
 
@@ -63,7 +60,7 @@ This should do an in-place conversion of all the images (and labels) to RPI orie
 The next step is to convert the data to the nnUNet format. Run the following command:
 
 ```bash
-python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi 
+python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi
           --path-out ${nnUNet_raw} -dname tSCICombinedRegion -dnum 275 --split 0.8 0.2 --seed 50 --region-based
 ```
 
