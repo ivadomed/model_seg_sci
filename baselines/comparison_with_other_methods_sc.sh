@@ -72,8 +72,8 @@ echo "PATH_LOG: ${PATH_LOG}"
 echo "PATH_QC: ${PATH_QC}"
 
 SUBJECT=$1
-PATH_NNUNET_SCRIPT=$2
-PATH_NNUNET_MODEL=$3
+PATH_NNUNET_SCRIPT=$2   # path to the nnUNet SCIseg run_inference_single_subject.py
+PATH_NNUNET_MODEL=$3    # path to the nnUNet SCIseg model
 
 echo "SUBJECT: ${SUBJECT}"
 echo "PATH_NNUNET_SCRIPT: ${PATH_NNUNET_SCRIPT}"
@@ -85,7 +85,7 @@ echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
 # Get ANIMA binaries path
 anima_binaries_path=$(grep "^anima = " ~/.anima/config.txt | sed "s/.* = //" | sed 's/\/$//')
 
-# Segment spinal cord and compute ANIMA segmentation performance metrics
+# Segment spinal cord using methods available in SCT (sct_deepseg_sc or sct_propseg)
 segment_sc() {
   local file="$1"
   local contrast="$2"
@@ -128,7 +128,7 @@ segment_sc() {
   fi
 }
 
-# Segment spinal cord using our nnUNet model
+# Segment spinal cord using our SCIseg nnUNet model
 segment_sc_nnUNet(){
   local file="$1"
   local kernel="$2"     # 2d or 3d
