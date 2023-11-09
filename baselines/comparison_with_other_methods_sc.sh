@@ -165,7 +165,9 @@ segment_sc_MONAI(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_MONAI_SCRIPT} --path-img ${file}.nii.gz --path-out ${FILESEG}.nii.gz --chkp-path ${PATH_MONAI_MODEL}
+  python ${PATH_MONAI_SCRIPT} --path-img ${file}.nii.gz --path-out . --chkp-path ${PATH_MONAI_MODEL}
+  # Rename MONAI output
+  mv ${file}_pred.nii.gz ${FILESEG}.nii.gz
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
