@@ -5,6 +5,9 @@ The script:
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
 
+Note: to read XLS files, you might need to install the following packages:
+    pip install openpyxl
+
 Author: Jan Valosek
 """
 
@@ -12,8 +15,8 @@ import os
 import re
 import glob
 import argparse
-import subprocess
 
+import numpy as np
 import pandas as pd
 
 
