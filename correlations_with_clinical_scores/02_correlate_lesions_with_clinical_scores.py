@@ -103,8 +103,8 @@ def get_fnames(dir_paths):
     df = df.drop_duplicates(subset=['participant_id'])
     print(f'Number of unique participants: {len(df)}')
 
-    # Add a column with fname_lesion_manual by replacing '_nnunet_3d' by 'manual_bin'
-    df['fname_lesion_manual'] = df['fname_lesion_nnunet_3d'].apply(lambda x: x.replace('_nnunet_3d', 'manual_bin'))
+    # Add a column with fname_lesion_manual by replacing '_nnunet_3d' by '-manual_bin'
+    df['fname_lesion_manual'] = df['fname_lesion_nnunet_3d'].apply(lambda x: x.replace('_nnunet_3d', '-manual_bin'))
 
     # Make sure the lesion exists
     for fname in df['fname_lesion_manual']:
@@ -135,6 +135,47 @@ def main():
 
     # For each participant_id, get the lesion and spinal cord file names
     df = get_fnames(dir_paths)
+
+    # Iterate over the rows of the dataframe and read the XLS files
+    for index, row in df.iterrows():
+
+        print(f'Processing XLS files for {row["participant_id"]}')
+
+        # Read the XLS file with lesion metrics for lesion predicted by our 3D SCIseg nnUNet model
+        df_lesion_nnunet_3d = pd.read_excel(row['fname_lesion_nnunet_3d'], sheet_name='measures')
+        # If the dataframe is empty, insert nan values
+        if df_lesion_nnunet_3d.empty:
+            df.at[index, 'volume_nnunet_3d'] = np.nan
+            df.at[index, 'length_nnunet_3d'] = np.nan
+            df.at[index, 'max_axial_damage_ratio_nnunet_3d'] = np.nan
+        else:
+            # check how many rows are in the dataframe
+            if len(df_lesion_nnunet_3d) > 1:
+                print(f'WARNING: More than one row in {row["fname_lesion_nnunet_3d"]}')
+
+            # Get volume, length, and max_axial_damage_ratio and save the values in the currently processed row of df
+            df.at[index, 'volume_nnunet_3d'] = df_lesion_nnunet_3d['volume [mm3]'].values[0]
+            df.at[index, 'length_nnunet_3d'] = df_lesion_nnunet_3d['length [mm]'].values[0]
+            df.at[index, 'max_axial_damage_ratio_nnunet_3d'] = df_lesion_nnunet_3d['max_axial_damage_ratio []'].values[0]
+
+        # Read the XLS file with lesion metrics for manual (GT) lesion
+        df_lesion_manual = pd.read_excel(row['fname_lesion_manual'], sheet_name='measures')
+        # If the dataframe is empty, insert nan values
+        if df_lesion_manual.empty:
+            df.at[index, 'volume_manual'] = np.nan
+            df.at[index, 'length_manual'] = np.nan
+            df.at[index, 'max_axial_damage_ratio_manual'] = np.nan
+        else:
+            # check how many rows are in the dataframe
+            if len(df_lesion_manual) > 1:
+                print(f'WARNING: More than one row in {row["fname_lesion_manual"]}')
+
+            # Get volume, length, and max_axial_damage_ratio and save the values in the currently processed row of df
+            df.at[index, 'volume_manual'] = df_lesion_manual['volume [mm3]'].values[0]
+            df.at[index, 'length_manual'] = df_lesion_manual['length [mm]'].values[0]
+            df.at[index, 'max_axial_damage_ratio_manual'] = df_lesion_manual['max_axial_damage_ratio []'].values[0]
+
+    print('Here')
 
 
 if __name__ == '__main__':
