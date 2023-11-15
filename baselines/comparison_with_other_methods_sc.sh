@@ -170,7 +170,7 @@ compute_anima_metrics(){
   rm ${FILESEG}_updated_header.nii.gz
 }
 
-# Copy GT segmentation
+# Copy GT spinal cord segmentation (located under derivatives/labels)
 copy_gt(){
   local file="$1"
   # Construct file name to GT segmentation located under derivatives/labels
@@ -224,7 +224,7 @@ else
     file_t2="${SUBJECT}"_T2w
 fi
 
-# Copy GT segmentation
+# Copy GT spinal cord segmentation
 copy_gt "${file_t2}"
 
 # Check if file_t2 exists

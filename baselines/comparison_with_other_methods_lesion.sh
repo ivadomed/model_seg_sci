@@ -136,7 +136,7 @@ compute_anima_metrics(){
   rm ${FILELESION}_updated_header.nii.gz
 }
 
-# Copy GT segmentation
+# Copy GT lesion segmentation (located under derivatives/labels)
 copy_gt(){
   local file="$1"
   # Construct file name to GT segmentation located under derivatives/labels
@@ -190,7 +190,7 @@ else
     file_t2="${SUBJECT}"_T2w
 fi
 
-# Copy GT segmentation
+# Copy GT lesion segmentation
 copy_gt "${file_t2}"
 
 # binarize the GT with thr 0.5
