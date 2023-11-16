@@ -108,15 +108,15 @@ segment_lesion_nnUNet(){
 copy_gt(){
   local file="$1"
   # Construct file name to GT segmentation located under derivatives/labels
-  FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_lesion-manual.nii.gz"
+  FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_label-lesion.nii.gz"
   echo ""
   echo "Looking for manual segmentation: $FILELESIONMANUAL"
   if [[ -e $FILELESIONMANUAL ]]; then
       echo "Found! Copying ..."
-      rsync -avzh $FILELESIONMANUAL ${file}_lesion-manual.nii.gz
+      rsync -avzh $FILELESIONMANUAL ${file}_label-lesion.nii.gz
   else
-      echo "File ${FILELESIONMANUAL}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
-      echo "ERROR: Manual GT segmentation ${FILELESIONMANUAL}.nii.gz does not exist. Exiting."
+      echo "File ${FILELESIONMANUAL} does not exist" >> ${PATH_LOG}/missing_files.log
+      echo "ERROR: Manual GT segmentation ${FILELESIONMANUAL} does not exist. Exiting."
       exit 1
   fi
 }
@@ -166,7 +166,7 @@ segment_lesion_nnUNet "${file_t2}" '3d' "${file_t2}_seg_nnunet_3d"
 copy_gt "${file_t2}"
 # Generate QC report for manual lesion segmentation
 # Note: there is no manual SC segmentation, so we use the nnUNet SC segmentation
-sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_seg_nnunet_3d.nii.gz -d ${file_t2}_lesion-manual.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT} -qc-dataset ${SUBJECT}
+sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_seg_nnunet_3d.nii.gz -d ${file_t2}_label-lesion.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT} -qc-dataset ${SUBJECT}
 
 # ------------------------------------------------------------------------------
 # End
