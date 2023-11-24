@@ -68,6 +68,8 @@ def get_parser():
     # input yaml file containing list of axial subjects to include for active learning
     parser.add_argument('--include-axial', type=str, default=None,
                         help='Path to yaml file containing list of axial subjects to include for active learning.')
+    parser.add_argument("--add-sci-paris", action="store_true", default=False,
+                        help="If set, the script will add the sci-paris dataset to the training set. Default: False")
 
     return parser
 
@@ -166,6 +168,19 @@ def main():
         # update the train and test subjects dicts with the key as the subject and value as the path to the subject
         train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
         test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
+
+        # add the sci-paris dataset to the training set
+        if "sci-paris" in dataset and args.add_sci_paris:
+            logger.info(f"Adding the sci-paris dataset to the training set ...")
+            # get the list of subjects in the root directory 
+            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+            # logger.info(f"Total number of subjects in the Colorado dataset: {len(subjects)}")
+
+            # add all the subjects to train_subjects dict
+            train_subjects.update({sub: os.path.join(root, sub) for sub in subjects})
+
+            # add to the list of all subjects
+            all_subjects.extend(subjects)
 
     # print(f"Total number of subjects in the dataset: {len(all_subjects)}")
     # print(f"Total number of subjects in the training set: {len(train_subjects)}")
@@ -386,6 +401,8 @@ def main():
     logger.info(f"Number of training and validation images (including sessions): {train_ctr}")
     logger.info(f"Number of test subjects (including sessions) in SCI-Zurich: {test_ctr_zur}")
     logger.info(f"Number of test subjects (including sessions) in SCI-Colorado: {test_ctr_col}")
+    if args.add_sci_paris:
+        logger.info(f"Training/Validation set contains images from 3 sites: SCI-Zurich, SCI-Colorado, and SCI-Paris")
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
 
