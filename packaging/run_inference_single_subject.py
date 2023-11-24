@@ -160,30 +160,12 @@ def main():
     # Run nnUNet prediction
     print('Starting inference...')
     start = time.time()
-    # # directly call the predict function
-    # predictor(
-    #     list_of_lists_or_source_folder=fname_file_tmp_list,
-    #     output_folder=tmpdir_nnunet,
-    #     model_training_output_dir=args.path_model,
-    #     use_folds=folds_avail,
-    #     tile_step_size=args.tile_step_size,     # changing it from 0.5 to 0.9 makes inference faster
-    #     use_gaussian=True,                      # applies gaussian noise and gaussian blur
-    #     use_mirroring=False,                    # test time augmentation by mirroring on all axes
-    #     perform_everything_on_gpu=True if args.use_gpu else False,
-    #     device=torch.device('cuda', 0) if args.use_gpu else torch.device('cpu'),
-    #     verbose=False,
-    #     save_probabilities=False,
-    #     overwrite=True,
-    #     checkpoint_name='checkpoint_final.pth' if not args.use_best_checkpoint else 'checkpoint_best.pth',
-    #     num_processes_preprocessing=3,
-    #     num_processes_segmentation_export=3
-    # )
 
     # instantiate the nnUNetPredictor
     predictor = nnUNetPredictor(
         tile_step_size=args.tile_step_size,     # changing it from 0.5 to 0.9 makes inference faster
-        use_gaussian=True,
-        use_mirroring=False,
+        use_gaussian=True,                      # applies gaussian noise and gaussian blur
+        use_mirroring=False,                    # test time augmentation by mirroring on all axes
         perform_everything_on_gpu=True if args.use_gpu else False,
         device=torch.device('cuda') if args.use_gpu else torch.device('cpu'),
         verbose=False,
@@ -212,14 +194,8 @@ def main():
         num_parts=1,
         part_id=0
     )
-    # predictor.predict_from_list_of_files(
-    #     fname_file_tmp_list, args.path_out,
-    #                                         save_probabilities=False, overwrite=False,
-    #                                         num_processes_preprocessing=2, num_processes_segmentation_export=2,
-    #                                         folder_with_segs_from_prev_stage=None, num_parts=1, part_id=0)
-
+    
     end = time.time()
-
     print('Inference done.')
     total_time = end - start
     print('Total inference time: {} minute(s) {} seconds'.format(int(total_time // 60), int(round(total_time % 60))))
