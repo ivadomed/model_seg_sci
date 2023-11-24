@@ -47,9 +47,9 @@ def get_parser():
     )
     parser.add_argument(
         '-contrast',
+        required=True,
         type=str,
-        help='Image contrast. For example: T2w or acq-sag_T2w',
-        default='acq-sag_T2w'
+        help='Image contrast. Examples: T2w (sci-colorado), acq-sag_T2w or acq-ax_T2w (sci-zurich)',
     )
 
     return parser
