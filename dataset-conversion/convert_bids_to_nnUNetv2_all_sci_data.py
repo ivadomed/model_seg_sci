@@ -148,26 +148,38 @@ def main():
     # loop over the datasets
     for dataset in args.path_data:
         root = Path(dataset)
+
+        # add the sci-paris dataset to the training set
+        if "sci-paris" in dataset and args.add_sci_paris:
+            logger.info(f"Adding the sci-paris dataset to the training set ...")
+            paris_subs = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+
+            # add all the subjects to train_subjects dict
+            train_subjects.update({sub: os.path.join(root, sub) for sub in paris_subs})
+
+            # add to the list of all subjects
+            all_subjects.extend(paris_subs)
         
-        # get the list of subjects in the root directory 
-        subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+        else:
+            # get the list of subjects in the root directory 
+            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
 
-        # add to the list of all subjects
-        all_subjects.extend(subjects)
-        
-        # Get the training and test splits
-        tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
+            # add to the list of all subjects
+            all_subjects.extend(subjects)
+            
+            # Get the training and test splits
+            tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
 
-        # get the length of the number of subjects common to both tr_subs and axial
-        if args.include_axial is not None and "sci-zurich" in dataset:
-            train_ax_subs = list(set(tr_subs).intersection(axial_subjects))
-            logger.info(f"Number of Zurich axial subjects added to the training set: {len(train_ax_subs)}")
-            test_ax_subs = list(set(te_subs).intersection(axial_subjects))
-            logger.info(f"Corrected axial images in the original test split of seed {args.seed} (hence cannot be added to the training set): {test_ax_subs}")
+            # get the length of the number of subjects common to both tr_subs and axial
+            if args.include_axial is not None and "sci-zurich" in dataset:
+                train_ax_subs = list(set(tr_subs).intersection(axial_subjects))
+                logger.info(f"Number of axial Zurich subjects added to the training set: {len(train_ax_subs)}")
+                test_ax_subs = list(set(te_subs).intersection(axial_subjects))
+                logger.info(f"Corrected axial images in the original test split of seed {args.seed} (hence cannot be added to the training set): {test_ax_subs}")
 
-        # update the train and test subjects dicts with the key as the subject and value as the path to the subject
-        train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
-        test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
+            # update the train and test subjects dicts with the key as the subject and value as the path to the subject
+            train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
+            test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
 
         # add the sci-paris dataset to the training set
         if "sci-paris" in dataset and args.add_sci_paris:
