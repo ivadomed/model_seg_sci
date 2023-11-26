@@ -113,6 +113,9 @@ def main():
     Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
     Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
 
+    # save output to a log file
+    logger.add(os.path.join(path_out, "logs.txt"), rotation="10 MB", level="INFO")
+
     # In case of a single dataset, create test directories only for this dataset
     if len(args.path_data) == 1 and 'zurich' in args.path_data[0]:
         path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
