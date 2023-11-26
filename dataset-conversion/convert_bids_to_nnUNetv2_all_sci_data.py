@@ -145,7 +145,7 @@ def main():
             # convert to a list
             axial_subjects = list(axial_subjects.values())[0]
 
-    logger.info(f"Number of axial subjects in the YAML file: {len(axial_subjects)}")
+    logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
@@ -184,22 +184,9 @@ def main():
             train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
             test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
 
-        # add the sci-paris dataset to the training set
-        if "sci-paris" in dataset and args.add_sci_paris:
-            logger.info(f"Adding the sci-paris dataset to the training set ...")
-            # get the list of subjects in the root directory 
-            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
-            # logger.info(f"Total number of subjects in the Colorado dataset: {len(subjects)}")
-
-            # add all the subjects to train_subjects dict
-            train_subjects.update({sub: os.path.join(root, sub) for sub in subjects})
-
-            # add to the list of all subjects
-            all_subjects.extend(subjects)
-
-    # print(f"Total number of subjects in the dataset: {len(all_subjects)}")
-    # print(f"Total number of subjects in the training set: {len(train_subjects)}")
-    # print(f"Total number of subjects in the test set: {len(test_subjects)}")
+    # logger.info(f"Total number of subjects combining all datasets: {len(all_subjects)}")
+    logger.info(f"Total number of subjects (not images) in the training set (combining all datasets): {len(train_subjects)}")
+    logger.info(f"Total number of subjects (not images) in the test set: {len(test_subjects)}")
     # print(f"subjects in the training set: {train_subjects.keys()}")
 
     train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
@@ -413,9 +400,9 @@ def main():
             print("Skipping file, could not be located in the Train or Test splits split.", subject)
 
     logger.info(f"----- Dataset conversion finished! -----")
-    logger.info(f"Number of training and validation images (including sessions): {train_ctr}")
-    logger.info(f"Number of test subjects (including sessions) in SCI-Zurich: {test_ctr_zur}")
-    logger.info(f"Number of test subjects (including sessions) in SCI-Colorado: {test_ctr_col}")
+    logger.info(f"Number of training and validation images (not subjects) including sessions: {train_ctr}")
+    logger.info(f"Number of test images (not subjects) including sessions in SCI-Zurich: {test_ctr_zur}")
+    logger.info(f"Number of test images (not subjects) including sessions in SCI-Colorado: {test_ctr_col}")
     if args.add_sci_paris:
         logger.info(f"Training/Validation set contains images from 3 sites: SCI-Zurich, SCI-Colorado, and SCI-Paris")
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
