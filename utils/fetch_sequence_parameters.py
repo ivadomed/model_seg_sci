@@ -133,8 +133,13 @@ def main():
     # Initialize an empty list to store the parsed data
     parsed_data = []
 
+    list_of_files = glob.glob(os.path.join(dir_path, '**', '*' + contrast + '.nii.gz'), recursive=True)
+    # Keep only ses-01 for sci-zurich
+    if 'zurich' in dir_path:
+        list_of_files = [file for file in list_of_files if 'ses-01' in file]
+
     # Loop across JSON sidecar files in the input path
-    for file in sorted(glob.glob(os.path.join(dir_path, '**', '*' + contrast + '.nii.gz'), recursive=True)):
+    for file in list_of_files:
         if file.endswith('.nii.gz'):
             print(f'Parsing {file} ...')
             file_path = os.path.join(dir_path, file)
