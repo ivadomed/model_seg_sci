@@ -141,7 +141,7 @@ def main():
     # Loop across JSON sidecar files in the input path
     for file in list_of_files:
         if file.endswith('.nii.gz'):
-            print(f'Parsing {file} ...')
+            print(f'Parsing {file}')
             file_path = os.path.join(dir_path, file)
             parsed_json = parse_json_file(file_path)
             parsed_header = parse_nii_file(file_path)
