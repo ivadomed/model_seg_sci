@@ -7,6 +7,8 @@ Loop across JSON sidecar files and nii headers in the input path and parse from 
     PixDim
     SliceThickness
 
+If JSON sidecar is not available (sci-paris), fetch only PixDim and SliceThickness from nii header.
+
 Example usage:
     python utils/fetch_sequence_parameters.py -i /path/to/dataset -contrast T2w
 
@@ -49,7 +51,7 @@ def get_parser():
         '-contrast',
         required=True,
         type=str,
-        help='Image contrast. Examples: T2w (sci-colorado), acq-sag_T2w or acq-ax_T2w (sci-zurich)',
+        help='Image contrast. Examples: T2w (sci-colorado, sci-paris), acq-sag_T2w or acq-ax_T2w (sci-zurich)',
     )
 
     return parser
