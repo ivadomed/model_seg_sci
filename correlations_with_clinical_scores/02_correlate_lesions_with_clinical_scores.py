@@ -100,6 +100,9 @@ def get_fnames(dir_paths):
     df['participant_id'] = df['fname_lesion_nnunet_3d'].apply(lambda x: fetch_subject_and_session(x))
     # Make the participant_id column the first column
     df = df[['participant_id', 'fname_lesion_nnunet_3d']]
+    # Add a column with site (if participant_id contains 'zh' --> site = 'zurich', otherwise site = 'colorado')
+    df['site'] = df['participant_id'].apply(lambda x: 'zurich' if 'zh' in x else 'colorado')
+
     print(f'Number of rows: {len(df)}')
 
     # Keep only unique participant_id rows
