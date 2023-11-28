@@ -73,7 +73,7 @@ def fetch_subject_and_session(filename_path):
 
 def get_fnames(dir_paths):
     """
-    Get the list of file names across all input paths (i.e. all seeds)
+    Get the list of file names across all input paths (i.e. all seeds), sort them and keep only the unique ones
     :param dir_paths: list of paths to the 'results' folders containing the XLS files with lesion metrics for each seed
     :return: pandas dataframe with the paths to the XLS files for manual and predicted lesions
     """
