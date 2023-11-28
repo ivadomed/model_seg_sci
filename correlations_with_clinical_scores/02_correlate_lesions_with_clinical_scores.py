@@ -187,12 +187,9 @@ def main():
         # Read the XLS file with lesion metrics for manual (GT) lesion
         df = fetch_lesion_metrics(index, row, 'manual', df)
 
-            # Get volume, length, and max_axial_damage_ratio and save the values in the currently processed row of df
-            df.at[index, 'volume_manual'] = df_lesion_manual['volume [mm3]'].values[0]
-            df.at[index, 'length_manual'] = df_lesion_manual['length [mm]'].values[0]
-            df.at[index, 'max_axial_damage_ratio_manual'] = df_lesion_manual['max_axial_damage_ratio []'].values[0]
-
-    print('Here')
+    # Save the dataframe as XLS file
+    df.to_excel(os.path.join(output_dir, 'lesion_metrics.xlsx'), index=False)
+    print(f'Saved {os.path.join(output_dir, "lesion_metrics.xlsx")}')
 
 
 if __name__ == '__main__':
