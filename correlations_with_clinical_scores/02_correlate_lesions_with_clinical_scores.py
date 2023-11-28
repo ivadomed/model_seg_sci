@@ -18,6 +18,15 @@ import argparse
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+
+from matplotlib import pyplot as plt
+
+
+metric_to_title = {'volume': 'Total lesion volume [$mm^3$]',
+                   'length': 'Intramedullary lesion length [mm]',
+                   'max_axial_damage_ratio': 'Maximal axial damage ratio []'
+                   }
 
 
 def get_parser():
@@ -157,6 +166,53 @@ def fetch_lesion_metrics(index, row, pred_type, df):
     return df
 
 
+def generate_regplot(df, output_dir):
+    """
+    Plot data and a linear regression model fit. Manual GT lesion vs lesions predicted using our 3D SCIseg nnUNet model.
+    :param df: dataframe with lesion metrics
+    :param output_dir: output directory
+    """
+
+    print('Plotting...')
+    for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+        # Create a figure
+        fig = plt.figure(figsize=(6, 6))
+        # Create a subplot
+        ax = fig.add_subplot(111)
+        # Plot the data (manual vs nnunet_3d) and a linear regression model fit
+        # Zurich
+        sns.regplot(x=metric+'_manual', y=metric+'_nnunet_3d', data=df[df['site'] == 'zurich'], ax=ax, color='red')
+        # Colorado
+        sns.regplot(x=metric+'_manual', y=metric+'_nnunet_3d', data=df[df['site'] == 'colorado'], ax=ax, color='blue')
+        # Set the title
+        ax.set_title(f'{metric_to_title[metric]}: manual vs nnUNet 3D')
+        # Set the x-axis label
+        ax.set_xlabel(f'Manual GT lesion')
+        # Set the y-axis label
+        ax.set_ylabel(f'Lesion predicted by nnUNet 3D')
+
+        # Make the x- and y-axis limits equal
+        ax.set_ylim(ax.get_xlim())
+        # Make the x- and y-axis ticks equal
+        ax.set_aspect('equal', adjustable='box')
+
+        # Show grid
+        ax.grid(True)
+
+        # # Create single custom legend for whole figure with several subplots
+        markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['red', 'blue']]
+        ax.legend(markers, ['Zurich (T2w sag)', 'Colorado (T2w ax)'], numpoints=1, loc='upper left')
+
+        # Save individual figures
+        plt.tight_layout()
+
+        # Save the figure
+        fig.savefig(os.path.join(output_dir, f'{metric}_regplot.png'), dpi=300)
+        print(f'Saved {os.path.join(output_dir, f"{metric}_regplot.png")}')
+        # Close the figure
+        plt.close(fig)
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -193,6 +249,9 @@ def main():
     # Save the dataframe as XLS file
     df.to_excel(os.path.join(output_dir, 'lesion_metrics.xlsx'), index=False)
     print(f'Saved {os.path.join(output_dir, "lesion_metrics.xlsx")}')
+
+    #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
+    generate_regplot(df, output_dir)
 
 
 if __name__ == '__main__':
