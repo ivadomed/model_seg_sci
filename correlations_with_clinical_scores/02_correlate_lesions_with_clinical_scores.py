@@ -179,10 +179,6 @@ def main():
     # Iterate over the rows of the dataframe and read the XLS files
     for index, row in df.iterrows():
 
-        # Process only sci-colorado (i.e., skip row["participant_id"] containing "zh")
-        if 'zh' in row["participant_id"]:
-            continue
-
         print(f'Processing XLS files for {row["participant_id"]}')
 
         # Read the XLS file with lesion metrics for lesion predicted by our 3D SCIseg nnUNet model
