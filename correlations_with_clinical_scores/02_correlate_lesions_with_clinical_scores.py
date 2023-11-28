@@ -4,6 +4,9 @@ The script:
  - keep only the unique subjects (to avoid duplicates between seeds)
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
+ - save the aggregated data to a CSV file
+ - create regression plots for each metric (volume, length, max_axial_damage_ratio) manual vs nnUNet and save them to
+ the output folder
 
 Note: to read XLS files, you might need to install the following packages:
     pip install openpyxl
