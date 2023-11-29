@@ -393,6 +393,9 @@ def main():
     df.to_excel(os.path.join(output_dir, 'lesion_metrics.xlsx'), index=False)
     print(f'Saved {os.path.join(output_dir, "lesion_metrics.xlsx")}')
 
+    # Remove rows with volume_manual > 4000
+    df = df[df['volume_manual'] <= 4000]
+
     #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
     generate_regplot_manual_vs_predicted(df, output_dir)
 
