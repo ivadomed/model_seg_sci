@@ -5,7 +5,10 @@ The script:
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
  - save the aggregated data to a CSV file
- - create regression plots for each metric (volume, length, max_axial_damage_ratio) manual vs nnUNet and save them to
+ - plot data and a linear regression model fit for each each metric (volume, length, max_axial_damage_ratio) manual vs
+ nnUNet lesion segmentation and save them to the output folder
+ - plot data and a linear regression model fit for each each metric (volume, length, max_axial_damage_ratio) manual vs
+ clinical scores (LEMS, AIS, pinprick, light touch) and admission (initial), discharge and difference and save them to
  the output folder
 
 Note: to read XLS files, you might need to install the following packages:
