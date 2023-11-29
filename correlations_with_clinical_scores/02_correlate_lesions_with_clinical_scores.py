@@ -24,7 +24,8 @@ import pandas as pd
 import seaborn as sns
 
 from matplotlib import pyplot as plt
-
+from matplotlib.ticker import MaxNLocator
+from scipy.stats import spearmanr
 
 metric_to_title = {'volume': 'Total lesion volume [$mm^3$]',
                    'length': 'Intramedullary lesion length [mm]',
@@ -49,6 +50,11 @@ def get_parser():
              'corresponds to a specific seed. The results folders were generated using the \'01_analyze_lesions.sh\'.'
              'The XLS files contain lesion metrics and were generated using \'sct_analyze_lesion.\' '
              'Example: sci-multisite_analyze_lesions_seed7/results sci-multisite_analyze_lesions_seed42/results'
+    )
+    parser.add_argument(
+        '-participants-tsv-colorado',
+        required=False,
+        help='Full path to the sci-colorado participants.tsv file containing the clinical scores.'
     )
     parser.add_argument(
         '-o',
@@ -81,6 +87,36 @@ def fetch_subject_and_session(filename_path):
     subject_session = subjectID + '_' + sessionID if subjectID and sessionID else subjectID
 
     return subject_session
+
+
+def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=False, include_equal=True):
+    """
+    Format p-value.
+    If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
+
+    :param p_value: input p-value as a float
+    :param alpha: significance level
+    :param decimal_places: number of decimal places the p-value will be rounded
+    :param include_space: include space or not (e.g., ' = 0.06')
+    :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
+    :return: p_value: the formatted p-value (e.g., '<0.05') as a str
+    """
+    if include_space:
+        space = ' '
+    else:
+        space = ''
+
+    # If the p-value is lower than alpha, return '<alpha' (e.g., <0.001)
+    if p_value < alpha:
+        p_value = space + "<" + space + str(alpha)
+    # If the p-value is greater than alpha, round it number of decimals specified by decimal_places
+    else:
+        if include_equal:
+            p_value = space + '=' + space + str(round(p_value, decimal_places))
+        else:
+            p_value = space + str(round(p_value, decimal_places))
+
+    return p_value
 
 
 def get_fnames(dir_paths):
@@ -216,10 +252,114 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         plt.close(fig)
 
 
+def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir):
+    """
+    Plot data and a linear regression model fit. Lesion metrics vs clinical scores.
+    :param df: dataframe with lesion metrics
+    :param path_participants_colorado: path to the participants.tsv file
+    :param output_dir: output directory
+    """
+
+    # List of clinical scores
+    clinical_scores_list = ['LEMS', 'ais', 'pin_prick_total', 'light_touch_total']
+
+    clinical_scores_list_final = []
+    # Each score is available in the initial and discharge versions
+    for score in clinical_scores_list:
+        clinical_scores_list_final.append('initial_' + score)
+        clinical_scores_list_final.append('discharge_' + score)
+
+    # Read the participants.tsv file (participant_id and clinical scores columns)
+    df_participants_colorado = pd.read_csv(path_participants_colorado, sep='\t',
+                                           usecols=['participant_id'] + clinical_scores_list_final)
+
+    # Recode discharge_ais
+    df_participants_colorado['discharge_ais'] = df_participants_colorado['discharge_ais'].replace(
+        {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5})
+
+    # Compute the difference between initial and discharge scores
+    for score in clinical_scores_list:
+        df_participants_colorado['diff_' + score] = df_participants_colorado['initial_' + score] - \
+                                                    df_participants_colorado['discharge_' + score]
+
+    # Merge the dataframes
+    df = pd.merge(df, df_participants_colorado, on='participant_id')
+
+    df_colorado = df[df['site'] == 'colorado']
+
+    # Drop rows with NaNs
+    df_colorado = df_colorado.dropna()
+
+    # Compute difference between manual and nnunet_3d lesion segmetation
+    for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+        df_colorado[metric + '_diff'] = df_colorado[metric + '_manual'] - df_colorado[metric + '_nnunet_3d']
+
+    for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+        for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list]:
+            # Create a figure
+            fig = plt.figure(figsize=(7, 7))
+            # Create a subplot
+            ax = fig.add_subplot(111)
+            # Plot the data (manual vs nnunet_3d) and a linear regression model fit
+            # We have clinical scores only for Colorado
+            sns.regplot(x=score, y=metric + '_nnunet_3d', data=df_colorado, ax=ax,
+                        color='green')
+            sns.regplot(x=score, y=metric + '_manual', data=df_colorado, ax=ax,
+                        color='orange')
+            sns.regplot(x=score, y=metric + '_diff', data=df_colorado, ax=ax,
+                        color='black')
+
+            # Compute correlation coefficient and p-value and add them to the plot
+            corr_nnunet, pval_nnunet = spearmanr(df_colorado[score], df_colorado[metric + '_nnunet_3d'])
+            corr_manual, pval_manual = spearmanr(df_colorado[score], df_colorado[metric + '_manual'])
+
+            # Set the title
+            ax.set_title(f'{metric_to_title[metric]} vs {score}')
+            # Set the x-axis label
+            ax.set_xlabel(f'{score}')
+            # Set the y-axis label
+            ax.set_ylabel(f'{metric_to_title[metric]}')
+
+            # For AIS, set x-axis ticks to be integers
+            if 'ais' in score:
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+            # Show grid
+            ax.grid(True)
+
+            # # Create single custom legend for whole figure with several subplots
+            markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange', 'black']]
+            legend = ax.legend(markers,
+                               [f'nnUNet 3D lesion segmentation: Spearman r={corr_nnunet:.2f}, '
+                                f'p{format_pvalue(pval_nnunet)}',
+                                f'Manual GT lesion segmentation: Spearman r={corr_manual:.2f}, '
+                                f'p{format_pvalue(pval_manual)}',
+                                f'Difference manual - nnUNet 3D'],
+                               numpoints=1,
+                               loc='upper right')
+            # Make legend's box black
+            frame = legend.get_frame()
+            frame.set_edgecolor('black')
+            ax.add_artist(legend)
+
+            # Save individual figures
+            plt.tight_layout()
+
+            # Save the figure
+            fname_fig = os.path.join(output_dir, f'{metric}_regplot_{score}.png')
+            fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
+            print(f'Saved {os.path.join(output_dir, fname_fig)}')
+            # Close the figure
+            plt.close(fig)
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
     args = parser.parse_args()
+
+    # Path to the sci-colorado participants.tsv file containing the clinical scores
+    path_participants_colorado = args.participants_tsv_colorado
 
     # Output directory
     output_dir = os.path.join(os.getcwd(), args.o)
@@ -254,7 +394,12 @@ def main():
     print(f'Saved {os.path.join(output_dir, "lesion_metrics.xlsx")}')
 
     #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
-    generate_regplot(df, output_dir)
+    generate_regplot_manual_vs_predicted(df, output_dir)
+
+    # If sci-colorado participants.tsv file is provided, plot data and a linear regression model fit
+    if path_participants_colorado is not None:
+        # Plot data and a linear regression model fit. Lesion metrics vs clinical scores.
+        generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
 
 
 if __name__ == '__main__':
