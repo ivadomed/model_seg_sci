@@ -169,17 +169,16 @@ def fetch_lesion_metrics(index, row, pred_type, df):
     return df
 
 
-def generate_regplot(df, output_dir):
+def generate_regplot_manual_vs_predicted(df, output_dir):
     """
     Plot data and a linear regression model fit. Manual GT lesion vs lesions predicted using our 3D SCIseg nnUNet model.
     :param df: dataframe with lesion metrics
     :param output_dir: output directory
     """
 
-    print('Plotting...')
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         # Create a figure
-        fig = plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(7, 7))
         # Create a subplot
         ax = fig.add_subplot(111)
         # Plot the data (manual vs nnunet_3d) and a linear regression model fit
@@ -188,7 +187,7 @@ def generate_regplot(df, output_dir):
         # Colorado
         sns.regplot(x=metric+'_manual', y=metric+'_nnunet_3d', data=df[df['site'] == 'colorado'], ax=ax, color='blue')
         # Set the title
-        ax.set_title(f'{metric_to_title[metric]}: manual vs nnUNet 3D')
+        ax.set_title(f'{metric_to_title[metric]}: manual vs nnUNet 3D lesion seg')
         # Set the x-axis label
         ax.set_xlabel(f'Manual GT lesion')
         # Set the y-axis label
@@ -210,8 +209,9 @@ def generate_regplot(df, output_dir):
         plt.tight_layout()
 
         # Save the figure
-        fig.savefig(os.path.join(output_dir, f'{metric}_regplot.png'), dpi=300)
-        print(f'Saved {os.path.join(output_dir, f"{metric}_regplot.png")}')
+        fname_fig = os.path.join(output_dir, f'{metric}_regplot.png')
+        fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
+        print(f'Saved {os.path.join(output_dir, fname_fig)}')
         # Close the figure
         plt.close(fig)
 
