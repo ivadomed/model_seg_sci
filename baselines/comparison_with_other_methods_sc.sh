@@ -143,7 +143,7 @@ segment_sc_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type sc -use-gpu
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -165,7 +165,7 @@ segment_sc_MONAI(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_MONAI_SCRIPT} --path-img ${file}.nii.gz --path-out . --chkp-path ${PATH_MONAI_MODEL}
+  python ${PATH_MONAI_SCRIPT} --path-img ${file}.nii.gz --path-out . --chkp-path ${PATH_MONAI_MODEL} --device gpu
   # Rename MONAI output
   mv ${file}_pred.nii.gz ${FILESEG}.nii.gz
   # Get the end time
