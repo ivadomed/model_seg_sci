@@ -271,7 +271,7 @@ segment_sc "${file_t2}" 't2' 'deepseg' '2d'
 segment_sc "${file_t2}" 't2' 'deepseg' '3d'
 segment_sc "${file_t2}" 't2' 'propseg'
 segment_sc_nnUNet "${file_t2}" '2d'
-segment_sc_nnUNet "${file_t2}" '3d'
+segment_sc_nnUNet "${file_t2}" '3d_fullres'
 segment_sc_MONAI "${file_t2}"
 
 # ------------------------------------------------------------------------------
