@@ -289,6 +289,17 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         print(f'Created: {fname_fig}')
 
 
+def print_colorado_subjects_with_dice_0(df_concat):
+    """
+    Print subjects with Dice = 0 for Colorado site
+    :param df_concat: dataframe containing all the data
+    :return:
+    """
+    df = df_concat[df_concat['site'] == 'colorado']
+    df = df[df['Dice'] == 0]
+    print(df[['filename', 'method', 'Dice']])
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -362,6 +373,9 @@ def main():
 
     # Concatenate the list of dataframes into a single dataframe
     df_concat = pd.concat(list_of_df, ignore_index=True)
+
+    # Print colorado subjects with Dice=0
+    print_colorado_subjects_with_dice_0(df_concat)
 
     # Print mean and std for each metric
     print_mean_and_std(df_concat, list_of_metrics, pred_type)
