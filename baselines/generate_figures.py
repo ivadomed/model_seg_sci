@@ -1,5 +1,5 @@
 """
-Parse the xml files with segmentation metrics and execution_time.csv and create Raincloud plot.
+Parse the xml files with ANIMA segmentation metrics and execution_time.csv and create Raincloud plot.
 Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
 
 Authors: Jan Valosek, Naga Karthik
@@ -323,6 +323,7 @@ def main():
     # Initialize an empty list to store the parsed dataframes from each directory
     list_of_df = list()
 
+    # Loop across provided directories and parse the xml files
     for dir_path in dir_paths:
         # Get all the xml files in the directory
         xml_files = glob.glob(os.path.join(dir_path, '*.xml'))
