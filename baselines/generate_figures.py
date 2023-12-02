@@ -29,6 +29,7 @@ METHODS_TO_LABEL_SC = {
     'deepseg_3d': 'sct_deepseg_sc 3D',
     'nnunet_2d': 'nnUNet 2D',
     'nnunet_3d': 'nnUNet 3D',
+    'monai': 'contrast-agnostic',
     }
 
 METHODS_TO_LABEL_LESION = {
@@ -353,6 +354,9 @@ def main():
         df[['site', 'method']] = df['filename'].apply(lambda x: pd.Series(fetch_site_and_method(x, pred_type)))
         # Reorder the columns
         df = df[['filename', 'site', 'method'] + [col for col in df.columns if col not in ['filename', 'site', 'method']]]
+
+        # remove '_fullres' from the method column
+        df['method'] = df['method'].apply(lambda x: x.replace('_fullres', ''))
 
         list_of_df.append(df)
 
