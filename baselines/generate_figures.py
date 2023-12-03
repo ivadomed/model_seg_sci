@@ -263,6 +263,9 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         elif metric == 'RelativeVolumeError' and pred_type == 'lesion':
             ax.set_ylim(-125, 125)
 
+        if metric == 'SurfaceDistance' and pred_type == 'sc':
+            ax.set_ylim(0, 15)
+
         # Set title
         num_of_seeds = len(df['seed'].unique())
         if pred_type == 'sc':
