@@ -27,9 +27,9 @@ METHODS_TO_LABEL_SC = {
     'propseg': 'sct_propseg',
     'deepseg_2d': 'sct_deepseg_sc 2D',
     'deepseg_3d': 'sct_deepseg_sc 3D',
-    'nnunet_2d': 'nnUNet 2D',
-    'nnunet_3d': 'nnUNet 3D',
     'monai': 'contrast-agnostic',
+    'nnunet_2d': 'nnUNet 2D',
+    'nnunet_3d': 'nnUNet 3D'
     }
 
 METHODS_TO_LABEL_LESION = {
