@@ -11,9 +11,11 @@ Example:
 """
 
 import os
+import sys
 import re
 import glob
 import argparse
+import logging
 import numpy as np
 import matplotlib as mpl
 
@@ -21,6 +23,13 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import matplotlib.pyplot as plt
 import ptitprince as pt
+
+
+# Initialize logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # default: logging.DEBUG, logging.INFO
+hdlr = logging.StreamHandler(sys.stdout)
+logging.root.addHandler(hdlr)
 
 
 METHODS_TO_LABEL_SC = {
@@ -151,23 +160,23 @@ def print_mean_and_std(df, list_of_metrics, pred_type):
     """
     # Loop across metrics
     for metric in list_of_metrics:
-        print(f'{metric}:')
+        logger.info(f'{metric}:')
         # Loop across methods (e.g., nnUNet 2D, nnUNet 3D, etc.)
         for method in df['method'].unique():
             # Mean +- std across sites
             if pred_type == 'sc':
-                print(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
-                      f'{df[df["method"] == method][metric].std():.2f}')
+                logger.info(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                            f'{df[df["method"] == method][metric].std():.2f}')
             elif pred_type == 'lesion':
-                print(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
-                      f'{df[df["method"] == method][metric].std():.2f}')
+                logger.info(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                            f'{df[df["method"] == method][metric].std():.2f}')
             # Loop across sites
             for site in df['site'].unique():
                 df_tmp = df[(df['method'] == method) & (df['site'] == site)]
                 if pred_type == 'sc':
-                    print(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                    logger.info(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
                 elif pred_type == 'lesion':
-                    print(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                    logger.info(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
 
 
 def split_string_by_capital_letters(s):
@@ -289,7 +298,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         fname_fig = os.path.join(path_figures, f'{pred_type}_rainplot_{metric}.png')
         plt.savefig(fname_fig, dpi=300, bbox_inches='tight')
         plt.close()
-        print(f'Created: {fname_fig}')
+        logger.info(f'Created: {fname_fig}')
 
 
 def print_colorado_subjects_with_dice_0(df_concat):
@@ -300,7 +309,8 @@ def print_colorado_subjects_with_dice_0(df_concat):
     """
     df = df_concat[df_concat['site'] == 'colorado']
     df = df[df['Dice'] == 0]
-    print(df[['filename', 'method', 'Dice']])
+    logger.info(f'Subjects with Dice = 0 for Colorado site:')
+    logger.info(df[['filename', 'method', 'Dice']])
 
 
 def main():
@@ -314,6 +324,13 @@ def main():
     output_dir = os.path.join(os.getcwd(), args.o)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    # Dump log file there
+    fname_log = f'log_stats_{pred_type}.txt'
+    if os.path.exists(fname_log):
+        os.remove(fname_log)
+    fh = logging.FileHandler(os.path.join(os.path.abspath(output_dir), fname_log))
+    logging.root.addHandler(fh)
 
     # Parse input paths
     dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
@@ -349,7 +366,7 @@ def main():
         # Create a pandas DataFrame from the parsed data
         df = pd.DataFrame(parsed_data)
 
-        print(f'Parsed {len(df)} files for seed {seed} from {dir_path}.')
+        logger.info(f'Parsed {len(df)} files for seed {seed} from {dir_path}.')
 
         # Get list of ANIMA metrics
         list_of_metrics = list(df.columns)
@@ -384,7 +401,7 @@ def main():
     # Print mean and std for each metric
     print_mean_and_std(df_concat, list_of_metrics, pred_type)
 
-    print("")
+    logger.info("")
     # Create Raincloud plot for each metric
     create_rainplot(df_concat, list_of_metrics, output_dir, pred_type)
 
