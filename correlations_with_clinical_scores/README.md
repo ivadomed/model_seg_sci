@@ -12,7 +12,7 @@ caller `sct_run_batch`).
 
 Example:
 
-```commandline
+```console
 sct_run_batch -config config_analyze_lesions_seed{XXX}.json
 ```
 
@@ -33,7 +33,7 @@ In this case, we pass the path to the `run_inference_single_subject.py` script a
 
 ℹ️ You can run the script across all train/test splits (i.e., seeds) by using the following command:
 
-```commandline
+```console
 for config_file in config_analyze_lesions_seed*.json;do echo sct_run_batch -config $config_file;done
 ```
 
