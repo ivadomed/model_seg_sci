@@ -280,6 +280,14 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
     df_participants_colorado['discharge_ais'] = df_participants_colorado['discharge_ais'].replace(
         {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5})
 
+    # Separate initial_ais into 2 groups of motor complete (AIS A/B) versus motor incomplete (AIS C/D)
+    df_participants_colorado['initial_ais_grouped'] = df_participants_colorado['initial_ais'].replace(
+        {1: 1, 2: 1, 3: 2, 4: 2})
+
+    # Separate discharge_ais into 2 groups of motor complete (AIS A/B) versus motor incomplete (AIS C/D)
+    df_participants_colorado['discharge_ais_grouped'] = df_participants_colorado['discharge_ais'].replace(
+        {1: 1, 2: 1, 3: 2, 4: 2})
+
     # Compute the difference between initial and discharge scores
     for score in clinical_scores_list:
         df_participants_colorado['diff_' + score] = df_participants_colorado['initial_' + score] - \
@@ -298,7 +306,9 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
         df_colorado[metric + '_diff'] = df_colorado[metric + '_manual'] - df_colorado[metric + '_nnunet_3d']
 
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
-        for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list]:
+        # Loop across clinical scores
+        for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
+                     ['initial_ais_grouped', 'discharge_ais_grouped']:
             # Create a figure
             fig = plt.figure(figsize=(7, 7))
             # Create a subplot
@@ -326,6 +336,10 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
             # For AIS, set x-axis ticks to be integers
             if 'ais' in score:
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+            # For grouped AIS, change x-axis labels from 1 to motor complete (A/B) and from 2 to motor incomplete (C/D)
+            if 'ais_grouped' in score:
+                ax.set_xticklabels(['', 'motor complete (A/B)', 'motor incomplete (C/D)'])
 
             # Show grid
             ax.grid(True)
