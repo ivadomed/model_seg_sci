@@ -305,6 +305,7 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         df_colorado[metric + '_diff'] = df_colorado[metric + '_manual'] - df_colorado[metric + '_nnunet_3d']
 
+    # Loop across lesion metrics
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         # Loop across clinical scores
         for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
