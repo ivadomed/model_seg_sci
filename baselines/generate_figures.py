@@ -89,7 +89,7 @@ def get_parser():
 
 def parse_xml_file(file_path):
     """
-    Fetch subject_id and segmentation metrics from the xml file:
+    Fetch filename and segmentation metrics from the xml file:
 
     <?xml version="1.0" encoding="UTF-8"?>
     <image name="sub-5546_T2w_seg_deepseg_2d_global">
@@ -106,7 +106,8 @@ def parse_xml_file(file_path):
     </image>
 
     :param file_path: path to the xml file
-    :return: subject_id: subject id
+    :return filename: filename, e.g. 'sub-5416_T2w_seg_deepseg_2d_global'
+    :return segmentation_metrics: dictionary with segmentation metrics
     """
     # Parse the XML data
     with open(file_path, 'r') as xml_file:
