@@ -129,18 +129,18 @@ def parse_xml_file(file_path):
     return filename, segmentation_metrics
 
 
-def fetch_site_and_method(input_string, pred_type):
+def fetch_participant_id_site_and_method(input_string, pred_type):
     """
-    Fetch the subject_id, site and method from the input string
+    Fetch the participant_id, site and method from the input string
     :param input_string: input string, e.g. 'sub-5416_T2w_seg_nnunet'
-    :return subject_id: subject id, e.g. 'sub-5416'
+    :return participant_id: subject id, e.g. 'sub-5416'
     :return site: site name, e.g. 'zurich' or 'colorado'
     :return method: segmentation method, e.g. 'nnunet'
     """
 
     # Fetch subject id
-    subject = re.search('sub-(.*?)[_/]', input_string)  # [_/] slash or underscore
-    subject_id = subject.group(0)[:-1] if subject else ""  # [:-1] removes the last underscore or slash
+    participant = re.search('sub-(.*?)[_/]', input_string)  # [_/] slash or underscore
+    participant_id = participant.group(0)[:-1] if participant else ""  # [:-1] removes the last underscore or slash
 
     # Fetch site
     if 'sub-zh' in input_string:
@@ -156,7 +156,7 @@ def fetch_site_and_method(input_string, pred_type):
     else:
         raise ValueError(f'Unknown pred_type: {pred_type}')
 
-    return subject_id, site, method
+    return participant_id, site, method
 
 
 def print_mean_and_std(df, list_of_metrics, pred_type):
@@ -392,11 +392,11 @@ def main():
             list_of_metrics.append('ExecutionTime[s]')
 
         # Apply the fetch_filename_and_method function to each row using a lambda function
-        df[['subject_id', 'site', 'method']] = df['filename'].\
-            apply(lambda x: pd.Series(fetch_site_and_method(x, pred_type)))
+        df[['participant_id', 'site', 'method']] = df['filename'].\
+            apply(lambda x: pd.Series(fetch_participant_id_site_and_method(x, pred_type)))
         # Reorder the columns
-        df = df[['filename', 'subject_id', 'site', 'method'] + [col for col in df.columns if col not in
-                                                                ['filename', 'subject_id', 'site', 'method']]]
+        df = df[['filename', 'participant_id', 'site', 'method'] + [col for col in df.columns if col not in
+                                                                ['filename', 'participant_id', 'site', 'method']]]
 
         # remove '_fullres' from the method column
         df['method'] = df['method'].apply(lambda x: x.replace('_fullres', ''))
@@ -408,7 +408,7 @@ def main():
 
     # Remove 'sub-5740' (https://github.com/ivadomed/model_seg_sci/issues/59)
     logger.info(f'Removing subject sub-5740 from the dataframe.')
-    df_concat = df_concat[df_concat['subject_id'] != 'sub-5740']
+    df_concat = df_concat[df_concat['participant_id'] != 'sub-5740']
 
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
