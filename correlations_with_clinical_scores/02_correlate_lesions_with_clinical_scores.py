@@ -301,7 +301,7 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
     # Drop rows with NaNs
     df_colorado = df_colorado.dropna()
 
-    # Compute difference between manual and nnunet_3d lesion segmetation
+    # Compute difference between manual and nnunet_3d lesion segmentation
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         df_colorado[metric + '_diff'] = df_colorado[metric + '_manual'] - df_colorado[metric + '_nnunet_3d']
 
