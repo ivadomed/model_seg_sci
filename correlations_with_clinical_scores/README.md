@@ -21,7 +21,7 @@ Example of the `config_analyze_lesions_seed{XXX}.json` file:
 ```json
 {
   "path_data"   : "<PATH_TO_COMBINED_DATASET>_seed{XXX}",
-  "path_output" : "<PATH_TO_COMBINED_DATASET>_2023-08-18",
+  "path_output" : "<PATH_TO_COMBINED_DATASET>_analyze_lesions_seed{XXX}_2023-XX-XX",
   "script"      : "<PATH_TO_REPO>/model_seg_sci/correlations_with_clinical_scores/01_analyze_lesions.sh",
   "jobs"        : 8,
   "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX}"
