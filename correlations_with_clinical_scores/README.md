@@ -28,10 +28,11 @@ Example of the `config_analyze_lesions_seed{XXX}.json` file:
 }
 ```
 
-ℹ️ `script_args` argument is used to pass arguments to the `comparison_with_other_methods_{sc,lesion}.sh` script. 
+ℹ️ `script_args` argument is used to pass arguments to the `01_analyze_lesions.sh` script. 
 In this case, we pass the path to the `run_inference_single_subject.py` script and the path to the nnUNet model.
 
-ℹ️ You can run the script across all train/test splits (i.e., seeds) by using the following command:
+ℹ️ You can run the script across all train/test splits (i.e., seeds) by using the following command (assuming you have 
+5 different config files, one for each seed):
 
 ```console
 for config_file in config_analyze_lesions_seed*.json;do echo sct_run_batch -config $config_file;done
