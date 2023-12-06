@@ -329,6 +329,7 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
     # Merge the dataframes
     df = pd.merge(df, df_participants_colorado, on='participant_id')
 
+    # We have clinical scores only for Colorado
     df_colorado = df[df['site'] == 'colorado']
 
     # Drop rows with NaNs
