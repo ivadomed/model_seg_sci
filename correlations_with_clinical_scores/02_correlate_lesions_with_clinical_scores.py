@@ -241,10 +241,27 @@ def generate_regplot_manual_vs_predicted(df, output_dir, figure_title):
         # Set the y-axis label
         ax.set_ylabel(f'Lesion predicted by nnUNet 3D')
 
-        # Make the x- and y-axis limits equal
-        ax.set_ylim(ax.get_xlim())
-        # Make the x- and y-axis ticks equal
-        ax.set_aspect('equal', adjustable='box')
+        # Set title
+        ax.set_title(f'{figure_title}: {metric_to_title[metric]}: manual vs nnUNet 3D lesion seg')
+
+        if metric == 'length':
+            # Set the x-axis limits
+            ax.set_xlim(-5, 210)
+            # Set the y-axis limits
+            ax.set_ylim(-5, 210)
+        elif metric == 'volume':
+            # Set the x-axis limits
+            ax.set_xlim(-200, 7100)
+            # Set the y-axis limits
+            ax.set_ylim(-200, 7100)
+        else:
+            # Set the x-axis limits
+            ax.set_xlim(-0.1, 2.1)
+            # Set the y-axis limits
+            ax.set_ylim(-0.1, 2.1)
+
+        # Draw a diagonal line
+        ax.plot(ax.get_xlim(), ax.get_ylim(), ls="--", c=".3")
 
         # Show grid
         ax.grid(True)
