@@ -18,9 +18,11 @@ Author: Jan Valosek
 """
 
 import os
+import sys
 import re
 import glob
 import argparse
+import logging
 
 import numpy as np
 import pandas as pd
@@ -34,6 +36,12 @@ metric_to_title = {'volume': 'Total lesion volume [$mm^3$]',
                    'length': 'Intramedullary lesion length [mm]',
                    'max_axial_damage_ratio': 'Maximal axial damage ratio []'
                    }
+
+# Initialize logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # default: logging.DEBUG, logging.INFO
+hdlr = logging.StreamHandler(sys.stdout)
+logging.root.addHandler(hdlr)
 
 
 def get_parser():
@@ -197,7 +205,7 @@ def fetch_lesion_metrics(index, row, pred_type, df):
                 df_lesion_nnunet_3d['max_axial_damage_ratio []'].values[0]
         # More than one lesion
         else:
-            print(f'WARNING: More than one lesion in {row["fname_lesion_nnunet_3d"]}')
+            logger.info(f'WARNING: More than one lesion in {row["fname_lesion_nnunet_3d"]}')
             # Sum the volume and length
             df.at[index, 'volume_'+pred_type] = df_lesion_nnunet_3d['volume [mm3]'].sum()
             df.at[index, 'length_'+pred_type] = df_lesion_nnunet_3d['length [mm]'].sum()
@@ -208,11 +216,12 @@ def fetch_lesion_metrics(index, row, pred_type, df):
     return df
 
 
-def generate_regplot_manual_vs_predicted(df, output_dir):
+def generate_regplot_manual_vs_predicted(df, output_dir, figure_title):
     """
     Plot data and a linear regression model fit. Manual GT lesion vs lesions predicted using our 3D SCIseg nnUNet model.
     :param df: dataframe with lesion metrics
     :param output_dir: output directory
+    :param figure_title: title of the figure ('2sites', '3sites_beforeAL', or '3sites_afterAL')
     """
 
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
@@ -248,11 +257,18 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         plt.tight_layout()
 
         # Save the figure
-        fname_fig = os.path.join(output_dir, f'{metric}_regplot.png')
+        fname_fig = os.path.join(output_dir, f'{metric}_regplot_{figure_title}.png')
         fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
-        print(f'Saved {os.path.join(output_dir, fname_fig)}')
+        logger.info(f'Saved {os.path.join(output_dir, fname_fig)}')
         # Close the figure
         plt.close(fig)
+
+    # print subjects with length > 100 mm
+    pd.set_option('display.max_colwidth', None)
+    logger.info(df[(df['length_manual'] > 100) & (df['length_nnunet_3d'] < 100)][
+              ['site', 'participant_id', 'length_manual', 'length_nnunet_3d']])
+    logger.info(df[(df['length_manual'] > 100) & (df['length_nnunet_3d'] < 100)][
+              ['fname_lesion_nnunet_3d']])
 
 
 def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir):
@@ -385,6 +401,18 @@ def main():
         os.makedirs(output_dir)
         print(f'Created {output_dir}')
 
+    # From output_dir, get '2sites', '3sites_beforeAL', or '3sites_afterAL' using regex
+    match = re.search(r'2sites|3sites_beforeAL|3sites_afterAL', output_dir)
+    if match:
+        figure_title = match.group()
+
+    # Dump log file there
+    fname_log = f'log_{figure_title}.txt'
+    if os.path.exists(fname_log):
+        os.remove(fname_log)
+    fh = logging.FileHandler(os.path.join(os.path.abspath(output_dir), fname_log))
+    logging.root.addHandler(fh)
+
     # Parse input paths
     dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
 
@@ -399,7 +427,7 @@ def main():
     # Iterate over the rows of the dataframe and read the XLS files
     for index, row in df.iterrows():
 
-        print(f'Processing XLS files for {row["participant_id"]}')
+        logger.info(f'Processing XLS files for {row["participant_id"]}')
 
         # Read the XLS file with lesion metrics for lesion predicted by our 3D SCIseg nnUNet model
         df = fetch_lesion_metrics(index, row, 'nnunet_3d', df)
@@ -408,14 +436,15 @@ def main():
         df = fetch_lesion_metrics(index, row, 'manual', df)
 
     # Save the dataframe as XLS file
-    df.to_excel(os.path.join(output_dir, 'lesion_metrics.xlsx'), index=False)
-    print(f'Saved {os.path.join(output_dir, "lesion_metrics.xlsx")}')
+    xls_fname = os.path.join(output_dir, f'lesion_metrics_{figure_title}.xlsx')
+    df.to_excel(xls_fname, index=False)
+    logger.info(f'Saved {xls_fname}')
 
     # Remove rows with volume_manual > 4000
     df = df[df['volume_manual'] <= 4000]
 
     #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
-    generate_regplot_manual_vs_predicted(df, output_dir)
+    generate_regplot_manual_vs_predicted(df, output_dir, figure_title)
 
     # If sci-colorado participants.tsv file is provided, plot data and a linear regression model fit
     if path_participants_colorado is not None:
