@@ -39,3 +39,8 @@ for config_file in config_analyze_lesions_seed*.json;do echo sct_run_batch -conf
 ```
 
 ⚠️ Make sure that the input dataset (`path_data`) corresponds with the seed of the nnUNet model (`script_args`).
+
+## 2. Generate regression plots using the `02a_generate_regplot_manual_vs_predicted.py` script
+
+Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCISeg 3D lesion
+segmentation BEFORE and AFTER active learning.
