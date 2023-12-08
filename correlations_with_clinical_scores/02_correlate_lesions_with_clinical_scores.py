@@ -27,6 +27,7 @@ import logging
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib as mpl
 
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -223,6 +224,8 @@ def generate_regplot_manual_vs_predicted(df, output_dir, figure_title):
     :param output_dir: output directory
     :param figure_title: title of the figure ('2sites', '3sites_beforeAL', or '3sites_afterAL')
     """
+
+    mpl.rcParams['font.family'] = 'Helvetica'
 
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         # Create a figure
