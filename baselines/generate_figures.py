@@ -34,11 +34,11 @@ logging.root.addHandler(hdlr)
 
 METHODS_TO_LABEL_SC = {
     'propseg': 'sct_propseg',
-    'deepseg_2d': 'sct_deepseg_sc 2D',
-    'deepseg_3d': 'sct_deepseg_sc 3D',
+    'deepseg_2d': 'sct_deepseg_sc\n2D',
+    'deepseg_3d': 'sct_deepseg_sc\n3D',
     'monai': 'contrast-agnostic',
-    'nnunet_2d': 'SCISeg 2D',
-    'nnunet_3d': 'SCISeg 3D'
+    'nnunet_2d': 'SCISeg\n2D',
+    'nnunet_3d': 'SCISeg\n3D'
     }
 
 METHODS_TO_LABEL_LESION = {
