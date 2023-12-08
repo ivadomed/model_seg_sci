@@ -30,9 +30,9 @@ import matplotlib as mpl
 
 from matplotlib import pyplot as plt
 
-metric_to_title = {'volume': 'Total lesion volume [mm$^3$]',
-                   'length': 'Intramedullary lesion length [mm]',
-                   'max_axial_damage_ratio': 'Maximal axial damage ratio'
+metric_to_title = {'volume': 'Total Lesion Volume [mm$^3$]',
+                   'length': 'Intramedullary Lesion Length [mm]',
+                   'max_axial_damage_ratio': 'Maximal Axial Damage Ratio'
                    }
 
 # Initialize logging
@@ -41,7 +41,7 @@ logger.setLevel(logging.INFO)  # default: logging.DEBUG, logging.INFO
 hdlr = logging.StreamHandler(sys.stdout)
 logging.root.addHandler(hdlr)
 
-FONT_SIZE = 14
+FONT_SIZE = 15
 
 
 def get_parser():
@@ -212,7 +212,7 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
             df = df[df['max_axial_damage_ratio_manual_method2'] <= 1]
 
         # Create a figure
-        fig = plt.figure(figsize=(7, 7))
+        fig = plt.figure(figsize=(6, 6))
         # Create a subplot
         ax = fig.add_subplot(111)
         # Plot the data (manual vs nnunet_3d) and a linear regression model fit
@@ -235,7 +235,7 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Set the x-axis label
         ax.set_xlabel(f'Manual Ground Truth', fontsize=FONT_SIZE)
         # Set the y-axis label
-        ax.set_ylabel(f'Lesion predicted by SCISeg 3D', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'SCISeg 3D Prediction', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Set the x-axis limits
