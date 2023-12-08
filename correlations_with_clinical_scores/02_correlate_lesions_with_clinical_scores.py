@@ -33,9 +33,9 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from scipy.stats import spearmanr
 
-metric_to_title = {'volume': 'Total lesion volume [$mm^3$]',
+metric_to_title = {'volume': 'Total lesion volume [mm$^3$]',
                    'length': 'Intramedullary lesion length [mm]',
-                   'max_axial_damage_ratio': 'Maximal axial damage ratio []'
+                   'max_axial_damage_ratio': 'Maximal axial damage ratio'
                    }
 
 # Initialize logging
