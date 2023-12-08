@@ -24,6 +24,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ptitprince as pt
 
+from scipy.stats import wilcoxon, normaltest
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -86,6 +87,36 @@ def get_parser():
     )
 
     return parser
+
+
+def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=False, include_equal=True):
+    """
+    Format p-value.
+    If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
+
+    :param p_value: input p-value as a float
+    :param alpha: significance level
+    :param decimal_places: number of decimal places the p-value will be rounded
+    :param include_space: include space or not (e.g., ' = 0.06')
+    :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
+    :return: p_value: the formatted p-value (e.g., '<0.05') as a str
+    """
+    if include_space:
+        space = ' '
+    else:
+        space = ''
+
+    # If the p-value is lower than alpha, return '<alpha' (e.g., <0.001)
+    if p_value < alpha:
+        p_value = space + "<" + space + str(alpha)
+    # If the p-value is greater than alpha, round it number of decimals specified by decimal_places
+    else:
+        if include_equal:
+            p_value = space + '=' + space + str(round(p_value, decimal_places))
+        else:
+            p_value = space + str(round(p_value, decimal_places))
+
+    return p_value
 
 
 def parse_xml_file(file_path):
@@ -327,6 +358,47 @@ def print_colorado_subjects_with_dice_0(df_concat):
     logger.info(df[['filename', 'method', 'Dice']])
 
 
+def compute_wilcoxon_test(df_concat, list_of_metrics):
+    """
+    Compute Wilcoxon signed-rank test (two related paired samples -- a same subject for nnunet_3d vs nnunet_2d)
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.wilcoxon.html
+    :param df_concat: dataframe containing all the data
+    :param list_of_metrics: list of metrics to compute the Wilcoxon test for
+    :return:
+    """
+
+    logger.info('')
+
+    # Remove 'NbTestedLesions' and 'VolTestedLesions' from the list of metrics
+    list_of_metrics = [metric for metric in list_of_metrics if metric not in ['NbTestedLesions', 'VolTestedLesions']]
+
+    # Loop across sites
+    for site in df_concat['site'].unique():
+        # Loop across metrics
+        for metric in list_of_metrics:
+            # Reorder the dataframe
+            df_nnunet_2d = df_concat[(df_concat['method'] == 'nnunet_2d') & (df_concat['site'] == site)]
+            df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
+
+            # Merge the two dataframes based on participant_id. Keep only metric column
+            df = pd.merge(df_nnunet_2d[['participant_id', metric]], df_nnunet_3d[['participant_id', metric]],
+                          on='participant_id', suffixes=('_2d', '_3d'))
+
+            # Drop rows with NaN values
+            df = df.dropna()
+
+            # Run normality test
+            stat, p = normaltest(df[metric + '_2d'])
+            logger.info(f'{metric}, {site}: Normality test for nnunet_2d: p{format_pvalue(p)}')
+            stat, p = normaltest(df[metric + '_3d'])
+            logger.info(f'{metric}, {site}: Normality test for nnunet_3d: p{format_pvalue(p)}')
+
+            # Compute Wilcoxon signed-rank test
+            stat, p = wilcoxon(df[metric + '_2d'], df[metric + '_3d'])
+            logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_2d and nnunet_3d: '
+                        f'p{format_pvalue(p)}')
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -417,6 +489,9 @@ def main():
 
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
+
+    # Compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
+    compute_wilcoxon_test(df_concat, list_of_metrics)
 
     # Print mean and std for each metric
     print_mean_and_std(df_concat, list_of_metrics, pred_type)
