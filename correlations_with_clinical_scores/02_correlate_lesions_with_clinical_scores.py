@@ -242,10 +242,10 @@ def generate_regplot_manual_vs_predicted(df, output_dir, figure_title):
         # Set the x-axis label
         ax.set_xlabel(f'Manual GT lesion')
         # Set the y-axis label
-        ax.set_ylabel(f'Lesion predicted by nnUNet 3D')
+        ax.set_ylabel(f'Lesion predicted by SCISeg 3D')
 
         # Set title
-        ax.set_title(f'{figure_title}: {metric_to_title[metric]}: manual vs nnUNet 3D lesion seg')
+        ax.set_title(f'{figure_title}: {metric_to_title[metric]}: manual vs SCISeg 3D lesion seg')
 
         if metric == 'length':
             # Set the x-axis limits
