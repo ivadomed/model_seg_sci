@@ -33,9 +33,32 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from scipy.stats import spearmanr
 
-metric_to_title = {'volume': 'Total lesion volume [mm$^3$]',
-                   'length': 'Intramedullary lesion length [mm]',
-                   'max_axial_damage_ratio': 'Maximal axial damage ratio'
+FONT_SIZE = 15
+
+metric_to_title = {'volume': 'Lesion Volume',
+                   'length': 'Intramedullary Lesion Length',
+                   'max_axial_damage_ratio': 'Maximal Axial Damage Ratio'
+                   }
+
+score_to_title = {'initial_LEMS': 'Initial Lower Extremity Motor Score (LEMS)',
+                  'initial_ais': 'Initial ASIA Impairment Scale (AIS)',
+                  'initial_ais_grouped': 'Initial ASIA Impairment Scale (AIS)',
+                  'initial_pin_prick_total': 'Initial Pin Prick Score',
+                  'initial_light_touch_total': 'Initial Light Touch Score',
+                  'discharge_LEMS': 'Discharge Lower Extremity Motor Score (LEMS)',
+                  'discharge_ais': 'Discharge ASIA Impairment Scale (AIS)',
+                  'discharge_ais_grouped': 'Discharge ASIA Impairment Scale (AIS)',
+                  'discharge_pin_prick_total': 'Discharge Pin Prick Score',
+                  'discharge_light_touch_total': 'Discharge Light Touch Score',
+                  'diff_LEMS': 'Difference (Discharge-Initial) Lower Extremity Motor Score (LEMS)',
+                  'diff_ais': 'Difference (Discharge-Initial) ASIA Impairment Scale (AIS)',
+                  'diff_pin_prick_total': 'Difference (Discharge-Initial) Pin Prick Score',
+                  'diff_light_touch_total': 'Difference (Discharge-Initial) Light Touch Score'
+                  }
+
+metric_to_label = {'volume': 'Total Lesion Volume [mm$^3$]',
+                   'length': 'Intramedullary Lesion Length [mm]',
+                   'max_axial_damage_ratio': 'Maximal Axial Damage Ratio'
                    }
 
 # Initialize logging
@@ -101,7 +124,7 @@ def fetch_subject_and_session(filename_path):
     return subject_session
 
 
-def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=False, include_equal=True):
+def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, include_equal=True):
     """
     Format p-value.
     If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
@@ -217,78 +240,157 @@ def fetch_lesion_metrics(index, row, pred_type, df):
     return df
 
 
-def generate_regplot_manual_vs_predicted(df, output_dir, figure_title):
+def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_final, output_dir):
     """
-    Plot data and a linear regression model fit. Manual GT lesion vs lesions predicted using our 3D SCIseg nnUNet model.
-    :param df: dataframe with lesion metrics
-    :param output_dir: output directory
-    :param figure_title: title of the figure ('2sites', '3sites_beforeAL', or '3sites_afterAL')
+    Plot everything on initial, discharge, and diff clinical scores
+    Manual GT vs SCIseg nnUNet 3D predictions
+    :param df_colorado:
+    :param clinical_scores_list:
+    :param clinical_scores_list_final:
+    :param output_dir:
+    :return:
     """
 
     mpl.rcParams['font.family'] = 'Helvetica'
 
+    # Loop across lesion metrics
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
-        # Create a figure
-        fig = plt.figure(figsize=(7, 7))
-        # Create a subplot
-        ax = fig.add_subplot(111)
-        # Plot the data (manual vs nnunet_3d) and a linear regression model fit
-        # Zurich
-        sns.regplot(x=metric+'_manual', y=metric+'_nnunet_3d', data=df[df['site'] == 'zurich'], ax=ax, color='red')
-        # Colorado
-        sns.regplot(x=metric+'_manual', y=metric+'_nnunet_3d', data=df[df['site'] == 'colorado'], ax=ax, color='blue')
-        # Set the title
-        ax.set_title(f'{metric_to_title[metric]}: manual vs nnUNet 3D lesion seg')
-        # Set the x-axis label
-        ax.set_xlabel(f'Manual GT lesion')
-        # Set the y-axis label
-        ax.set_ylabel(f'Lesion predicted by SCISeg 3D')
+        # Loop across clinical scores
+        for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
+                     ['initial_ais_grouped', 'discharge_ais_grouped']:
+            # Create a figure
+            fig = plt.figure(figsize=(6, 6))
+            # Create a subplot
+            ax = fig.add_subplot(111)
+            # Plot the data (manual vs nnunet_3d) and a linear regression model fit
+            sns.regplot(x=score, y=metric + '_nnunet_3d', data=df_colorado, ax=ax,
+                        color='green')
+            sns.regplot(x=score, y=metric + '_manual', data=df_colorado, ax=ax,
+                        color='orange')
+            # sns.regplot(x=score, y=metric + '_diff', data=df_colorado, ax=ax,
+            #             color='black')
 
-        # Set title
-        ax.set_title(f'{figure_title}: {metric_to_title[metric]}: manual vs SCISeg 3D lesion seg')
+            # Compute correlation coefficient and p-value and add them to the plot
+            corr_nnunet, pval_nnunet = spearmanr(df_colorado[score], df_colorado[metric + '_nnunet_3d'])
+            corr_manual, pval_manual = spearmanr(df_colorado[score], df_colorado[metric + '_manual'])
 
-        if metric == 'length':
-            # Set the x-axis limits
-            ax.set_xlim(-5, 210)
-            # Set the y-axis limits
-            ax.set_ylim(-5, 210)
-        elif metric == 'volume':
-            # Set the x-axis limits
-            ax.set_xlim(-200, 7100)
-            # Set the y-axis limits
-            ax.set_ylim(-200, 7100)
-        else:
-            # Set the x-axis limits
-            ax.set_xlim(-0.1, 2.1)
-            # Set the y-axis limits
-            ax.set_ylim(-0.1, 2.1)
+            # Set the title
+            #ax.set_title(f'{metric_to_title[metric]} vs {score_to_title[score]}', fontsize=FONT_SIZE)
+            # Set the x-axis label
+            ax.set_xlabel(f'{score_to_title[score]}', fontsize=FONT_SIZE)
+            # Set the y-axis label
+            ax.set_ylabel(f'{metric_to_label[metric]}', fontsize=FONT_SIZE)
 
-        # Draw a diagonal line
-        ax.plot(ax.get_xlim(), ax.get_ylim(), ls="--", c=".3")
+            # For AIS, set x-axis ticks to be integers
+            if 'ais' in score:
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
-        # Show grid
-        ax.grid(True)
+            # For grouped AIS, change x-axis labels from 1 to motor complete (A/B) and from 2 to motor incomplete (C/D)
+            if 'ais_grouped' in score:
+                ax.set_xticklabels(['', 'motor complete (A/B)', 'motor incomplete (C/D)'])
 
-        # # Create single custom legend for whole figure with several subplots
-        markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['red', 'blue']]
-        ax.legend(markers, ['Zurich (T2w sag)', 'Colorado (T2w ax)'], numpoints=1, loc='upper left')
+            # Show grid
+            ax.grid(True)
 
-        # Save individual figures
-        plt.tight_layout()
+            # # Create single custom legend for whole figure with several subplots
+            # markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange', 'black']]
+            # legend = ax.legend(markers,
+            #                    [f'SCISeg 3D Prediction: Spearman r={corr_nnunet:.2f}, '
+            #                     f'p{format_pvalue(pval_nnunet)}',
+            #                     f'Manual Ground Truth: Spearman r={corr_manual:.2f}, '
+            #                     f'p{format_pvalue(pval_manual)}',
+            #                     f'Difference manual - nnUNet 3D'],
+            #                    numpoints=1,
+            #                    loc='upper right')
+            # Create single custom legend for whole figure with several subplots
+            markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange']]
+            legend = ax.legend(markers,
+                               [f'SCISeg 3D Prediction: Spearman r = {corr_nnunet:.2f}, '
+                                f'p{format_pvalue(pval_nnunet)}',
+                                f'Manual Ground Truth: Spearman r = {corr_manual:.2f}, '
+                                f'p{format_pvalue(pval_manual)}'],
+                               numpoints=1,
+                               loc='upper right', fontsize=FONT_SIZE-3)
 
-        # Save the figure
-        fname_fig = os.path.join(output_dir, f'{metric}_regplot_{figure_title}.png')
-        fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
-        logger.info(f'Saved {os.path.join(output_dir, fname_fig)}')
-        # Close the figure
-        plt.close(fig)
+            # Make legend's box black
+            frame = legend.get_frame()
+            frame.set_edgecolor('black')
+            ax.add_artist(legend)
 
-    # print subjects with length > 100 mm
-    pd.set_option('display.max_colwidth', None)
-    logger.info(df[(df['length_manual'] > 100) & (df['length_nnunet_3d'] < 100)][
-              ['site', 'participant_id', 'length_manual', 'length_nnunet_3d']])
-    logger.info(df[(df['length_manual'] > 100) & (df['length_nnunet_3d'] < 100)][
-              ['fname_lesion_nnunet_3d']])
+            # Increase tick labels size
+            ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE - 3)
+
+            # Save individual figures
+            plt.tight_layout()
+
+            # Save the figure
+            fname_fig = os.path.join(output_dir, f'{metric}_regplot_{score}.png')
+            fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
+            print(f'Saved {os.path.join(output_dir, fname_fig)}')
+            # Close the figure
+            plt.close(fig)
+
+
+def plot_everything_discharge(df_colorado, clinical_scores_list, output_dir):
+    """
+    Plot everything only on discharge clinical scores
+    Improvers vs non-improvers
+    :param df_colorado:
+    :param clinical_scores_list:
+    :param output_dir:
+    :return:
+    """
+
+    mpl.rcParams['font.family'] = 'Helvetica'
+
+    # Loop across lesion metrics
+    for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+        # Loop across discharge clinical scores
+        for score in ['discharge_' + s for s in clinical_scores_list]:
+        #for score in ['diff_' + s for s in clinical_scores_list]:
+
+            # skip ais for # OPTION #3
+            if 'ais' in score:
+                continue
+
+            # Plot the data (SCISeg 3D) and a linear regression model fit
+            sns.lmplot(x=score, y=metric + '_nnunet_3d', data=df_colorado, palette="Set1",
+                       #hue=score + '_improve', legend=False)       # OPTION #1
+                       #hue='improve', legend=False)                # OPTION #2
+                       hue=score.replace('discharge', 'improve'), legend=False)        # OPTION #3
+                       #hue = score.replace('diff', 'improve'), legend = False)  # OPTION #3
+
+            # Change the figure size
+            plt.gcf().set_size_inches(7, 7)
+
+            # Set the title
+            plt.title(f'{metric_to_title[metric]} vs {score}')
+            # Set the x-axis label
+            plt.xlabel(f'{score}')
+            # Set the y-axis label
+            plt.ylabel(f'{metric_to_title[metric]} (computed from SCISeg 3D prediction)')
+
+            # For AIS, set x-axis ticks to be integers
+            if 'ais' in score:
+                plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+
+            # Show grid
+            plt.grid(True)
+
+            # Move legend to the upper right corner
+            plt.legend(loc='upper right')
+            # Add legened title
+            plt.gca().get_legend().set_title('Improvement')
+
+            # Save individual figures
+            plt.tight_layout()
+
+            # Save the figure
+            fname_fig = os.path.join(output_dir, f'{metric}_lmplot_{score}.png')
+            plt.savefig(os.path.join(output_dir, fname_fig), dpi=300)
+            print(f'Saved {os.path.join(output_dir, fname_fig)}')
+            # Close the figure
+            plt.close()
 
 
 def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir):
@@ -326,13 +428,35 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
 
     # Compute the difference between initial and discharge scores
     for score in clinical_scores_list:
-        df_participants_colorado['diff_' + score] = df_participants_colorado['initial_' + score] - \
-                                                    df_participants_colorado['discharge_' + score]
+        df_participants_colorado['diff_' + score] = df_participants_colorado['discharge_' + score] - \
+                                                    df_participants_colorado['initial_' + score]
+
+    # OPTION #1
+    # # Define 2 groups of "improvers" versus "non-improvers": "improvers" (1) with diff_SCORE >= 1 and
+    # # "non-improvers" (0) with diff_SCORE < 1
+    # for score in clinical_scores_list:
+    #     df_participants_colorado['diff_' + score + '_improve'] = np.where(
+    #         df_participants_colorado['diff_' + score] >= 1, 1, 0)
+
+    # OPTION #2
+    # Define 2 groups of "improvers" versus "non-improvers": "improvers" (1) with discharge_ais_grouped >= 1 and
+    # "non-improvers" (0) with discharge_ais_grouped == 0
+    # df_participants_colorado['improve'] = np.where(df_participants_colorado['diff_ais'] >= 1, 0, 1)
+
+    # OPTION #3
+    # Define 2 groups of "improvers" versus "non-improvers" using the minimal detectable change for LEMS, light touch,
+    # and pin prick. LEMS = 1 point, pin prick = 7.8 points, light touch = 12.95 points
+    # Details: https://www.sralab.org/rehabilitation-measures/international-standards-neurological-classification-spinal-cord-injury-asia-impairment-scale
+    df_participants_colorado['improve_LEMS'] = np.where(df_participants_colorado['diff_LEMS'] >= 1, 1, 0)
+    df_participants_colorado['improve_light_touch_total'] = np.where(
+        df_participants_colorado['diff_light_touch_total'] >= 12.95, 1, 0)
+    df_participants_colorado['improve_pin_prick_total'] = np.where(
+        df_participants_colorado['diff_pin_prick_total'] >= 7.8, 1, 0)
 
     # Merge the dataframes
     df = pd.merge(df, df_participants_colorado, on='participant_id')
 
-    # We have clinical scores only for Colorado
+    # Keep only Colorado - we have clinical scores only for Colorado
     df_colorado = df[df['site'] == 'colorado']
 
     # Drop rows with NaNs
@@ -342,70 +466,10 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
         df_colorado[metric + '_diff'] = df_colorado[metric + '_manual'] - df_colorado[metric + '_nnunet_3d']
 
-    # Loop across lesion metrics
-    for metric in ['volume', 'length', 'max_axial_damage_ratio']:
-        # Loop across clinical scores
-        for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
-                     ['initial_ais_grouped', 'discharge_ais_grouped']:
-            # Create a figure
-            fig = plt.figure(figsize=(7, 7))
-            # Create a subplot
-            ax = fig.add_subplot(111)
-            # Plot the data (manual vs nnunet_3d) and a linear regression model fit
-            # We have clinical scores only for Colorado
-            sns.regplot(x=score, y=metric + '_nnunet_3d', data=df_colorado, ax=ax,
-                        color='green')
-            sns.regplot(x=score, y=metric + '_manual', data=df_colorado, ax=ax,
-                        color='orange')
-            sns.regplot(x=score, y=metric + '_diff', data=df_colorado, ax=ax,
-                        color='black')
-
-            # Compute correlation coefficient and p-value and add them to the plot
-            corr_nnunet, pval_nnunet = spearmanr(df_colorado[score], df_colorado[metric + '_nnunet_3d'])
-            corr_manual, pval_manual = spearmanr(df_colorado[score], df_colorado[metric + '_manual'])
-
-            # Set the title
-            ax.set_title(f'{metric_to_title[metric]} vs {score}')
-            # Set the x-axis label
-            ax.set_xlabel(f'{score}')
-            # Set the y-axis label
-            ax.set_ylabel(f'{metric_to_title[metric]}')
-
-            # For AIS, set x-axis ticks to be integers
-            if 'ais' in score:
-                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-
-            # For grouped AIS, change x-axis labels from 1 to motor complete (A/B) and from 2 to motor incomplete (C/D)
-            if 'ais_grouped' in score:
-                ax.set_xticklabels(['', 'motor complete (A/B)', 'motor incomplete (C/D)'])
-
-            # Show grid
-            ax.grid(True)
-
-            # # Create single custom legend for whole figure with several subplots
-            markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange', 'black']]
-            legend = ax.legend(markers,
-                               [f'nnUNet 3D lesion segmentation: Spearman r={corr_nnunet:.2f}, '
-                                f'p{format_pvalue(pval_nnunet)}',
-                                f'Manual GT lesion segmentation: Spearman r={corr_manual:.2f}, '
-                                f'p{format_pvalue(pval_manual)}',
-                                f'Difference manual - nnUNet 3D'],
-                               numpoints=1,
-                               loc='upper right')
-            # Make legend's box black
-            frame = legend.get_frame()
-            frame.set_edgecolor('black')
-            ax.add_artist(legend)
-
-            # Save individual figures
-            plt.tight_layout()
-
-            # Save the figure
-            fname_fig = os.path.join(output_dir, f'{metric}_regplot_{score}.png')
-            fig.savefig(os.path.join(output_dir, fname_fig), dpi=300)
-            print(f'Saved {os.path.join(output_dir, fname_fig)}')
-            # Close the figure
-            plt.close(fig)
+    # Initial, discharge, and difference scores
+    plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_final, output_dir)
+    # Discharge scores only
+    plot_everything_discharge(df_colorado, clinical_scores_list, output_dir)
 
 
 def main():
@@ -461,11 +525,15 @@ def main():
     df.to_excel(xls_fname, index=False)
     logger.info(f'Saved {xls_fname}')
 
-    # Remove rows with volume_manual > 4000
-    df = df[df['volume_manual'] <= 4000]
+    # Replace nan with 0 for the volume_nnunet_3d column
+    # nan means that there is no lesion predicted by our 3D nnUNet model;
+    # therefore, metrics are assigned to 0 to plot them
+    df['volume_nnunet_3d'] = df['volume_nnunet_3d'].fillna(0)
+    df['length_nnunet_3d'] = df['length_nnunet_3d'].fillna(0)
+    df['max_axial_damage_ratio_nnunet_3d'] = df['max_axial_damage_ratio_nnunet_3d'].fillna(0)
 
-    #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
-    generate_regplot_manual_vs_predicted(df, output_dir, figure_title)
+    # Remove rows with volume_manual > 4000
+    #df = df[df['volume_manual'] <= 4000]
 
     # If sci-colorado participants.tsv file is provided, plot data and a linear regression model fit
     if path_participants_colorado is not None:
