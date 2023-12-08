@@ -42,8 +42,8 @@ METHODS_TO_LABEL_SC = {
     }
 
 METHODS_TO_LABEL_LESION = {
-    'nnunet_2d': 'nnUNet 2D',
-    'nnunet_3d': 'nnUNet 3D',
+    'nnunet_2d': 'SCISeg 2D',
+    'nnunet_3d': 'SCISeg 3D',
     }
 
 LABEL_FONT_SIZE = 16
