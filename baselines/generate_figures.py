@@ -253,9 +253,13 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     df['site'] = df['site'].apply(lambda x: 'Site 1' if x == 'Zurich' else 'Site 2')
 
     for metric in list_of_metrics:
+
+        # Drop rows with NaN values for the current metric
+        df_temp = df.dropna(subset=[metric])
+
         fig_size = (10, 5) if pred_type == 'sc' else (8, 5)
         fig, ax = plt.subplots(figsize=fig_size)
-        ax = pt.RainCloud(data=df,
+        ax = pt.RainCloud(data=df_temp,
                           x='method',
                           y=metric,
                           hue='site',
@@ -285,7 +289,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Include number of subjects for each site into the legend
         handles, labels = ax.get_legend_handles_labels()
         for i, label in enumerate(labels):
-            n = len(df[(df['site'] == label) & (df['method'] == 'nnunet_3d')]['filename'])
+            n = len(df_temp[(df_temp['site'] == label) & (df_temp['method'] == 'nnunet_3d')]['filename'])
             labels[i] = f'{label} (n={n})'
         # Since the figure contains violionplot + boxplot + scatterplot we are keeping only last two legend entries
         handles = handles[-2:]
@@ -326,7 +330,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
             ax.set_ylim(0, 15)
 
         # Set title
-        num_of_seeds = len(df['seed'].unique())
+        num_of_seeds = len(df_temp['seed'].unique())
         if pred_type == 'sc':
             ax.set_title(f'Test {split_string_by_capital_letters(metric)} for Spinal Cord Segmentation across {num_of_seeds} seeds',
                          fontsize=LABEL_FONT_SIZE)
