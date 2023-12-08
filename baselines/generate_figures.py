@@ -46,8 +46,9 @@ METHODS_TO_LABEL_LESION = {
     'nnunet_3d': 'SCISeg 3D',
     }
 
-LABEL_FONT_SIZE = 16
+LABEL_FONT_SIZE = 14
 TICK_FONT_SIZE = 12
+PALETTE = ['red', 'darkblue']
 
 
 def get_parser():
@@ -207,7 +208,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     :return:
     """
 
-    mpl.rcParams['font.family'] = 'Arial'
+    mpl.rcParams['font.family'] = 'Helvetica'
 
     # Capitalize site names from 'zurich' to 'Zurich' and from 'colorado' to 'Colorado' (to have nice legend)
     df['site'] = df['site'].apply(lambda x: x.capitalize())
@@ -222,6 +223,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           x='method',
                           y=metric,
                           hue='site',
+                          palette=PALETTE,
                           order=METHODS_TO_LABEL_SC.keys() if pred_type == 'sc' else METHODS_TO_LABEL_LESION.keys(),
                           dodge=True,       # move boxplots next to each other
                           linewidth=0,      # violionplot border line (0 - no line)
