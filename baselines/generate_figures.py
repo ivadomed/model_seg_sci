@@ -212,6 +212,9 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
     # Capitalize site names from 'zurich' to 'Zurich' and from 'colorado' to 'Colorado' (to have nice legend)
     df['site'] = df['site'].apply(lambda x: x.capitalize())
 
+    # Rename site names: "Zurich" -> "Site 1" and "Colorado" -> "Site 2"
+    df['site'] = df['site'].apply(lambda x: 'Site 1' if x == 'Zurich' else 'Site 2')
+
     for metric in list_of_metrics:
         fig_size = (10, 5) if pred_type == 'sc' else (8, 5)
         fig, ax = plt.subplots(figsize=fig_size)
@@ -230,7 +233,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
                           box_showmeans=True,  # show mean value inside the boxplots
                           box_meanprops={'marker': '^', 'markerfacecolor': 'black', 'markeredgecolor': 'black',
                                          'markersize': '6'},
-                          hue_order=['Zurich', 'Colorado'],
+                          hue_order=['Site 1', 'Site 2'],
                           )
 
         # TODO: include mean +- std for each boxplot above the mean value
