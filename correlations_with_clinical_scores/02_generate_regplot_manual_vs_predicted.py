@@ -1,6 +1,6 @@
 """
-Generate sns.regplot for each each metric (volume, length, max_axial_damage_ratio) manual vs SCISeg 3D lesion
-segmentation BEFORE and AFTER active learning.
+Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCISeg 3D lesion segmentation
+BEFORE and AFTER active learning.
 
 The script:
  - fetch subjects from the provided /results folders (each one for a specific seed)
