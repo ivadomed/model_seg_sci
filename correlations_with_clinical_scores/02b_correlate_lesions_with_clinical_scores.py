@@ -303,12 +303,12 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             #                    numpoints=1,
             #                    loc='upper right')
             # Create single custom legend for whole figure with several subplots
-            markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange']]
+            markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['orange', 'green']]
             legend = ax.legend(markers,
-                               [f'SCISeg 3D Prediction: Spearman r = {corr_nnunet:.2f}, '
-                                f'p{format_pvalue(pval_nnunet)}',
-                                f'Manual Ground Truth: Spearman r = {corr_manual:.2f}, '
-                                f'p{format_pvalue(pval_manual)}'],
+                               [f'Manual Ground Truth: r = {corr_manual:.2f}, '
+                                f'p{format_pvalue(pval_manual)}',
+                                f'SCISeg 3D Prediction: r = {corr_nnunet:.2f}, '
+                                f'p{format_pvalue(pval_nnunet)}'],
                                numpoints=1,
                                loc='upper right', fontsize=FONT_SIZE-3)
 
