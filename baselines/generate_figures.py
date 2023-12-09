@@ -90,7 +90,7 @@ def get_parser():
     return parser
 
 
-def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=False, include_equal=True):
+def format_pvalue(p_value, alpha=0.001, decimal_places=3, include_space=False, include_equal=True):
     """
     Format p-value.
     If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
