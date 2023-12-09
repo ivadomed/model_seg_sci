@@ -24,7 +24,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ptitprince as pt
 
-from scipy.stats import wilcoxon, normaltest
+from functools import reduce
+from scipy.stats import wilcoxon, normaltest, kruskal
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -412,6 +413,72 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
                         f'p{format_pvalue(p)}')
 
 
+def compute_kruskal_wallis_test(df_concat, list_of_metrics):
+    """
+    Compute Kruskal-Wallis H-test (non-parametric version of ANOVA)
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.kruskal.html
+    :param df_concat:
+    :param list_of_metrics:
+    :return:
+    """
+
+    logger.info('')
+
+    # Remove 'NbTestedLesions' and 'VolTestedLesions' from the list of metrics
+    list_of_metrics = [metric for metric in list_of_metrics if metric not in ['NbTestedLesions', 'VolTestedLesions']]
+
+    # Loop across sites
+    for site in df_concat['site'].unique():
+        # Loop across metrics
+        for metric in list_of_metrics:
+            # Reorder the dataframe
+            df_propseg = df_concat[(df_concat['method'] == 'propseg') & (df_concat['site'] == site)]
+            df_deepseg_2d = df_concat[(df_concat['method'] == 'deepseg_2d') & (df_concat['site'] == site)]
+            df_deepseg_3d = df_concat[(df_concat['method'] == 'deepseg_3d') & (df_concat['site'] == site)]
+            df_contrast_agnostic = df_concat[(df_concat['method'] == 'monai') & (df_concat['site'] == site)]
+            df_nnunet_2d = df_concat[(df_concat['method'] == 'nnunet_2d') & (df_concat['site'] == site)]
+            df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
+
+            # Combine all dataframes based on participant_id and seed. Keep only metric column. Use reduce and lambda
+            df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id', 'seed']),
+                        [df_propseg[['participant_id', 'session_id', 'seed', metric]],
+                         df_deepseg_2d[['participant_id', 'session_id', 'seed', metric]],
+                         df_deepseg_3d[['participant_id', 'session_id', 'seed', metric]],
+                         df_contrast_agnostic[['participant_id', 'session_id', 'seed', metric]],
+                         df_nnunet_2d[['participant_id', 'session_id', 'seed', metric]],
+                         df_nnunet_3d[['participant_id', 'session_id', 'seed', metric]]])
+            # Rename columns
+            df.columns = ['participant_id', 'session_id', 'seed', metric + '_propseg', metric + '_deepseg_2d',
+                            metric + '_deepseg_3d', metric + '_monai', metric + '_nnunet_2d', metric + '_nnunet_3d']
+
+            # Drop rows with NaN values
+            df = df.dropna()
+            # Print number of subjects
+            logger.info(f'{metric}, {site}: Number of subjects: {len(df)}')
+
+            # Compute Kruskal-Wallis H-test
+            stat, p = kruskal(df[metric + '_propseg'], df[metric + '_deepseg_2d'], df[metric + '_deepseg_3d'],
+                              df[metric + '_monai'], df[metric + '_nnunet_2d'], df[metric + '_nnunet_3d'])
+            logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: p{format_pvalue(p)}')
+            # Run post-hoc tests between nnunet_3d and all other methods
+            if p < 0.05:
+                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_propseg'])
+                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and propseg: '
+                            f'p{format_pvalue(p)}')
+                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_deepseg_2d'])
+                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and deepseg_2d: '
+                            f'p{format_pvalue(p)}')
+                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_deepseg_3d'])
+                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and deepseg_3d: '
+                            f'p{format_pvalue(p)}')
+                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_monai'])
+                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and monai: '
+                            f'p{format_pvalue(p)}')
+                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_nnunet_2d'])
+                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and nnunet_2d: '
+                            f'p{format_pvalue(p)}')
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -505,8 +572,12 @@ def main():
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
 
-    # Compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
-    compute_wilcoxon_test(df_concat, list_of_metrics)
+    # For lesions, compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
+    if pred_type == 'lesions':
+        compute_wilcoxon_test(df_concat, list_of_metrics)
+    # For SC, compute Kruskal-Wallis H-test (we have 6 methods)
+    else:
+        compute_kruskal_wallis_test(df_concat, list_of_metrics)
 
     # Print mean and std for each metric
     print_mean_and_std(df_concat, list_of_metrics, pred_type)
