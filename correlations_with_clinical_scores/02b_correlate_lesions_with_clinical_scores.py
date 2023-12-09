@@ -336,10 +336,9 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             plt.close(fig)
 
 
-def plot_everything_discharge(df_colorado, clinical_scores_list, output_dir):
+def plot_improvers_vs_nonimprovers_discharge(df_colorado, clinical_scores_list, output_dir):
     """
-    Plot everything only on discharge clinical scores
-    Improvers vs non-improvers
+    Plot improvers vs non-improvers on discharge clinical scores
     :param df_colorado:
     :param clinical_scores_list:
     :param output_dir:
@@ -473,8 +472,8 @@ def generate_regplot_metric_vs_score(df, path_participants_colorado, output_dir)
 
     # Initial, discharge, and difference scores
     plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_final, output_dir)
-    # Discharge scores only
-    plot_everything_discharge(df_colorado, clinical_scores_list, output_dir)
+    # Improvers vs non-improvers on discharge scores only
+    plot_improvers_vs_nonimprovers_discharge(df_colorado, clinical_scores_list, output_dir)
 
 
 def main():
