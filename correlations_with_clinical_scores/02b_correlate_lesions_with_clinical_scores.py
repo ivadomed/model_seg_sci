@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from scipy.stats import spearmanr, wilcoxon
 
-FONT_SIZE = 18
+FONT_SIZE = 19
 
 metric_to_title = {'volume': 'Lesion Volume',
                    'length': 'Intramedullary Lesion Length',
@@ -45,7 +45,7 @@ score_to_title = {'initial_LEMS': 'Initial Lower Extremity Motor Score (LEMS)',
                   'initial_ais_grouped': 'Initial ASIA Impairment Scale (AIS)',
                   'initial_pin_prick_total': 'Initial Pin Prick Score',
                   'initial_light_touch_total': 'Initial Light Touch Score',
-                  'discharge_LEMS': 'Discharge Lower Extremity Motor Score (LEMS)',
+                  'discharge_LEMS': 'Discharge Lower Extremity Motor Score',
                   'discharge_ais': 'Discharge ASIA Impairment Scale (AIS)',
                   'discharge_ais_grouped': 'Discharge ASIA Impairment Scale (AIS)',
                   'discharge_pin_prick_total': 'Discharge Pin Prick Score',
