@@ -33,7 +33,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from scipy.stats import spearmanr
 
-FONT_SIZE = 15
+FONT_SIZE = 18
 
 metric_to_title = {'volume': 'Lesion Volume',
                    'length': 'Intramedullary Lesion Length',
