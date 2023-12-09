@@ -29,6 +29,7 @@ import seaborn as sns
 import matplotlib as mpl
 
 from matplotlib import pyplot as plt
+from scipy.stats import wilcoxon
 
 metric_to_title = {'volume': 'Total Lesion Volume [mm$^3$]',
                    'length': 'Intramedullary Lesion Length [mm]',
@@ -104,6 +105,36 @@ def fetch_subject_and_session(filename_path):
     subject_session = subjectID + '_' + sessionID if subjectID and sessionID else subjectID
 
     return subject_session
+
+
+def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, include_equal=True):
+    """
+    Format p-value.
+    If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
+
+    :param p_value: input p-value as a float
+    :param alpha: significance level
+    :param decimal_places: number of decimal places the p-value will be rounded
+    :param include_space: include space or not (e.g., ' = 0.06')
+    :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
+    :return: p_value: the formatted p-value (e.g., '<0.05') as a str
+    """
+    if include_space:
+        space = ' '
+    else:
+        space = ''
+
+    # If the p-value is lower than alpha, return '<alpha' (e.g., <0.001)
+    if p_value < alpha:
+        p_value = space + "<" + space + str(alpha)
+    # If the p-value is greater than alpha, round it number of decimals specified by decimal_places
+    else:
+        if include_equal:
+            p_value = space + '=' + space + str(round(p_value, decimal_places))
+        else:
+            p_value = space + str(round(p_value, decimal_places))
+
+    return p_value
 
 
 def get_fnames(dir_paths):
@@ -300,6 +331,28 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
     #             ['fname_lesion_nnunet_3d_method1']])
 
 
+def compute_wilcoxon_test(df):
+    """
+    Compute Wilcoxon signed-rank test between nnunet_3d_method1 and nnunet_3d_method2
+    :param df: dataframe with lesion metrics
+    """
+    # Loop across sites
+    for site in ['zurich', 'colorado']:
+        # Loop across metrics
+        for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+
+            if metric == 'max_axial_damage_ratio':
+                df = df[df['max_axial_damage_ratio_manual_method1'] <= 1]
+                df = df[df['max_axial_damage_ratio_manual_method2'] <= 1]
+
+            df_site = df[df['site'] == site]
+
+            # Compute Wilcoxon signed-rank test between nnunet_3d_method1 and nnunet_3d_method2
+            stat, pval = wilcoxon(df_site[metric + '_nnunet_3d_method1'], df_site[metric + '_nnunet_3d_method2'])
+            logger.info(f'{site}: Wilcoxon test between {metric}_nnunet_3d_method1 and {metric}_nnunet_3d_method2: '
+                        f'p{format_pvalue(pval)}')
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -357,6 +410,9 @@ def main():
         df_merged['volume_nnunet_3d' + method] = df_merged['volume_nnunet_3d' + method].fillna(0)
         df_merged['length_nnunet_3d' + method] = df_merged['length_nnunet_3d' + method].fillna(0)
         df_merged['max_axial_damage_ratio_nnunet_3d' + method] = df_merged['max_axial_damage_ratio_nnunet_3d' + method].fillna(0)
+
+    # Compute Wilcoxon signed-rank test
+    compute_wilcoxon_test(df_merged)
 
     #  Plot data and a linear regression model fit (manual GT lesion vs lesions predicted using our 3D nnUNet model)
     generate_regplot_manual_vs_predicted(df_merged, output_dir)
