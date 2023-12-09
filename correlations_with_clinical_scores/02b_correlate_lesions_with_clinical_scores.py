@@ -315,7 +315,15 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
                                 f'SCISeg 3D Prediction: r = {corr_nnunet:.2f}, '
                                 f'p{format_pvalue(pval_nnunet)}'],
                                numpoints=1,
-                               loc='upper right', fontsize=FONT_SIZE-5)
+                               loc='upper right', fontsize=FONT_SIZE-4)
+
+            # Adjust y-axis limits
+            if metric == 'length':
+                ax.set_ylim(-5, 120)
+            elif metric == 'volume':
+                ax.set_ylim(-200, 3000)
+            else:
+                ax.set_ylim(-0.1, 1)
 
             # Make legend's box black
             frame = legend.get_frame()
