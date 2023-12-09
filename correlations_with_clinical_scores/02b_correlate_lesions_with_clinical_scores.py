@@ -31,7 +31,7 @@ import matplotlib as mpl
 
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, wilcoxon
 
 FONT_SIZE = 18
 
@@ -255,6 +255,11 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
 
     # Loop across lesion metrics
     for metric in ['volume', 'length', 'max_axial_damage_ratio']:
+
+        # Compute Wilcoxon signed-rank test between manual and nnunet_3d
+        stat, pval = wilcoxon(df_colorado[metric + '_manual'], df_colorado[metric + '_nnunet_3d'])
+        logger.info(f'{metric}: p{format_pvalue(pval, alpha=0.001)}')
+
         # Loop across clinical scores
         for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
                      ['initial_ais_grouped', 'discharge_ais_grouped']:
