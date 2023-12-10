@@ -26,6 +26,7 @@ import ptitprince as pt
 
 from functools import reduce
 from scipy.stats import wilcoxon, normaltest, kruskal
+from statsmodels.stats.multitest import multipletests
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -460,23 +461,21 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             stat, p = kruskal(df[metric + '_propseg'], df[metric + '_deepseg_2d'], df[metric + '_deepseg_3d'],
                               df[metric + '_monai'], df[metric + '_nnunet_2d'], df[metric + '_nnunet_3d'])
             logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: p{format_pvalue(p)}')
+
             # Run post-hoc tests between nnunet_3d and all other methods
             if p < 0.05:
-                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_propseg'])
-                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and propseg: '
-                            f'p{format_pvalue(p)}')
-                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_deepseg_2d'])
-                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and deepseg_2d: '
-                            f'p{format_pvalue(p)}')
-                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_deepseg_3d'])
-                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and deepseg_3d: '
-                            f'p{format_pvalue(p)}')
-                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_monai'])
-                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and monai: '
-                            f'p{format_pvalue(p)}')
-                stat, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_nnunet_2d'])
-                logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_3d and nnunet_2d: '
-                            f'p{format_pvalue(p)}')
+                p_val_dict = {}
+                for method in ['propseg', 'deepseg_2d', 'deepseg_3d', 'monai', 'nnunet_2d']:
+                    stats, p = wilcoxon(df[metric + '_nnunet_3d'], df[metric + '_' + method], alternative='two-sided')
+                    p_val_dict[method] = p
+                # Do Bonferroni correction
+                # https://www.statsmodels.org/dev/generated/statsmodels.stats.multitest.multipletests.html
+                _, pvals_corrected, _, _ = multipletests(list(p_val_dict.values()), alpha=0.05, method='bonferroni')
+                p_val_dict_corrected = dict(zip(list(p_val_dict.keys()), pvals_corrected))
+                # Format p-values using format_pvalue function
+                p_val_dict_corrected = {k: format_pvalue(v) for k, v in p_val_dict_corrected.items()}
+                logger.info(f'{metric}, {site}: Post-hoc tests between nnunet_3d and all other methods:\n'
+                            f'{p_val_dict_corrected}')
 
 
 def main():
