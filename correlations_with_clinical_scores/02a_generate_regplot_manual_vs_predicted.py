@@ -1,5 +1,5 @@
 """
-Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCISeg 3D lesion segmentation
+Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCIseg 3D lesion segmentation
 BEFORE and AFTER active learning.
 
 The script:
@@ -266,7 +266,7 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Set the x-axis label
         ax.set_xlabel(f'Manual Ground Truth', fontsize=FONT_SIZE)
         # Set the y-axis label
-        ax.set_ylabel(f'SCISeg 3D Prediction', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'SCIseg 3D Prediction', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Set the x-axis limits

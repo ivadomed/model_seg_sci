@@ -42,10 +42,10 @@ for config_file in config_analyze_lesions_seed*.json;do echo sct_run_batch -conf
 
 ## 2a. Generate regression plots using the `02a_generate_regplot_manual_vs_predicted.py` script
 
-Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCISeg 3D lesion
+Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCIseg 3D lesion
 segmentation BEFORE and AFTER active learning.
 
 ## 2b. Generate regression plots using the `02b_correlate_lesions_with_clinical_scores.py` script
 
 Generate sns.lmplot for each metric (volume, length, max_axial_damage_ratio) and clinical score (AIS, LEMS, light touch,
-pinprick) at initial, discharge and diff time points manual vs SCISeg 3D lesion segmentation.
+pinprick) at initial, discharge and diff time points manual vs SCIseg 3D lesion segmentation.

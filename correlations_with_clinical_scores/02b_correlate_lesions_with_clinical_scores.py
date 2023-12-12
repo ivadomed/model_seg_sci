@@ -300,7 +300,7 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             # # Create single custom legend for whole figure with several subplots
             # markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['green', 'orange', 'black']]
             # legend = ax.legend(markers,
-            #                    [f'SCISeg 3D Prediction: Spearman r={corr_nnunet:.2f}, '
+            #                    [f'SCIseg 3D Prediction: Spearman r={corr_nnunet:.2f}, '
             #                     f'p{format_pvalue(pval_nnunet)}',
             #                     f'Manual Ground Truth: Spearman r={corr_manual:.2f}, '
             #                     f'p{format_pvalue(pval_manual)}',
@@ -312,7 +312,7 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             legend = ax.legend(markers,
                                [f'Manual Ground Truth: r = {corr_manual:.2f}, '
                                 f'p{format_pvalue(pval_manual)}',
-                                f'SCISeg 3D Prediction: r = {corr_nnunet:.2f}, '
+                                f'SCIseg 3D Prediction: r = {corr_nnunet:.2f}, '
                                 f'p{format_pvalue(pval_nnunet)}'],
                                numpoints=1,
                                loc='upper right', fontsize=FONT_SIZE-4)
@@ -365,7 +365,7 @@ def plot_improvers_vs_nonimprovers_discharge(df_colorado, clinical_scores_list, 
             if 'ais' in score:
                 continue
 
-            # Plot the data (SCISeg 3D) and a linear regression model fit
+            # Plot the data (SCIseg 3D) and a linear regression model fit
             sns.lmplot(x=score, y=metric + '_nnunet_3d', data=df_colorado, palette="Set1",
                        #hue=score + '_improve', legend=False)       # OPTION #1
                        #hue='improve', legend=False)                # OPTION #2
@@ -380,7 +380,7 @@ def plot_improvers_vs_nonimprovers_discharge(df_colorado, clinical_scores_list, 
             # Set the x-axis label
             plt.xlabel(f'{score}')
             # Set the y-axis label
-            plt.ylabel(f'{metric_to_title[metric]} (computed from SCISeg 3D prediction)')
+            plt.ylabel(f'{metric_to_title[metric]} (computed from SCIseg 3D prediction)')
 
             # For AIS, set x-axis ticks to be integers
             if 'ais' in score:
