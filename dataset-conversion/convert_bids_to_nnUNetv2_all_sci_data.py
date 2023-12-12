@@ -204,7 +204,8 @@ def main():
         logger.info(f"{dataset_name} dataset version: {dataset_commit}")
 
     train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
-    for subject in all_subjects:
+    train_niftis, test_nifitis = [], []
+    for subject in tqdm(all_subjects, desc="Iterating over all subjects"):
 
         if subject in train_subjects.keys():
 
@@ -234,6 +235,9 @@ def main():
                                                               f"{subject}_{session}_acq-{orientation}_T2w.nii.gz")
                             subject_label_file = os.path.join(subject_labels_path, 
                                                               f"{subject}_{session}_acq-{orientation}_T2w_lesion-manual.nii.gz")
+
+                            # add the subject image file to the list of training niftis
+                            train_niftis.append(os.path.basename(subject_image_file))
 
                             # create the new convention names for nnunet
                             sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
@@ -278,6 +282,9 @@ def main():
                         subject_label_file = os.path.join(subject_labels_path, 
                                                           f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
+                        # add the subject image file to the list of training niftis
+                        train_niftis.append(os.path.basename(subject_image_file))
+                        
                         # create the new convention names for nnunet
                         sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
                         
@@ -323,6 +330,9 @@ def main():
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
 
+                # add the subject image file to the list of training niftis
+                train_niftis.append(os.path.basename(subject_image_file))
+                
                 # create the new convention names for nnunet
                 sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
@@ -378,6 +388,9 @@ def main():
                     subject_label_file = os.path.join(subject_labels_path,
                                                       f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
+                    # add the subject image file to the list of testing niftis
+                    test_nifitis.append(os.path.basename(subject_image_file))
+
                     # create the new convention names for nnunet
                     sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
@@ -420,6 +433,9 @@ def main():
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
+
+                # add the subject image file to the list of testing niftis
+                test_nifitis.append(os.path.basename(subject_image_file))
 
                 # create the new convention names for nnunet
                 sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
@@ -466,6 +482,16 @@ def main():
         logger.info(f"Training/Validation set contains images from 3 sites: SCI-Zurich, SCI-Colorado, and SCI-Paris")
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
+
+    # create a yaml file containing the list of training and test niftis
+    niftis_dict = {
+        f"train": sorted(train_niftis),
+        f"test": sorted(test_nifitis)
+    }
+
+    # write the train and test niftis to a yaml file
+    with open(os.path.join(path_out, f"train_test_split_seed{args.seed}.yaml"), "w") as outfile:
+        yaml.dump(niftis_dict, outfile, default_flow_style=False)
 
     # c.f. dataset json generation
     # In nnUNet V2, dataset.json file has become much shorter. The description of the fields and changes
