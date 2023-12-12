@@ -1,6 +1,6 @@
 
-Compare our nnUNet models (`3d` and `2d`) with other methods (`sct_propseg`, `sct_deepseg_sc -kernel 2d`, `sct_deepseg_sc -kernel 3d`) on 
-`sci-zurich` and `sci-colorado` datasets.
+Compare our nnUNet models (`3d` and `2d`) with other methods (`sct_propseg`, `sct_deepseg_sc -kernel 2d`, 
+`sct_deepseg_sc -kernel 3d`, `MONAI contrast-agnostic`) on `sci-zurich` and `sci-colorado` datasets.
 
 ## Data structure
 
@@ -45,6 +45,8 @@ create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_f
 
 `conda` environment with nnUNetV2 is required to run the `comparison_with_other_methods.sh` script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
 
+## MONAI
+
 ### ANIMA
 
 ANIMA is used to compute segmentation performance metrics. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/ANIMA_quick_start_guide.md).
@@ -62,7 +64,20 @@ Just run the file corresponding to `sc` or `lesion` for performing the compariso
 sct_run_batch -config config_{sc,lesion}_seed{XXX}.json
 ```
 
-Example of the `config_{sc,lesion}_seed{XXX}.json` file:
+Example of the `config_sc_seed{XXX}.json` file:
+
+```json
+ {
+  "path_data"   : "<PATH_TO_COMBINED_DATASET>_seed{XXX}",
+  "path_output" : "<PATH_TO_COMBINED_DATASET>_2023-08-18",
+  "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/comparison_with_other_methods_{sc/lesion}.sh",
+  "jobs"        : 8, 
+  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX} <PATH_TO_CONTRAST-AGNOSTIC_REPO>/monai/run_inference_single_image.py <PATH_TO_CONTRAST-AGNOSTIC_MODEL>"
+ }
+```
+
+Example of the `config_lesion_seed{XXX}.json` file:
+
 ```json
  {
   "path_data"   : "<PATH_TO_COMBINED_DATASET>_seed{XXX}",
