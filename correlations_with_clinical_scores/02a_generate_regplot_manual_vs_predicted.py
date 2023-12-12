@@ -304,10 +304,10 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         #           numpoints=1, loc='upper left')
 
         ax.legend([marker1, marker2, marker3, marker4],
-                  ['Site 1 (T2w sag) Before Active Learning',
-                   'Site 1 (T2w sag) After Active Learning',
-                   'Site 2 (T2w ax) Before Active Learning',
-                   'Site 2 (T2w ax) After Active Learning'],
+                  ['Site 1, Training Phase 1 (Before Active Learning)',
+                   'Site 1, Training Phase 3 (After Active Learning)',
+                   'Site 2, Training Phase 1 (Before Active Learning)',
+                   'Site 2, Training Phase 3 (After Active Learning)'],
                   numpoints=1, loc='upper left', fontsize=FONT_SIZE-3)
 
         # Increase tick labels size
