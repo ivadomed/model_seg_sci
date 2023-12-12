@@ -42,7 +42,8 @@ import yaml
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
-from utils import binarize_label, create_region_based_label
+from utils import binarize_label, create_region_based_label, get_git_branch_and_commit, Image
+from tqdm import tqdm
 
 import nibabel as nib
 
@@ -148,9 +149,17 @@ def main():
     logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
+    # temp dict for storing dataset commits
+    dataset_commits = {}
+
     # loop over the datasets
     for dataset in args.path_data:
         root = Path(dataset)
+
+        # get the git branch and commit ID of the dataset
+        dataset_name = os.path.basename(os.path.normpath(dataset))
+        branch, commit = get_git_branch_and_commit(dataset)
+        dataset_commits[dataset_name] = f"git-{branch}-{commit}"
 
         # add the sci-paris dataset to the training set
         if "sci-paris" in dataset and args.add_sci_paris:
@@ -188,6 +197,10 @@ def main():
     logger.info(f"Total number of subjects (not images) in the training set (combining all datasets): {len(train_subjects)}")
     logger.info(f"Total number of subjects (not images) in the test set: {len(test_subjects)}")
     # print(f"subjects in the training set: {train_subjects.keys()}")
+
+    # print version of each dataset in a separate line
+    for dataset_name, dataset_commit in dataset_commits.items():
+        logger.info(f"{dataset_name} dataset version: {dataset_commit}")
 
     train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
     for subject in all_subjects:
@@ -424,6 +437,7 @@ def main():
     json_dict['numTraining'] = train_ctr
     json_dict['numTest'] = test_ctr_zur + test_ctr_col
     json_dict['seed_used'] = args.seed
+    json_dict['dataset_versions'] = dataset_commits
     
     # The following keys are the most important ones. 
     """
