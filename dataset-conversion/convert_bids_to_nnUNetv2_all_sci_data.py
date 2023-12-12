@@ -141,6 +141,7 @@ def main():
 
     # load the yaml file and convert to a list
     if args.include_axial is not None:
+        logger.info(f"Loading axial Zurich subjects from the YAML file ...")
         with open(args.include_axial) as f:
             axial_subjects = yaml.load(f, Loader=yaml.FullLoader)
             # convert to a list
