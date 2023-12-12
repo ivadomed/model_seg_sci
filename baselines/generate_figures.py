@@ -40,13 +40,13 @@ METHODS_TO_LABEL_SC = {
     'deepseg_2d': 'sct_deepseg_sc\n2D',
     'deepseg_3d': 'sct_deepseg_sc\n3D',
     'monai': 'contrast-agnostic',
-    'nnunet_2d': 'SCISeg\n2D',
-    'nnunet_3d': 'SCISeg\n3D'
+    'nnunet_2d': 'SCIseg\n2D',
+    'nnunet_3d': 'SCIseg\n3D'
     }
 
 METHODS_TO_LABEL_LESION = {
-    'nnunet_2d': 'SCISeg 2D',
-    'nnunet_3d': 'SCISeg 3D',
+    'nnunet_2d': 'SCIseg 2D',
+    'nnunet_3d': 'SCIseg 3D',
     }
 
 LABEL_FONT_SIZE = 14
