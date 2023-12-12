@@ -253,6 +253,15 @@ def main():
                             # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                             shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                             shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                            # convert the image and label to RPI using the Image class
+                            image = Image(subject_image_file_nnunet)
+                            image.change_orientation("RPI")
+                            image.save(subject_image_file_nnunet)
+
+                            label = Image(subject_label_file_nnunet)
+                            label.change_orientation("RPI")
+                            label.save(subject_label_file_nnunet)
                                                 
                     else:                        
                         train_ctr += 1
@@ -289,6 +298,15 @@ def main():
                         shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                         shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
+                        # convert the image and label to RPI using the Image class
+                        image = Image(subject_image_file_nnunet)
+                        image.change_orientation("RPI")
+                        image.save(subject_image_file_nnunet)
+
+                        label = Image(subject_label_file_nnunet)
+                        label.change_orientation("RPI")
+                        label.save(subject_label_file_nnunet)
+
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
@@ -324,6 +342,15 @@ def main():
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                # convert the image and label to RPI using the Image class
+                image = Image(subject_image_file_nnunet)
+                image.change_orientation("RPI")
+                image.save(subject_image_file_nnunet)
+
+                label = Image(subject_label_file_nnunet)
+                label.change_orientation("RPI")
+                label.save(subject_label_file_nnunet)
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 if not args.region_based:
@@ -371,6 +398,15 @@ def main():
                     shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                     shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
+                    # convert the image and label to RPI using the Image class
+                    image = Image(subject_image_file_nnunet)
+                    image.change_orientation("RPI")
+                    image.save(subject_image_file_nnunet)
+
+                    label = Image(subject_label_file_nnunet)
+                    label.change_orientation("RPI")
+                    label.save(subject_label_file_nnunet)
+
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
@@ -400,6 +436,15 @@ def main():
                 # copy the files to new structure using symbolic links
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                # convert the image and label to RPI using the Image class
+                image = Image(subject_image_file_nnunet)
+                image.change_orientation("RPI")
+                image.save(subject_image_file_nnunet)
+
+                label = Image(subject_label_file_nnunet)
+                label.change_orientation("RPI")
+                label.save(subject_label_file_nnunet)
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 if not args.region_based:
@@ -438,6 +483,7 @@ def main():
     json_dict['numTest'] = test_ctr_zur + test_ctr_col
     json_dict['seed_used'] = args.seed
     json_dict['dataset_versions'] = dataset_commits
+    json_dict['image_orientation'] = "RPI"
     
     # The following keys are the most important ones. 
     """
