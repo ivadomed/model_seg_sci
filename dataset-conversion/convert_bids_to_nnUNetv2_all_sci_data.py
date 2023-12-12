@@ -68,6 +68,8 @@ def get_parser():
     # input yaml file containing list of axial subjects to include for active learning
     parser.add_argument('--include-axial', type=str, default=None,
                         help='Path to yaml file containing list of axial subjects to include for active learning.')
+    parser.add_argument("--add-sci-paris", action="store_true", default=False,
+                        help="If set, the script will add the sci-paris dataset to the training set. Default: False")
 
     return parser
 
@@ -111,6 +113,9 @@ def main():
     Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
     Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
 
+    # save output to a log file
+    logger.add(os.path.join(path_out, "logs.txt"), rotation="10 MB", level="INFO")
+
     # In case of a single dataset, create test directories only for this dataset
     if len(args.path_data) == 1 and 'zurich' in args.path_data[0]:
         path_out_imagesTsZur = Path(os.path.join(path_out, 'imagesTsZur'))
@@ -140,36 +145,48 @@ def main():
             # convert to a list
             axial_subjects = list(axial_subjects.values())[0]
 
-    logger.info(f"Number of axial subjects in the YAML file: {len(axial_subjects)}")
+    logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # loop over the datasets
     for dataset in args.path_data:
         root = Path(dataset)
+
+        # add the sci-paris dataset to the training set
+        if "sci-paris" in dataset and args.add_sci_paris:
+            logger.info(f"Adding the sci-paris dataset to the training set ...")
+            paris_subs = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+
+            # add all the subjects to train_subjects dict
+            train_subjects.update({sub: os.path.join(root, sub) for sub in paris_subs})
+
+            # add to the list of all subjects
+            all_subjects.extend(paris_subs)
         
-        # get the list of subjects in the root directory 
-        subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+        else:
+            # get the list of subjects in the root directory 
+            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
 
-        # add to the list of all subjects
-        all_subjects.extend(subjects)
-        
-        # Get the training and test splits
-        tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
+            # add to the list of all subjects
+            all_subjects.extend(subjects)
+            
+            # Get the training and test splits
+            tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
 
-        # get the length of the number of subjects common to both tr_subs and axial
-        if args.include_axial is not None and "sci-zurich" in dataset:
-            train_ax_subs = list(set(tr_subs).intersection(axial_subjects))
-            logger.info(f"Number of Zurich axial subjects added to the training set: {len(train_ax_subs)}")
-            test_ax_subs = list(set(te_subs).intersection(axial_subjects))
-            logger.info(f"Corrected axial images in the original test split of seed {args.seed} (hence cannot be added to the training set): {test_ax_subs}")
+            # get the length of the number of subjects common to both tr_subs and axial
+            if args.include_axial is not None and "sci-zurich" in dataset:
+                train_ax_subs = list(set(tr_subs).intersection(axial_subjects))
+                logger.info(f"Number of axial Zurich subjects added to the training set: {len(train_ax_subs)}")
+                test_ax_subs = list(set(te_subs).intersection(axial_subjects))
+                logger.info(f"Corrected axial images in the original test split of seed {args.seed} (hence cannot be added to the training set): {test_ax_subs}")
 
-        # update the train and test subjects dicts with the key as the subject and value as the path to the subject
-        train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
-        test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
+            # update the train and test subjects dicts with the key as the subject and value as the path to the subject
+            train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
+            test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
 
-    # print(f"Total number of subjects in the dataset: {len(all_subjects)}")
-    # print(f"Total number of subjects in the training set: {len(train_subjects)}")
-    # print(f"Total number of subjects in the test set: {len(test_subjects)}")
+    # logger.info(f"Total number of subjects combining all datasets: {len(all_subjects)}")
+    logger.info(f"Total number of subjects (not images) in the training set (combining all datasets): {len(train_subjects)}")
+    logger.info(f"Total number of subjects (not images) in the test set: {len(test_subjects)}")
     # print(f"subjects in the training set: {train_subjects.keys()}")
 
     train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
@@ -383,9 +400,11 @@ def main():
             print("Skipping file, could not be located in the Train or Test splits split.", subject)
 
     logger.info(f"----- Dataset conversion finished! -----")
-    logger.info(f"Number of training and validation images (including sessions): {train_ctr}")
-    logger.info(f"Number of test subjects (including sessions) in SCI-Zurich: {test_ctr_zur}")
-    logger.info(f"Number of test subjects (including sessions) in SCI-Colorado: {test_ctr_col}")
+    logger.info(f"Number of training and validation images (not subjects) including sessions: {train_ctr}")
+    logger.info(f"Number of test images (not subjects) including sessions in SCI-Zurich: {test_ctr_zur}")
+    logger.info(f"Number of test images (not subjects) including sessions in SCI-Colorado: {test_ctr_col}")
+    if args.add_sci_paris:
+        logger.info(f"Training/Validation set contains images from 3 sites: SCI-Zurich, SCI-Colorado, and SCI-Paris")
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
 
