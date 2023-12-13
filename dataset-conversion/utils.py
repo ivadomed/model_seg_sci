@@ -8,7 +8,6 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-
 def binarize_label(subject_path, label_path):
     label_npy = nib.load(label_path).get_fdata()
     threshold = 0.5
