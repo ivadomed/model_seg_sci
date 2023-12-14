@@ -49,3 +49,12 @@ segmentation BEFORE and AFTER active learning.
 
 Generate sns.lmplot for each metric (volume, length, max_axial_damage_ratio) and clinical score (AIS, LEMS, light touch,
 pinprick) at initial, discharge and diff time points manual vs SCIseg 3D lesion segmentation.
+
+3x3 mosaic of plots for each metric and clinical score can be then generated using `convert` command:
+
+```console
+convert volume_regplot_discharge_pin_prick_total.png volume_regplot_discharge_light_touch_total.png volume_regplot_discharge_LEMS.png +append row1.png
+convert length_regplot_discharge_pin_prick_total.png length_regplot_discharge_light_touch_total.png length_regplot_discharge_LEMS.png +append row2.png
+convert max_axial_damage_ratio_regplot_discharge_pin_prick_total.png max_axial_damage_ratio_regplot_discharge_light_touch_total.png max_axial_damage_ratio_regplot_discharge_LEMS.png +append row3.png
+convert row1.png row2.png row3.png -append combined.png
+```
