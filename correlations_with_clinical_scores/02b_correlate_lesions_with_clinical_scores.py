@@ -317,9 +317,9 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['orange', 'green']]
             legend = ax.legend(markers,
                                [f'Manual Ground Truth: r = {corr_manual:.2f}, '
-                                f'p{format_pvalue(pval_manual)}',
+                                '$\it{P}$' + f'{format_pvalue(pval_manual)}',
                                 f'SCIseg 3D Prediction: r = {corr_nnunet:.2f}, '
-                                f'p{format_pvalue(pval_nnunet)}'],
+                                '$\it{P}$' + f'{format_pvalue(pval_nnunet)}'],
                                numpoints=1,
                                loc='upper right', fontsize=FONT_SIZE-4)
 
