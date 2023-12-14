@@ -281,10 +281,16 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
 
             # Set the title
             #ax.set_title(f'{metric_to_title[metric]} vs {score_to_title[score]}', fontsize=FONT_SIZE)
-            # Set the x-axis label
-            ax.set_xlabel(f'{score_to_title[score]}', fontsize=FONT_SIZE)
-            # Set the y-axis label
-            ax.set_ylabel(f'{metric_to_label[metric]}', fontsize=FONT_SIZE)
+            if 'max_axial_damage_ratio' in metric:
+                # Set the x-axis label
+                ax.set_xlabel(f'{score_to_title[score]}', fontsize=FONT_SIZE)
+            else:
+                ax.set_xlabel('')
+            if 'pin_prick' in score:
+                # Set the y-axis label
+                ax.set_ylabel(f'{metric_to_label[metric]}', fontsize=FONT_SIZE)
+            else:
+                ax.set_ylabel('')
 
             # For AIS, set x-axis ticks to be integers
             if 'ais' in score:
