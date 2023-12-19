@@ -42,7 +42,8 @@ import yaml
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
-from utils import binarize_label, create_region_based_label
+from utils import binarize_label, create_region_based_label, get_git_branch_and_commit, Image
+from tqdm import tqdm
 
 import nibabel as nib
 
@@ -140,6 +141,7 @@ def main():
 
     # load the yaml file and convert to a list
     if args.include_axial is not None:
+        logger.info(f"Loading axial Zurich subjects from the YAML file ...")
         with open(args.include_axial) as f:
             axial_subjects = yaml.load(f, Loader=yaml.FullLoader)
             # convert to a list
@@ -148,9 +150,17 @@ def main():
     logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
+    # temp dict for storing dataset commits
+    dataset_commits = {}
+
     # loop over the datasets
     for dataset in args.path_data:
         root = Path(dataset)
+
+        # get the git branch and commit ID of the dataset
+        dataset_name = os.path.basename(os.path.normpath(dataset))
+        branch, commit = get_git_branch_and_commit(dataset)
+        dataset_commits[dataset_name] = f"git-{branch}-{commit}"
 
         # add the sci-paris dataset to the training set
         if "sci-paris" in dataset and args.add_sci_paris:
@@ -189,8 +199,13 @@ def main():
     logger.info(f"Total number of subjects (not images) in the test set: {len(test_subjects)}")
     # print(f"subjects in the training set: {train_subjects.keys()}")
 
+    # print version of each dataset in a separate line
+    for dataset_name, dataset_commit in dataset_commits.items():
+        logger.info(f"{dataset_name} dataset version: {dataset_commit}")
+
     train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
-    for subject in all_subjects:
+    train_niftis, test_nifitis = [], []
+    for subject in tqdm(all_subjects, desc="Iterating over all subjects"):
 
         if subject in train_subjects.keys():
 
@@ -221,6 +236,9 @@ def main():
                             subject_label_file = os.path.join(subject_labels_path, 
                                                               f"{subject}_{session}_acq-{orientation}_T2w_lesion-manual.nii.gz")
 
+                            # add the subject image file to the list of training niftis
+                            train_niftis.append(os.path.basename(subject_image_file))
+
                             # create the new convention names for nnunet
                             sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
                             
@@ -240,6 +258,15 @@ def main():
                             # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                             shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                             shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                            # convert the image and label to RPI using the Image class
+                            image = Image(subject_image_file_nnunet)
+                            image.change_orientation("RPI")
+                            image.save(subject_image_file_nnunet)
+
+                            label = Image(subject_label_file_nnunet)
+                            label.change_orientation("RPI")
+                            label.save(subject_label_file_nnunet)
                                                 
                     else:                        
                         train_ctr += 1
@@ -255,6 +282,9 @@ def main():
                         subject_label_file = os.path.join(subject_labels_path, 
                                                           f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
+                        # add the subject image file to the list of training niftis
+                        train_niftis.append(os.path.basename(subject_image_file))
+                        
                         # create the new convention names for nnunet
                         sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
                         
@@ -276,6 +306,15 @@ def main():
                         shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                         shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
+                        # convert the image and label to RPI using the Image class
+                        image = Image(subject_image_file_nnunet)
+                        image.change_orientation("RPI")
+                        image.save(subject_image_file_nnunet)
+
+                        label = Image(subject_label_file_nnunet)
+                        label.change_orientation("RPI")
+                        label.save(subject_label_file_nnunet)
+
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
@@ -291,6 +330,9 @@ def main():
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
 
+                # add the subject image file to the list of training niftis
+                train_niftis.append(os.path.basename(subject_image_file))
+                
                 # create the new convention names for nnunet
                 sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
@@ -311,6 +353,15 @@ def main():
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                # convert the image and label to RPI using the Image class
+                image = Image(subject_image_file_nnunet)
+                image.change_orientation("RPI")
+                image.save(subject_image_file_nnunet)
+
+                label = Image(subject_label_file_nnunet)
+                label.change_orientation("RPI")
+                label.save(subject_label_file_nnunet)
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 if not args.region_based:
@@ -337,6 +388,9 @@ def main():
                     subject_label_file = os.path.join(subject_labels_path,
                                                       f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
 
+                    # add the subject image file to the list of testing niftis
+                    test_nifitis.append(os.path.basename(subject_image_file))
+
                     # create the new convention names for nnunet
                     sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
@@ -358,6 +412,15 @@ def main():
                     shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                     shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
+                    # convert the image and label to RPI using the Image class
+                    image = Image(subject_image_file_nnunet)
+                    image.change_orientation("RPI")
+                    image.save(subject_image_file_nnunet)
+
+                    label = Image(subject_label_file_nnunet)
+                    label.change_orientation("RPI")
+                    label.save(subject_label_file_nnunet)
+
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
@@ -370,6 +433,9 @@ def main():
 
                 subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
                 subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
+
+                # add the subject image file to the list of testing niftis
+                test_nifitis.append(os.path.basename(subject_image_file))
 
                 # create the new convention names for nnunet
                 sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
@@ -387,6 +453,15 @@ def main():
                 # copy the files to new structure using symbolic links
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+                # convert the image and label to RPI using the Image class
+                image = Image(subject_image_file_nnunet)
+                image.change_orientation("RPI")
+                image.save(subject_image_file_nnunet)
+
+                label = Image(subject_label_file_nnunet)
+                label.change_orientation("RPI")
+                label.save(subject_label_file_nnunet)
 
                 # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                 if not args.region_based:
@@ -408,6 +483,16 @@ def main():
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
 
+    # create a yaml file containing the list of training and test niftis
+    niftis_dict = {
+        f"train": sorted(train_niftis),
+        f"test": sorted(test_nifitis)
+    }
+
+    # write the train and test niftis to a yaml file
+    with open(os.path.join(path_out, f"train_test_split_seed{args.seed}.yaml"), "w") as outfile:
+        yaml.dump(niftis_dict, outfile, default_flow_style=False)
+
     # c.f. dataset json generation
     # In nnUNet V2, dataset.json file has become much shorter. The description of the fields and changes
     # can be found here: https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md#datasetjson
@@ -424,6 +509,8 @@ def main():
     json_dict['numTraining'] = train_ctr
     json_dict['numTest'] = test_ctr_zur + test_ctr_col
     json_dict['seed_used'] = args.seed
+    json_dict['dataset_versions'] = dataset_commits
+    json_dict['image_orientation'] = "RPI"
     
     # The following keys are the most important ones. 
     """
