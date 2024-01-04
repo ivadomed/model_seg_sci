@@ -7,7 +7,8 @@ This repository contains the code for deep learning-based segmentation of the sp
 
 The model was trained on raw T2-weighted images of SCI patients from multiple (three) sites. The data included images with both axial and sagittal resolutions. To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
 
-<img width="1000" alt="sciseg-overview" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/f463e0d2-8c2e-42e7-bb2c-5122962ca373">
+<img width="1000" alt="figure2" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e858bde3-1b6e-4adb-8897-a6d323b64c0e">
+
 
 ## Getting started
 
