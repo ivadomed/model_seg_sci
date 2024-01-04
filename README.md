@@ -1,5 +1,7 @@
 # Automated Segmentation of Spinal Cord and Hyperintense Lesions in Traumatic Spinal Cord Injury
 
+[![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v1-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v1)
+
 This repository contains the code for deep learning-based segmentation of the spinal cord and hyperintense lesions in spinal cord injury (SCI). The code is based on the [nnUNet framework](https://github.com/MIC-DKFZ/nnUNet).
 
 
