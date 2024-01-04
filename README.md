@@ -78,4 +78,22 @@ python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-ou
 
 ℹ️ The script also supports getting segmentations on a GPU. To do so, simply add the flag `--use-gpu` at the end of the above commands. By default, the inference is run on the CPU. It is useful to note that obtaining the predictions from the GPU is significantly faster than the CPU.
 
+## Citation Info
 
+If you find this work and/or code useful for your research, please cite our paper:
+
+```
+@article {Enamundram2024.01.03.24300794,
+	author = {Naga Karthik Enamundram* and Jan Valosek* and Andrew C Smith and Dario Pfyffer and Simon Schading-Sassenhausen and Lynn Farner and Kenneth Arnold Weber II and Patrick Freund and Julien Cohen-Adad},
+	title = {SCIseg: Automatic Segmentation of T2-weighted Hyperintense Lesions in Spinal Cord Injury},
+	elocation-id = {2024.01.03.24300794},
+	year = {2024},
+	doi = {10.1101/2024.01.03.24300794},
+	publisher = {Cold Spring Harbor Laboratory Press},
+	URL = {https://www.medrxiv.org/content/early/2024/01/03/2024.01.03.24300794},
+	eprint = {https://www.medrxiv.org/content/early/2024/01/03/2024.01.03.24300794.full.pdf},
+	journal = {medRxiv},
+    note = {*Shared first authorship}
+}
+
+```
