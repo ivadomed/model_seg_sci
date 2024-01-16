@@ -79,7 +79,7 @@ segment_sc_nnUNet(){
   # Generate spinal cord QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
   # Compute ANIMA segmentation performance metrics
-  #compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
+  #compute_anima_metrics ${FILESEG} ${file}_seg-manual
 }
 
 # Segment lesion using our nnUNet model
@@ -106,7 +106,7 @@ segment_lesion_nnUNet(){
   # Generate lesion QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -d ${FILELESION}.nii.gz -p sct_deepseg_lesion -plane ${plane} -qc ${PATH_QC} -qc-subject ${SUBJECT}
   # Compute ANIMA segmentation performance metrics
-  compute_anima_metrics ${FILELESION} ${file}_lesion-manual.nii.gz
+  compute_anima_metrics ${FILELESION} ${file}_lesion-manual
 }
 
 
