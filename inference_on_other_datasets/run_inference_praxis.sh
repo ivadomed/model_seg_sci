@@ -175,17 +175,17 @@ cd ${SUBJECT}/anat
 # T2w
 # ------------------------------------------------------------------------------
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
-file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
-
 # If subject is ott004, ott005, sub-hal002 or sub-hal004, add run-01 suffix to the file name
 if [[ $SUBJECT =~ "ott004" ]] || [[ $SUBJECT =~ "ott005" ]] || [[ $SUBJECT =~ "sub-hal002" ]] || [[ $SUBJECT =~ "sub-hal004" ]]; then
-    file_t2="${file_t2}_run-01"
+    file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-01_T2w
 # If subject is sub-hal006 or sub-hal026, add run-02 suffix to the file name
 elif [[ $SUBJECT =~ "sub-hal006" ]] || [[ $SUBJECT =~ "sub-hal026" ]]; then
-    file_t2="${file_t2}_run-02"
+    file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-02_T2w
 # If subject is ott011 or sub-hal011, add run-03 suffix to the file name
 elif [[ $SUBJECT =~ "ott011" ]] || [[ $SUBJECT =~ "sub-hal011" ]]; then
-    file_t2="${file_t2}_run-03"
+    file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-03_T2w
+else
+    file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 fi
 
 # Check if file_t2 exists
