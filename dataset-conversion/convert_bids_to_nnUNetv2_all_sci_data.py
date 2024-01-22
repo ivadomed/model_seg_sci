@@ -490,7 +490,7 @@ def main():
     }
 
     # write the train and test niftis to a yaml file
-    with open(os.path.join(path_out, f"train_test_split_seed{args.seed}.yaml"), "w") as outfile:
+    with open(f"dataset_split_seed{args.seed}.yaml", "w") as outfile:
         yaml.dump(niftis_dict, outfile, default_flow_style=False)
 
     # c.f. dataset json generation
