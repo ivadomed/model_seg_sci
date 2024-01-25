@@ -67,8 +67,10 @@ echo "anima-scripts-public-root = ${HOME}/anima/Anima-Scripts-Public/" >> .anima
 echo "extra-data-root = ${HOME}/anima/Anima-Scripts-Data-Public/" >> .anima/config.txt
 
 USAGE:
-python compute_anima_metrics.py --pred_folder <path_to_predictions_folder> 
---gt_folder <path_to_gt_folder> -dname <dataset_name> --label-type <sc/lesion>
+python compute_anima_metrics.py
+    --pred_folder <path_to_predictions_folder>
+    --gt_folder <path_to_gt_folder>
+    --dataset-name <dataset_name>
 
 
 NOTE 1: For checking all the available options run the following command from your terminal: 
@@ -102,9 +104,8 @@ def get_parser():
                         help='Path to the folder containing nifti images of test predictions')
     parser.add_argument('--gt-folder', required=True, type=str,
                         help='Path to the folder containing nifti images of GT labels')
-    parser.add_argument('-dname', '--dataset-name', required=True, type=str,
-                        help='Dataset name used for storing on git-annex. For region-based metrics, '
-                             'append "-region" to the dataset name')
+    parser.add_argument('--dataset-name', required=True, type=str,
+                        help='Dataset name used for storing on git-annex. Example: "site_003"')
 
     return parser
 
