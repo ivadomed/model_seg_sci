@@ -184,7 +184,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
                             (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
                             os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"),
                             os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"),
-                            os.path.join(output_folder, f"{idx_pred}_{seg}")))
+                            os.path.join(output_folder, f"{sub_ses_pred}_{idx_pred}_{seg}")))
 
                 # Delete temporary binarized NIfTI files
                 os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
@@ -247,7 +247,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
                         (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
                         os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"),
                         os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"),
-                        os.path.join(output_folder, f"{idx_pred}")))
+                        os.path.join(output_folder, f"{sub_ses_pred}_{idx_pred}")))
 
             # Delete temporary binarized NIfTI files
             os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"))
