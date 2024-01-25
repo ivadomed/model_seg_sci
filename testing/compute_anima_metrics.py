@@ -93,10 +93,6 @@ import nibabel as nib
 from test_utils import fetch_filename_details
 
 
-REGION_BASED_DATASETS = ["site_003", "site_012"]
-STANDARD_DATASETS = ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]
-
-
 def get_parser():
     # parse command line arguments
     parser = argparse.ArgumentParser(description='Compute test metrics using animaSegPerfAnalyzer')
@@ -109,155 +105,85 @@ def get_parser():
     parser.add_argument('-dname', '--dataset-name', required=True, type=str,
                         help='Dataset name used for storing on git-annex. For region-based metrics, '
                              'append "-region" to the dataset name')
-    parser.add_argument('--label-type', required=True, type=str, choices=['sc', 'lesion'],
-                        help='Type of prediction and GT label to be used for ANIMA evaluation.'
-                            'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation'
-                            'NOTE: when label-type is "lesion", additional lesion detection metrics, namely,'
-                            'Lesion PPV, Lesion Sensitivity, and F1_score are computed')
-    # parser.add_argument('-o', '--output-folder', required=True, type=str,
-    #                     help='Path to the output folder to save the test metrics results')
 
     return parser
 
 
-def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set, label_type):
+def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path):
     """
     Computes the test metrics given folders containing nifti images of test predictions 
     and GT images by running the "animaSegPerfAnalyzer" command
     """
-    
-    if data_set in REGION_BASED_DATASETS:
 
-        # glob all the predictions and GTs and get the last three digits of the filename
-        pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
-        gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
+    # glob all the predictions and GTs and get the last three digits of the filename
+    pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
+    gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
 
-        dataset_name_nnunet = fetch_filename_details(pred_files[0])[0]
+    dataset_name_nnunet = fetch_filename_details(pred_files[0])[0]
 
-        # loop over the predictions and compute the metrics
-        for pred_file, gt_file in zip(pred_files, gt_files):
+    # loop over the predictions and compute the metrics
+    for pred_file, gt_file in zip(pred_files, gt_files):
 
-            print(f"Processing {pred_file} and {gt_file}")
+        print(f"Processing {pred_file} and {gt_file}")
 
-            _, sub_pred, ses_pred, idx_pred, _, _ = fetch_filename_details(pred_file)
-            _, sub_gt, ses_gt, idx_gt, _, _ = fetch_filename_details(gt_file)
+        _, sub_pred, ses_pred, idx_pred, _, _ = fetch_filename_details(pred_file)
+        _, sub_gt, ses_gt, idx_gt, _, _ = fetch_filename_details(gt_file)
 
-            # make sure the subject and session IDs match
-            print(f"Subject and session IDs for Preds and GTs: {sub_pred}_{ses_pred}_{idx_pred}, "
-                  f"{sub_gt}_{ses_gt}_{idx_gt}")
-            assert idx_pred == idx_gt, ('Subject and session IDs for Preds and GTs do not match. '
-                                        'Please check the filenames.')
-            
-            if ses_gt == "":
-                sub_ses_pred, sub_ses_gt = f"{sub_pred}", f"{sub_gt}"
-            else:
-                sub_ses_pred, sub_ses_gt = f"{sub_pred}_{ses_pred}", f"{sub_gt}_{ses_gt}"
-            assert sub_ses_pred == sub_ses_gt, ('Subject and session IDs for Preds and GTs do not match. '
-                                                'Please check the filenames.')
+        # make sure the subject and session IDs match
+        print(f"Subject and session IDs for Preds and GTs: {sub_pred}_{ses_pred}_{idx_pred}, "
+              f"{sub_gt}_{ses_gt}_{idx_gt}")
+        assert idx_pred == idx_gt, ('Subject and session IDs for Preds and GTs do not match. '
+                                    'Please check the filenames.')
 
-            for seg in ['sc', 'lesion']:
-                # load the predictions and GTs
-                pred_npy = nib.load(pred_file).get_fdata()
-                gt_npy = nib.load(gt_file).get_fdata()
+        if ses_gt == "":
+            sub_ses_pred, sub_ses_gt = f"{sub_pred}", f"{sub_gt}"
+        else:
+            sub_ses_pred, sub_ses_gt = f"{sub_pred}_{ses_pred}", f"{sub_gt}_{ses_gt}"
+        assert sub_ses_pred == sub_ses_gt, ('Subject and session IDs for Preds and GTs do not match. '
+                                            'Please check the filenames.')
 
-                if seg == 'sc':
-                    pred_npy = np.array(pred_npy == 1, dtype=float)
-                    gt_npy = np.array(gt_npy == 1, dtype=float)                
-                
-                elif seg == 'lesion':
-                    pred_npy = np.array(pred_npy == 2, dtype=float)
-                    gt_npy = np.array(gt_npy == 2, dtype=float)
-                
-                # Save the binarized predictions and GTs
-                pred_nib = nib.Nifti1Image(pred_npy, affine=np.eye(4))
-                gtc_nib = nib.Nifti1Image(gt_npy, affine=np.eye(4))
-                nib.save(img=pred_nib, filename=os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
-                nib.save(img=gtc_nib, filename=os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
-
-                # Run ANIMA segmentation performance metrics on the predictions
-                if seg == 'sc':
-                    seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -X'
-                elif seg == 'lesion':   # add lesion evaluation metrics with `-l`
-                    seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -l -X'
-                
-                os.system(seg_perf_analyzer_cmd %
-                            (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
-                            os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"),
-                            os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"),
-                            os.path.join(output_folder, f"{sub_ses_pred}_{idx_pred}_{seg}")))
-
-                # Delete temporary binarized NIfTI files
-                os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
-                os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
-
-        # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_sc_filepaths = [os.path.join(output_folder, f) for f in
-                                os.listdir(output_folder) if f.endswith('.xml') and 'sc' in f]
-        subject_lesion_filepaths = [os.path.join(output_folder, f) for f in
-                                os.listdir(output_folder) if f.endswith('.xml') and 'lesion' in f]
-        
-        return subject_sc_filepaths, subject_lesion_filepaths
-
-    elif data_set in STANDARD_DATASETS:
-        # glob all the predictions and GTs and get the last three digits of the filename
-        pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
-        gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
-
-        dataset_name_nnunet = fetch_filename_details(pred_files[0])[0]
-
-        # loop over the predictions and compute the metrics
-        for pred_file, gt_file in zip(pred_files, gt_files):
-            
-            _, sub_pred, ses_pred, idx_pred, _, _ = fetch_filename_details(pred_file)
-            _, sub_gt, ses_gt, idx_gt, _, _ = fetch_filename_details(gt_file)
-
-            # make sure the subject and session IDs match
-            print(f"Subject and session IDs for Preds and GTs: {sub_pred}_{ses_pred}_{idx_pred}, {sub_gt}_{ses_gt}_{idx_gt}")
-            assert idx_pred == idx_gt, 'Subject and session IDs for Preds and GTs do not match. Please check the filenames.'
-            
-            if ses_gt == "":
-                sub_ses_pred, sub_ses_gt = f"{sub_pred}", f"{sub_gt}"
-            else:
-                sub_ses_pred, sub_ses_gt = f"{sub_pred}_{ses_pred}", f"{sub_gt}_{ses_gt}"
-            assert sub_ses_pred == sub_ses_gt, 'Subject and session IDs for Preds and GTs do not match. Please check the filenames.'
-
+        for seg in ['sc', 'lesion']:
             # load the predictions and GTs
             pred_npy = nib.load(pred_file).get_fdata()
             gt_npy = nib.load(gt_file).get_fdata()
-            
-            # make sure the predictions are binary because ANIMA accepts binarized inputs only
-            pred_npy = np.array(pred_npy > 0.5, dtype=float)
-            gt_npy = np.array(gt_npy > 0.5, dtype=float)
+
+            if seg == 'sc':
+                pred_npy = np.array(pred_npy == 1, dtype=float)
+                gt_npy = np.array(gt_npy == 1, dtype=float)
+
+            elif seg == 'lesion':
+                pred_npy = np.array(pred_npy == 2, dtype=float)
+                gt_npy = np.array(gt_npy == 2, dtype=float)
 
             # Save the binarized predictions and GTs
             pred_nib = nib.Nifti1Image(pred_npy, affine=np.eye(4))
             gtc_nib = nib.Nifti1Image(gt_npy, affine=np.eye(4))
-            nib.save(img=pred_nib, filename=os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"))
-            nib.save(img=gtc_nib, filename=os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
+            nib.save(img=pred_nib, filename=os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
+            nib.save(img=gtc_nib, filename=os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
 
-            # Run ANIMA segmentation performance metrics on the predictions            
-            if label_type == 'lesion':
-                 seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -l -s -X'
-            elif label_type == 'sc':
+            # Run ANIMA segmentation performance metrics on the predictions
+            if seg == 'sc':
                 seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -X'
-            else:
-                raise ValueError('Please specify a valid label type: lesion or sc')
+            elif seg == 'lesion':   # add lesion evaluation metrics with `-l`
+                seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -l -X'
 
             os.system(seg_perf_analyzer_cmd %
                         (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
-                        os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"),
-                        os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"),
-                        os.path.join(output_folder, f"{sub_ses_pred}_{idx_pred}")))
+                        os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"),
+                        os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"),
+                        os.path.join(output_folder, f"{sub_ses_pred}_{idx_pred}_{seg}")))
 
             # Delete temporary binarized NIfTI files
-            os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{idx_pred}_bin.nii.gz"))
-            os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
+            os.remove(os.path.join(pred_folder, f"{dataset_name_nnunet}_{sub_ses_pred}_{idx_pred}_{seg}.nii.gz"))
+            os.remove(os.path.join(gt_folder, f"{dataset_name_nnunet}_{sub_ses_gt}_{idx_gt}_{seg}.nii.gz"))
 
-        # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_filepaths = [os.path.join(output_folder, f) for f in
-                                os.listdir(output_folder) if f.endswith('.xml')]
-        
-        return subject_filepaths
+    # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
+    subject_sc_filepaths = [os.path.join(output_folder, f) for f in
+                            os.listdir(output_folder) if f.endswith('.xml') and 'sc' in f]
+    subject_lesion_filepaths = [os.path.join(output_folder, f) for f in
+                            os.listdir(output_folder) if f.endswith('.xml') and 'lesion' in f]
+
+    return subject_sc_filepaths, subject_lesion_filepaths
 
 
 def main():
@@ -277,27 +203,28 @@ def main():
     # define variables
     pred_folder, gt_folder = args.pred_folder, args.gt_folder
     dataset_name = args.dataset_name
-    label_type = args.label_type
 
     output_folder = os.path.join(pred_folder, f"anima_stats")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
     print(f"Saving ANIMA performance metrics to {output_folder}")
 
-    if dataset_name not in REGION_BASED_DATASETS:
+    # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
+    subject_sc_filepaths, subject_lesion_filepaths = \
+        get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path)
 
-        # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                                        data_set=dataset_name, label_type=label_type)
+    # loop through the sc and lesion filepaths and get the metrics
+    for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
 
         test_metrics = defaultdict(list)
 
         # Update the test metrics dictionary by iterating over all subjects
         for subject_filepath in subject_filepaths:
-            subject = os.path.split(subject_filepath)[-1].split('_')[0]
+
+            _, subject, _, _, _, seg_type = fetch_filename_details(subject_filepath)
             root_node = ET.parse(source=subject_filepath).getroot()
 
-            # if GT is empty then metrics aren't calculated, hence the only entries in the XML file 
+            # if GT is empty then metrics aren't calculated, hence the only entries in the XML file
             # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
             # with empty GTs by checked if the length of the .xml file is 2
             if len(root_node) == 2:
@@ -315,63 +242,16 @@ def main():
 
         # Print aggregation of each metric via mean and standard dev.
         with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-            print('Test Phase Metrics [ANIMA]: ', file=f)
+            print(f'Test Phase Metrics [ANIMA] for {seg_type}: ', file=f)
 
-        print('Test Phase Metrics [ANIMA]: ')
+        print(f'Test Phase Metrics [ANIMA] for {seg_type}: ')
         for key in test_metrics:
             print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
-            
+
             # save the metrics to a log file
             with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                        print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
+                        print("\t%s --> Mean: %0.3f, Std: %0.3f" %
                                 (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
-        
-    else:
-
-        # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
-        subject_sc_filepaths, subject_lesion_filepaths = \
-            get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                        data_set=dataset_name, label_type=label_type)
-
-        # loop through the sc and lesion filepaths and get the metrics
-        for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
-        
-            test_metrics = defaultdict(list)
-
-            # Update the test metrics dictionary by iterating over all subjects
-            for subject_filepath in subject_filepaths:
-
-                _, subject, _, _, _, seg_type = fetch_filename_details(subject_filepath)
-                root_node = ET.parse(source=subject_filepath).getroot()
-
-                # if GT is empty then metrics aren't calculated, hence the only entries in the XML file 
-                # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
-                # with empty GTs by checked if the length of the .xml file is 2
-                if len(root_node) == 2:
-                    print(f"Skipping {subject} ENTIRELY Due to Empty GT!")
-                    continue
-
-                for metric in list(root_node):
-                    name, value = metric.get('name'), float(metric.text)
-
-                    if np.isinf(value) or np.isnan(value):
-                        print(f'Skipping Metric={name} for {subject} Due to INF or NaNs!')
-                        continue
-
-                    test_metrics[name].append(value)
-
-            # Print aggregation of each metric via mean and standard dev.
-            with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                print(f'Test Phase Metrics [ANIMA] for {seg_type}: ', file=f)
-
-            print(f'Test Phase Metrics [ANIMA] for {seg_type}: ')
-            for key in test_metrics:
-                print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
-                
-                # save the metrics to a log file
-                with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                            print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
-                                    (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
 
 
 if __name__ == '__main__':
