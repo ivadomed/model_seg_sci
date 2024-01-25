@@ -301,14 +301,14 @@ def main():
             # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
             # with empty GTs by checked if the length of the .xml file is 2
             if len(root_node) == 2:
-                print(f"Skipping Subject={int(subject):03d} ENTIRELY Due to Empty GT!")
+                print(f"Skipping Subject={subject} ENTIRELY Due to Empty GT!")
                 continue
 
             for metric in list(root_node):
                 name, value = metric.get('name'), float(metric.text)
 
                 if np.isinf(value) or np.isnan(value):
-                    print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
+                    print(f'Skipping Metric={name} for Subject={subject} Due to INF or NaNs!')
                     continue
 
                 test_metrics[name].append(value)
@@ -349,14 +349,14 @@ def main():
                 # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
                 # with empty GTs by checked if the length of the .xml file is 2
                 if len(root_node) == 2:
-                    print(f"Skipping Subject={int(subject):03d} ENTIRELY Due to Empty GT!")
+                    print(f"Skipping Subject={subject} ENTIRELY Due to Empty GT!")
                     continue
 
                 for metric in list(root_node):
                     name, value = metric.get('name'), float(metric.text)
 
                     if np.isinf(value) or np.isnan(value):
-                        print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
+                        print(f'Skipping Metric={name} for Subject={subject} Due to INF or NaNs!')
                         continue
 
                     test_metrics[name].append(value)
