@@ -93,7 +93,7 @@ import nibabel as nib
 from test_utils import fetch_filename_details
 
 
-REGION_BASED_DATASETS = ["sci-zurich-region", "sci-colorado-region"]
+REGION_BASED_DATASETS = ["site_003", "site_012"]
 STANDARD_DATASETS = ["spine-generic", "sci-colorado", "sci-zurich", "basel-mp2rage"]
 
 
