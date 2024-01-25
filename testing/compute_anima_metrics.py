@@ -340,9 +340,8 @@ def main():
 
             # Update the test metrics dictionary by iterating over all subjects
             for subject_filepath in subject_filepaths:
-                
-                subject = os.path.split(subject_filepath)[-1].split('_')[0]
-                seg_type = os.path.split(subject_filepath)[-1].split('_')[1]
+
+                _, subject, _, _, _, seg_type = fetch_filename_details(subject_filepath)
                 root_node = ET.parse(source=subject_filepath).getroot()
 
                 # if GT is empty then metrics aren't calculated, hence the only entries in the XML file 

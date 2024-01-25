@@ -8,9 +8,12 @@ def fetch_filename_details(filename_path):
     filename or file path. The function works both on absolute file path as well as filename
     :param filename_path: input nifti filename (e.g., sub-001_ses-01_T1w.nii.gz) or file path
     (e.g., /home/user/MRI/bids/derivatives/labels/sub-001/ses-01/anat/sub-001_ses-01_T1w.nii.gz
+    :return: datasetName: dataset name
     :return: subjectID: subject ID (e.g., sub-001)
     :return: sessionID: session ID (e.g., ses-01)
-    :return: filename: nii filename (e.g., sub-001_ses-01_T1w.nii.gz)
+    :return: fileID: file ID (e.g., 001)
+    :return: fileName: filename (e.g., sub-001_ses-01_T1w.nii.gz)
+    :return: seg_type: segmentation type (e.g., sc or lesion)
     
     Adapted from: https://github.com/spinalcordtoolbox/manual-correction/blob/main/utils.py#L24
     """
@@ -27,12 +30,16 @@ def fetch_filename_details(filename_path):
     fID = re.search('_\d{3}', fileName)
     fileID = fID.group(0)[1:] if fID else ""        # [1:-1] removes the underscores
 
+    # Fetch segtype (sc or lesion)
+    seg_type = re.search('sc|lesion', filename_path)
+    seg_type = seg_type.group(0) if seg_type else ""
+
     # REGEX explanation
     # \d - digit
     # \d? - no or one occurrence of digit
     # *? - match the previous element as few times as possible (zero or more times)
 
-    return datasetName, subjectID, sessionID, fileID, fileName
+    return datasetName, subjectID, sessionID, fileID, fileName, seg_type
 
 
 
