@@ -141,14 +141,17 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
             _, sub_gt, ses_gt, idx_gt, _ = fetch_filename_details(gt_file)
 
             # make sure the subject and session IDs match
-            print(f"Subject and session IDs for Preds and GTs: {sub_pred}_{ses_pred}_{idx_pred}, {sub_gt}_{ses_gt}_{idx_gt}")
-            assert idx_pred == idx_gt, 'Subject and session IDs for Preds and GTs do not match. Please check the filenames.'
+            print(f"Subject and session IDs for Preds and GTs: {sub_pred}_{ses_pred}_{idx_pred}, "
+                  f"{sub_gt}_{ses_gt}_{idx_gt}")
+            assert idx_pred == idx_gt, ('Subject and session IDs for Preds and GTs do not match. '
+                                        'Please check the filenames.')
             
             if ses_gt == "":
                 sub_ses_pred, sub_ses_gt = f"{sub_pred}", f"{sub_gt}"
             else:
                 sub_ses_pred, sub_ses_gt = f"{sub_pred}_{ses_pred}", f"{sub_gt}_{ses_gt}"
-            assert sub_ses_pred == sub_ses_gt, 'Subject and session IDs for Preds and GTs do not match. Please check the filenames.'
+            assert sub_ses_pred == sub_ses_gt, ('Subject and session IDs for Preds and GTs do not match. '
+                                                'Please check the filenames.')
 
             for seg in ['sc', 'lesion']:
                 # load the predictions and GTs
