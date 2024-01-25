@@ -136,7 +136,9 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
 
         # loop over the predictions and compute the metrics
         for pred_file, gt_file in zip(pred_files, gt_files):
-            
+
+            print(f"Processing {pred_file} and {gt_file}")
+
             _, sub_pred, ses_pred, idx_pred, _ = fetch_filename_details(pred_file)
             _, sub_gt, ses_gt, idx_gt, _ = fetch_filename_details(gt_file)
 
