@@ -1,5 +1,23 @@
 #!/bin/bash
 # Run nnUNet training and testing on PRAXIS datasets (e.g., site-003, site-012)
+#
+# Usage:
+#     cd ~/code/model_seg_sci
+#     ./inference_on_other_datasets/02_run_training_praxis.sh
+#
+# Author: Jan Valosek, Naga Karthik
+#
+
+# Uncomment for full verbose
+set -x
+
+# Immediately exit if error
+set -e -o pipefail
+
+# Exit if user presses CTRL+C (Linux) or CMD+C (OSX)
+trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
+
+
 
 # define arguments for nnUNet
 dataset_num="501"
