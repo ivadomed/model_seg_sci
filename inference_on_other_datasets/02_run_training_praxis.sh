@@ -18,7 +18,6 @@ set -e -o pipefail
 trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
 
 
-
 # define arguments for nnUNet
 dataset_num="501"
 dataset_name="Dataset${dataset_num}_tSCIpraxis"
