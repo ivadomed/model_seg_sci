@@ -112,7 +112,8 @@ def get_parser():
                         help='If the training was done on region-based datasets, set this flag to True. '
                              'Region-based means that the output segmentation is a multi-class segmentation (1: SC, '
                              '2: Lesion)')
-    parser.add_argument('--label-type', required=False, type=str, choices=['sc', 'lesion'], default='sc',
+    parser.add_argument('--label-type', required=False, type=str, choices=['sc', 'lesion'],
+                        default='lesion',
                         help='Type of prediction and GT label to be used for ANIMA evaluation. '
                              'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation'
                              'NOTE: when label-type is "lesion", additional lesion detection metrics, namely,'
