@@ -1,5 +1,26 @@
 """
-Converts the BIDS-structured PRAXIS datasets (e.g., site-003, site-012) to the nnUNetv2 dataset format.
+Convert BIDS-structured PRAXIS datasets (e.g., site-003, site-012) to the nnUNetv2 REGION-BASED format.
+
+dataset.json:
+
+```json
+    "channel_names": {
+        "0": "acq-sag_T2w"
+    },
+    "labels": {
+        "background": 0,
+        "sc": [
+            1,
+            2
+        ],
+        "lesion": 2
+    },
+    "regions_class_order": [
+        1,
+        2
+    ],
+```
+
 Full details about the format can be found here:
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
@@ -12,7 +33,7 @@ modified to include those as well.
 # Note: the script performs RPI reorientation of the images and labels
 
 Usage example multiple datasets:
-    python convert_bids_to_nnUNetv2_praxis.py
+    python convert_bids_to_nnUNetv2_praxis_region-based.py
         --path-data ~/data/site-003 ~/data/site-012
         --path-out ${nnUNet_raw}
         -dname tSCIpraxis
@@ -22,7 +43,7 @@ Usage example multiple datasets:
         --region-based
 
 Usage example single dataset:
-    python convert_bids_to_nnUNetv2_praxis.py
+    python convert_bids_to_nnUNetv2_praxis_region-based.py
         --path-data ~/data/site-003
         --path-out ${nnUNet_raw}
         -dname tSCIpraxis
@@ -52,7 +73,7 @@ import nibabel as nib
 
 def get_parser():
     # parse command line arguments
-    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 REGION-BASED format.')
     parser.add_argument('--path-data', nargs='+', required=True, type=str,
                         help='Path to BIDS dataset(s) (list).')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
