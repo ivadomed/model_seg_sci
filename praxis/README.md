@@ -19,6 +19,10 @@ using ANIMA segmentation performance metrics. The SCIseg lesion segmentation sho
 `02_run_training_praxis.sh` was used to train the pre-operative SCIseg nnUNet model. The model was trained on sites 
 `site-003` and `site-012` PRAXIS datasets.
 
-Two models were trained:
-1. The default nnUNet trainer `nnUNetTrainer` (i.e., the sum of Cross Entropy Loss and Dice Loss **with** the smoothing term)
-2. `nnUNetTrainerDiceCELoss_noSmooth` (i.e., the sum of Cross Entropy Loss and Dice Loss **without** the smoothing term)
+The following models were trained:
+1. REGION-BASED (a single input channel (T2w_sag) to segment both SC and lesions):
+   1. The default nnUNet trainer `nnUNetTrainer` (i.e., the sum of Cross Entropy Loss and Dice Loss **with** the smoothing term)
+   2. `nnUNetTrainerDiceCELoss_noSmooth` (i.e., the sum of Cross Entropy Loss and Dice Loss **without** the smoothing term)
+2. MULTI-CHANNEL (two input channels (T2w_sag and SC seg) as input channels to segment lesions):
+   1. The default nnUNet trainer `nnUNetTrainer` (i.e., the sum of Cross Entropy Loss and Dice Loss **with** the smoothing term)
+   2. `nnUNetTrainerDiceCELoss_noSmooth` (i.e., the sum of Cross Entropy Loss and Dice Loss **without** the smoothing term)
