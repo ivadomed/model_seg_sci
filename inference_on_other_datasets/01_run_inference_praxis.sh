@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Run our SCIseg nnUNet model on T2w images the PRAXIS database (site_003 and site_012)
+# Run our SCIseg nnUNet model on T2w images the PRAXIS database (e.g., site_003 and site_012)
 # The script is compatible with all datasets but has to be run separately for each dataset.
 # The script:
 #   - segments SC using our SCIseg nnUNet model
