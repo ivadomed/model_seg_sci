@@ -6,8 +6,8 @@ our SCIseg nnUNet model to segment the spinal cord and SCI lesions.
 
 ### Spinal cord
 
-The predicted spinal cords were visually inspected and manually corrected if necessary (using `manual_correction.py`), 
-added to the BIDS dataset under `derivatives/labels`, and pushed to the repository.
+The predicted spinal cords were visually inspected and manually corrected if necessary (using [manual_correction.py](https://github.com/spinalcordtoolbox/manual-correction/blob/main/manual_correction.py)), added to the BIDS dataset 
+under `derivatives/labels`, and pushed to the repository.
 
 ### SCI lesions
 
