@@ -19,7 +19,7 @@
 # {
 #  "path_data"   : "<PATH_TO_DATASET>",
 #  "path_output" : "<PATH_TO_DATASET>_2024-XX-XX",
-#  "script"      : "<PATH_TO_REPO>/model_seg_sci/inference_on_other_datasets/01_run_inference_praxis.sh",
+#  "script"      : "<PATH_TO_REPO>/model_seg_sci/praxis/01_run_inference_praxis.sh",
 #  "jobs"        : 8,
 #  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
 # }

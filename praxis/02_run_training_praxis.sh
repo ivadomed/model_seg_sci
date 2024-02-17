@@ -3,7 +3,7 @@
 #
 # Usage:
 #     cd ~/code/model_seg_sci
-#     ./inference_on_other_datasets/02_run_training_praxis.sh
+#     ./praxis/02_run_training_praxis.sh
 #
 # Author: Jan Valosek, Naga Karthik
 #
