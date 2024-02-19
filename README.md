@@ -12,13 +12,13 @@ The model was trained on raw T2-weighted images of SCI patients from multiple (t
 <img width="1000" alt="figure2" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e858bde3-1b6e-4adb-8897-a6d323b64c0e">
 
 
-## How to use the model
+## Using SCIseg
 
 ### Install dependencies
 
 - [Spinal Cord Toolbox (SCT) v6.2](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.2) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
 - [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) 
-- Python
+- Python (v3.9)
 
 Once the dependencies are installed, download the latest SCIseg model:
 
