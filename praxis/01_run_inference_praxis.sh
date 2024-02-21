@@ -1,7 +1,11 @@
 #!/bin/bash
 #
-# Run our SCIseg nnUNet model on T2w images the PRAXIS database (e.g., site_003 and site_012)
-# The script is compatible with all datasets but has to be run separately for each dataset.
+# Run the SCIseg nnUNet model on T2w images the PRAXIS database (e.g., site_003 and site_012)
+# The script is compatible with all PRAXIS datasets but has to be run separately for each dataset.
+#
+# NOTE: since most of the subjects have multiple runs of T2w images, you need to hardcode the run number for each
+# subject into the "T2w" section of this script. I am aware that this is not the best solution...
+#
 # The script:
 #   - segments SC using our SCIseg nnUNet model
 #   - segments lesion using our SCIseg nnUNet model
