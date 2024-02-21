@@ -176,14 +176,17 @@ cd ${SUBJECT}/anat
 # ------------------------------------------------------------------------------
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
 # If subject is ott004, ott005, sub-hal002 or sub-hal004, add run-01 suffix to the file name
-if [[ $SUBJECT =~ "ott004" ]] || [[ $SUBJECT =~ "ott005" ]] || [[ $SUBJECT =~ "sub-hal002" ]] || [[ $SUBJECT =~ "sub-hal004" ]]; then
+if [[ $SUBJECT =~ "ott004" ]] || [[ $SUBJECT =~ "ott005" ]] || [[ $SUBJECT =~ "hal002" ]] || [[ $SUBJECT =~ "hal004" ]]  || [[ $SUBJECT =~ "ham" ]] || [[ $SUBJECT =~ "que002" ]] || [[ $SUBJECT =~ "que008" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-01_T2w
 # If subject is sub-hal006 or sub-hal026, add run-02 suffix to the file name
-elif [[ $SUBJECT =~ "sub-hal006" ]] || [[ $SUBJECT =~ "sub-hal026" ]]; then
+elif [[ $SUBJECT =~ "sub-hal006" ]] || [[ $SUBJECT =~ "hal026" ]] || [[ $SUBJECT =~ "que012" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-02_T2w
 # If subject is ott011 or sub-hal011, add run-03 suffix to the file name
-elif [[ $SUBJECT =~ "ott011" ]] || [[ $SUBJECT =~ "sub-hal011" ]]; then
+elif [[ $SUBJECT =~ "ott011" ]] || [[ $SUBJECT =~ "hal011" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-03_T2w
+# If subject is sub-que004, add run-04 suffix to the file name
+elif [[ $SUBJECT =~ "que004" ]]; then
+    file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-04_T2w
 else
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 fi
