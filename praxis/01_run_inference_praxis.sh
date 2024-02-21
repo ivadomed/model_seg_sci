@@ -7,7 +7,7 @@
 # subject into the "T2w" section of this script. I am aware that this is not the best solution...
 #
 # The script:
-#   - segments SC using our SCIseg nnUNet model
+#   - segments SC using our SCIseg nnUNet model - this SC segs are QCed, corrected if needed and uploaded to git-annex
 #   - segments lesion using our SCIseg nnUNet model
 #   - copies ground truth (GT) lesion segmentation from derivatives/labels
 #   - computes ANIMA segmentation performance metrics between GT and predicted lesion segmentation
