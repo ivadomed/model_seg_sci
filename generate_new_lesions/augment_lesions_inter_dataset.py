@@ -1,15 +1,22 @@
 """
-Take lesion from subject_b and insert it into subject_a
+Use lesions from subjects in dataset A (pathology) and insert them into subjects in dataset B (healthy).
 
 Activate SCT conda environment:
     source ${SCT_DIR}/python/etc/profile.d/conda.sh
     conda activate venv_sct
 
 Run:
-    python generate_new_lesion.py
+    python augment_lesions_inter_dataset.py 
+        -dir-pathology ~/datasets/sci-zurich-nnunet/Dataset529_tSCIZurichDummyAllSeed99/imagesTr 
+        -dir-lesions ~/datasets/sci-zurich-nnunet/Dataset529_tSCIZurichDummyAllSeed99/labelsTr 
+        -dir-masks-pathology ~/datasets/sci-zurich-nnunet/Dataset529_tSCIZurichDummyAllSeed99/masksTr 
+        -dir-healthy ~/datasets/data-multi-subject-nnunet/Dataset529_SpineGenericMultiZScoreNorm/imagesTr 
+        -dir-masks-healthy ~/datasets/data-multi-subject-nnunet/Dataset529_SpineGenericMultiZScoreNorm/masksTr 
+        -dir-save ~/datasets/data-multi-subject-nnunet/Dataset529_SpineGenericMultiZScoreNorm/labelsTr 
+        -num 100 -seed 99 -min-lesion-vol 200 -resample -qc -histogram
+ 
+NOTE: nnUNet data structure is required.
 
-nnUNet data structure is required.
-TODO: switch to BIDS?
 """
 import os
 import sys
@@ -19,11 +26,9 @@ import numpy as np
 from scipy.ndimage import binary_dilation, generate_binary_structure
 import nibabel as nib
 
-from spinalcordtoolbox.image import Image, zeros_like
-from spinalcordtoolbox.resampling import resample_nib
-
+from image import Image, zeros_like
 from utils import get_centerline, get_lesion_volume, keep_largest_component, fetch_subject_and_session, \
-    generate_histogram
+    generate_histogram, resample_nib
 
 # TODO: Check out Diffusion models for synthesizing new images + lesions 
 
@@ -71,12 +76,18 @@ def insert_lesion(im_augmented, im_augmented_lesion, im_patho_data, im_patho_sc_
     # TODO - take angle of the centerline into account when projecting the lesion
     # TODO for Nathan - rewrite this without 3 loops
 
-    for x_step, x_cor in enumerate(range(x0, x1)):
-        for y_step, y_cor in enumerate(range(y0, y1)):
-            for z_step, z_cor in enumerate(range(z0, z1)):
-                # Check that dimensions do not overflow
-                if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
-                    continue
+    # Compute the shift to the center of the bounding box
+    shift_x, shift_y, shift_z = (x1 - x0) // 2, (y1 - y0) // 2, (z1 - z0) // 2
+
+    # for x_step, x_cor in enumerate(range(x0, x1)):
+    #     for y_step, y_cor in enumerate(range(y0, y1)):
+    #         for z_step, z_cor in enumerate(range(z0, z1)):
+    for x_step, x_cor in zip(range(-shift_x, shift_x + 1), range(x0, x1)):
+        for y_step, y_cor in zip(range(-shift_y, shift_y + 1 ), range(y0, y1)):
+            for z_step, z_cor in zip(range(-shift_z, shift_z + 1), range(z0, z1)):
+                # # Check that dimensions do not overflow
+                # if x + x_step >= im_augmented.shape[0] or y + y_step >= im_augmented.shape[1] or z + z_step >= im_augmented.shape[2]:
+                #     continue
                 
                 # Insert only voxels corresponding to the lesion mask
                 # Also make sure that the new lesion is not projected outside of the SC
