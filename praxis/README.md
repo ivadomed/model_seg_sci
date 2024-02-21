@@ -1,17 +1,18 @@
 
 ## 01. Inference using the SCIseg nnUNet model
 
-`01_run_inference_praxis.sh` was used to run inference on the `site-003` and `site-012` PRAXIS datasets. The script ran
-our SCIseg nnUNet model to segment the spinal cord and SCI lesions. 
+`01_run_inference_praxis.sh` is used to run inference using the SCIseg nnUNet model on any PRAXIS dataset. The script 
+has to be run separately for each site.
+The script segments both the spinal cord and SCI lesions:
 
 ### Spinal cord
 
-The predicted spinal cords were visually inspected and manually corrected if necessary (using [manual_correction.py](https://github.com/spinalcordtoolbox/manual-correction/blob/main/manual_correction.py)), added to the BIDS dataset 
-under `derivatives/labels`, and pushed to the repository.
+The predicted spinal cords are visually inspected and manually corrected if necessary (using [manual_correction.py](https://github.com/spinalcordtoolbox/manual-correction/blob/main/manual_correction.py)), 
+added to the BIDS dataset under `derivatives/labels`, and pushed to the repository.
 
 ### SCI lesions
 
-The lesions predicted by the SCIseg model were compared against the manual GT lesions (located under `derivatives/labels`) 
+The lesions predicted by the SCIseg model are compared against the manual GT lesions (located under `derivatives/labels`) 
 using ANIMA segmentation performance metrics. The SCIseg lesion segmentation showed low lesion segmentation performance.
 
 ## 02. Training pre-operative nnUNet model from scratch
