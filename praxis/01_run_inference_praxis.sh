@@ -191,6 +191,11 @@ else
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 fi
 
+# Moreover, for que, use acq-sagittal instead of acq-sag
+if [[ $SUBJECT =~ "que" ]]; then
+    file_t2="${file_t2//acq-sag/acq-sagittal}"
+fi
+
 # Check if file_t2 exists
 if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "File ${file_t2}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
