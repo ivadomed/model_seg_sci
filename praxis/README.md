@@ -7,7 +7,7 @@ The script segments both the spinal cord and SCI lesions:
 
 ### Spinal cord
 
-The predicted spinal cords are visually inspected and manually corrected if necessary (using [manual_correction.py](https://github.com/spinalcordtoolbox/manual-correction/blob/main/manual_correction.py)), 
+The predicted spinal cords are visually inspected, manually corrected if necessary (using [manual_correction.py](https://github.com/spinalcordtoolbox/manual-correction/blob/main/manual_correction.py)), 
 added to the BIDS dataset under `derivatives/labels`, and pushed to the repository.
 
 ### SCI lesions
