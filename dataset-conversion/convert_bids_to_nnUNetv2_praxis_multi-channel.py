@@ -294,11 +294,8 @@ def main():
         train_images.update({sub: os.path.join(root, sub) for sub in tr_subs})
         test_images.update({sub: os.path.join(root, sub) for sub in te_subs})
 
-    logger.info(f"Found subjects in the training set (combining all datasets): {len(train_images)}")
-    logger.info(f"Found subjects in the test set (combining all datasets): {len(test_images)}")
-    # Print test subjects for each site
-    for site in sites:
-        logger.info(f"Test subjects in {site}: {len([sub for sub in test_images if site in sub])}")
+    logger.info(f"Found images in the training set (combining all {len(sites)} datasets): {len(train_images)}")
+    logger.info(f"Found images in the test set (combining all {len(sites)} datasets): {len(test_images)}")
 
     # print version of each dataset in a separate line
     for dataset_name, dataset_commit in dataset_commits.items():
