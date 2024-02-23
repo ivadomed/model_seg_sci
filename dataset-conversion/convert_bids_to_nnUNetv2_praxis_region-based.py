@@ -278,7 +278,7 @@ def main():
         for site in sites:
             create_directories(path_out, site)
 
-    all_lesion_files, train_subjects, test_subjects = [], {}, {}
+    all_lesion_files, train_images, test_images = [], {}, {}
     # temp dict for storing dataset commits
     dataset_commits = {}
 
@@ -312,14 +312,11 @@ def main():
             all_lesion_files.extend(te_subs)
 
         # update the train and test subjects dicts with the key as the subject and value as the path to the subject
-        train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
-        test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
+        train_images.update({sub: os.path.join(root, sub) for sub in tr_subs})
+        test_images.update({sub: os.path.join(root, sub) for sub in te_subs})
 
-    logger.info(f"Found subjects in the training set (combining all datasets): {len(train_subjects)}")
-    logger.info(f"Found subjects in the test set (combining all datasets): {len(test_subjects)}")
-    # Print test subjects for each site
-    for site in sites:
-        logger.info(f"Test subjects in {site}: {len([sub for sub in test_subjects if site in sub])}")
+    logger.info(f"Found images in the training set (combining all {len(sites)} datasets): {len(train_images)}")
+    logger.info(f"Found images in the test set (combining all {len(sites)} datasets): {len(test_images)}")
 
     # print version of each dataset in a separate line
     for dataset_name, dataset_commit in dataset_commits.items():
@@ -335,7 +332,7 @@ def main():
         subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace('_lesion', '')
 
         # Train subjects
-        if subject_label_file in train_subjects.keys():
+        if subject_label_file in train_images.keys():
 
             train_ctr += 1
             # add the subject image file to the list of training niftis
@@ -377,7 +374,7 @@ def main():
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
         # Test subjects
-        elif subject_label_file in test_subjects:
+        elif subject_label_file in test_images:
 
             test_ctr += 1
             # add the subject image file to the list of testing niftis
@@ -387,10 +384,10 @@ def main():
             sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
             subject_image_file_nnunet = os.path.join(Path(path_out,
-                                                          f'imagesTs_{find_site_in_path(test_subjects[subject_label_file])}'),
+                                                          f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{sub_name}_{test_ctr:03d}_0000.nii.gz')
             subject_label_file_nnunet = os.path.join(Path(path_out,
-                                                          f'labelsTs_{find_site_in_path(test_subjects[subject_label_file])}'),
+                                                          f'labelsTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{sub_name}_{test_ctr:03d}.nii.gz')
 
             # use region-based labels if required
@@ -428,7 +425,7 @@ def main():
     logger.info(f"Number of test images: {test_ctr}")
     # Get number of test images per site (site-003, site-012, etc.)
     test_images_per_site = {}
-    for test_subject in test_subjects:
+    for test_subject in test_images:
         site = find_site_in_path(test_subject)
         if site in test_images_per_site:
             test_images_per_site[site] += 1
