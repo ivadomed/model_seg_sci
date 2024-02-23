@@ -391,7 +391,7 @@ def main():
                                                      f'{args.dataset_name}_{sub_name}_{test_ctr:03d}.nii.gz')
 
             # use region-based labels if required
-            if args.region_based and find_site_in_path(test_subjects[subject_label_file]) != 'site_014':
+            if args.region_based:
                 # overwritten the subject_label_file with the region-based label
                 subject_label_file = get_region_based_label(subject_label_file,
                                                             subject_image_file, sub_name, thr=0.5)
