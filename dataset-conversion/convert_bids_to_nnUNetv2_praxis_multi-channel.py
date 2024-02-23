@@ -1,5 +1,7 @@
 """
-Convert BIDS-structured PRAXIS datasets (e.g., site-003, site-012) to the nnUNetv2 MULTI-CHANNEL format.
+Convert BIDS-structured PRAXIS datasets (e.g., site-003, site-012, ...) to the nnUNetv2 MULTI-CHANNEL format.
+Note: site-013 and site-014 have only 4 and 5 subjects, respectively, with usable T2w sag images. Thus, we use them
+ONLY for testing, NOT for training.
 
 dataset.json:
 
@@ -27,7 +29,7 @@ modified to include those as well.
 
 Usage example multiple datasets:
     python convert_bids_to_nnUNetv2_praxis_region-based.py
-        --path-data ~/data/site-003 ~/data/site-012
+        --path-data ~/data/site-003 ~/data/site-012 ~/data/site-013 ~/data/site-014
         --path-out ${nnUNet_raw}
         -dname tSCIpraxis
         -dnum 275
@@ -60,6 +62,18 @@ from utils import create_multi_channel_label, get_git_branch_and_commit, Image
 from tqdm import tqdm
 
 import nibabel as nib
+
+# site-013 and site-014 have only 4 and 5 subjects, respectively, with usable T2w sag images.
+# Thus, we use them ONLY for testing, NOT for training.
+LIST_OF_TESTING_SUBJECTS = ['sub-ham027_acq-sag_run-01_T2w_lesion.nii.gz',
+                            'sub-ham089_acq-sag_run-01_T2w_lesion.nii.gz',
+                            'sub-ham196_acq-sag_run-01_T2w_lesion.nii.gz',
+                            'sub-ham349_acq-sag_run-01_T2w_lesion.nii.gz',
+                            'sub-que002_acq-sagittal_run-01_T2w_lesion.nii.gz',
+                            'sub-que004_acq-sagittal_run-04_T2w_lesion.nii.gz',
+                            'sub-que008_acq-sagittal_run-01_T2w_lesion.nii.gz',
+                            'sub-que011_acq-sagittal_T2w_lesion.nii.gz',
+                            'sub-que012_acq-sagittal_run-02_T2w_lesion.nii.gz']
 
 
 def get_parser():
@@ -256,7 +270,7 @@ def main():
         branch, commit = get_git_branch_and_commit(dataset)
         dataset_commits[dataset_name] = f"git-{branch}-{commit}"
 
-        if dataset_name != 'site_014':
+        if dataset_name not in ['site_013', 'site_014']:
             # get recursively all GT '_lesion' files
             lesion_files = [str(path) for path in root.rglob('*_lesion.nii.gz')]
 
@@ -266,18 +280,12 @@ def main():
             # Get the training and test splits
             tr_subs, te_subs = train_test_split(lesion_files, test_size=test_ratio, random_state=args.seed)
 
-        # Add two following images from site_014 to the test set (site_014 has only 5 subjects with usable T2w sag
-        # images; context: https://spineimage.ca/HEJ/site_014/issues/2)
-        # sub-que002_acq-sagittal_run-01_T2w.nii.gz, sub-que004_acq-sagittal_run-04_T2w.nii.gz,
-        # sub-que005_acq-sagittal_run-01_T2w.nii.gz, sub-que008_acq-sagittal_run-01_T2w.nii.gz,
-        # sub-que012_acq-sagittal_run-02_T2w.nii.gz
-        elif dataset_name == 'site_014':
+        # Add images from site_013 and site_014 to the test set -- these sites have only 4 and 5 subjects, respectively,
+        # with usable T2w sag images. Thus, we use them ONLY for testing, NOT for training.
+        elif dataset_name in ['site_013', 'site_014']:
             te_subs = []
-            te_subs.extend([str(path) for path in root.rglob('sub-que002_acq-sagittal_run-01_T2w.nii.gz')])
-            te_subs.extend([str(path) for path in root.rglob('sub-que004_acq-sagittal_run-04_T2w.nii.gz')])
-            te_subs.extend([str(path) for path in root.rglob('sub-que005_acq-sagittal_run-01_T2w.nii.gz')])
-            te_subs.extend([str(path) for path in root.rglob('sub-que008_acq-sagittal_run-01_T2w.nii.gz')])
-            te_subs.extend([str(path) for path in root.rglob('sub-que012_acq-sagittal_run-02_T2w.nii.gz')])
+            for subject in LIST_OF_TESTING_SUBJECTS:
+                te_subs.extend([str(path) for path in root.rglob(subject)])
 
             # add to the list of all subjects
             all_lesion_files.extend(te_subs)
