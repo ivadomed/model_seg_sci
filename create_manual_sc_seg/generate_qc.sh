@@ -79,11 +79,6 @@ cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 file_gt="${file}_lesion-manual"
 file_seg="${file}_seg-manual"
 
-# Make sure the GT metadata is a valid JSON object
-if [[ ! -s ${file_gt}.json ]]; then
-  echo "{}" >> ${file_gt}.json
-fi
-
 # Binarize the GTs because QC only accepts binary images
 sct_maths -i ${file_gt}.nii.gz -bin 0 -o ${file_gt}_bin.nii.gz
 
