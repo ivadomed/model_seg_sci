@@ -86,7 +86,8 @@ file_seg="${file}_seg-manual"
 # Binarize the GTs because QC only accepts binary images
 sct_maths -i ${file_gt}.nii.gz -bin 0 -o ${file_gt}_bin.nii.gz
 
-# Run the QC
+# Generate sagittal lesion QC
+# Note: -s is the SC segmentation provided to crop the image
 sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -d ${file_gt}_bin.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # Display useful info for the log
