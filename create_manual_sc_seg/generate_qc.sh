@@ -59,7 +59,13 @@ rsync -Ravzh $PATH_DATA/derivatives/labels/./${SUBJECT}/anat/${file}_*T2w* deriv
 cd ${SUBJECT}/anat
 
 # Add suffix corresponding to contrast
-file=${file}_acq-sag_T2w
+# for sci-colorado and sci-paris, use "T2w"
+if [[ $PATH_DATA =~ "colorado" ]] || [[ $PATH_DATA =~ "paris" ]]; then
+  file=${file}_T2w
+# for sci-zurich, use "acq-sag_T2w"
+else
+  file=${file}_acq-sag_T2w
+fi
 
 # Make sure the image metadata is a valid JSON object
 if [[ ! -s ${file}.json ]]; then
