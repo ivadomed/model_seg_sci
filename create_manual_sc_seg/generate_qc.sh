@@ -90,6 +90,9 @@ sct_maths -i ${file_gt}.nii.gz -bin 0 -o ${file_gt}_bin.nii.gz
 # Note: -s is the SC segmentation provided to crop the image
 sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -d ${file_gt}_bin.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
+# Generate single slice sagittal SC QC (to check FOV coverage (C/Th/L))
+sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -p sct_label_vertebrae -qc ${PATH_QC} -qc-subject ${SUBJECT}
+
 # Display useful info for the log
 end=`date +%s`
 runtime=$((end-start))
