@@ -1,15 +1,19 @@
 #!/bin/bash
 #
-# Preprocess data.
+# Generate lesion QC for T2w images.
 #
 # Dependencies (versions):
-# - SCT (5.4.0)
+# - SCT 6.0 and higher
 #
 # Usage:
-# sct_run_batch -script preprocess_data.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
+# sct_run_batch -script generate_qc.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
 
-# Manual segmentations or labels should be located under:
+# Lesion and SC labels should be located under:
 # PATH_DATA/derivatives/labels/SUBJECT/anat/
+
+# With the following naming convention:
+# file_gt="${file}_lesion-manual"
+# file_seg="${file}_seg-manual"
 
 # The following global variables are retrieved from the caller sct_run_batch
 # but could be overwritten by uncommenting the lines below:
