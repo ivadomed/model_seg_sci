@@ -73,11 +73,6 @@ else
   file=${file}_acq-sag_T2w
 fi
 
-# Make sure the image metadata is a valid JSON object
-if [[ ! -s ${file}.json ]]; then
-  echo "{}" >> ${file}.json
-fi
-
 # Go to subject folder for segmentation GTs
 cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 
