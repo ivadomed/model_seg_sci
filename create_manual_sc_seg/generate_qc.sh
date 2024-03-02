@@ -1,6 +1,8 @@
 #!/bin/bash
 #
-# Generate lesion QC for T2w images.
+# Generate QCs for T2w images:
+#     - sagittal lesion QC
+#     - single slice sagittal spinal cord QC (to check FOV coverage (C/Th/L))
 #
 # Dependencies (versions):
 # - SCT 6.0 and higher
