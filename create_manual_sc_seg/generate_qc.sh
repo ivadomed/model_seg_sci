@@ -84,10 +84,11 @@ file_seg="${file}_seg-manual"
 sct_maths -i ${file_gt}.nii.gz -bin 0 -o ${file_gt}_bin.nii.gz
 
 # Generate sagittal lesion QC
-# Note: -s is the SC segmentation provided to crop the image
+# Note: `-s` is the SC segmentation provided to crop the image
 sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -d ${file_gt}_bin.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # Generate single slice sagittal SC QC (to check FOV coverage (C/Th/L))
+# Note: `-p sct_label_vertebrae` is used to show a single sagittal slice (context: https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4011#issuecomment-1561736362)
 sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -p sct_label_vertebrae -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # Display useful info for the log
