@@ -92,12 +92,12 @@ segment_sc_nnUNet(){
   local file="$1"
   local kernel="$2"     # 2d or 3d
 
-  FILESEG="${file}_seg_nnunet_${kernel}"
+  FILESEG="${file}_sc_nnunet_${kernel}"
 
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type sc -use-gpu
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -106,6 +106,10 @@ segment_sc_nnUNet(){
 
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}
+
+  # Compute ANIMA segmentation performance metrics
+  compute_anima_metrics ${FILESEG} ${file}_label-SC_mask-manual
+
 }
 
 # Segment lesion using our nnUNet model
@@ -114,12 +118,12 @@ segment_lesion_nnUNet(){
   local kernel="$2"     # 2d or 3d
   local file_seg="$3"   # SC segmentation (used for QC)
 
-  FILESEGLESION="${file}_seg_lesion_nnunet_${kernel}"
+  FILESEGLESION="${file}_lesion_nnunet_${kernel}"
 
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEGLESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type lesion
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEGLESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type lesion -use-gpu
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -128,6 +132,9 @@ segment_lesion_nnUNet(){
 
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${file_seg}.nii.gz -d ${FILESEGLESION}.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT}
+
+  # Compute ANIMA segmentation performance metrics
+  compute_anima_metrics ${FILESEGLESION} ${file}_label-lesion
 }
 
 # Copy GT lesion segmentation (located under derivatives/labels)
@@ -135,11 +142,13 @@ copy_gt(){
   local file="$1"
   # Construct file name to GT segmentation located under derivatives/labels
   FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_label-lesion.nii.gz"
+  FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_label-SC_mask-manual.nii.gz"
   echo ""
   echo "Looking for manual segmentation: $FILELESIONMANUAL"
   if [[ -e $FILELESIONMANUAL ]]; then
       echo "Found! Copying ..."
       rsync -avzh $FILELESIONMANUAL ${file}_label-lesion.nii.gz
+      rsync -avzh $FILESEGMANUAL ${file}_label-SC_mask-manual.nii.gz
   else
       echo "File ${FILELESIONMANUAL} does not exist" >> ${PATH_LOG}/missing_files.log
       echo "ERROR: Manual GT segmentation ${FILELESIONMANUAL} does not exist. Exiting."
@@ -181,18 +190,19 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     exit 1
 fi
 
+# Copy GT lesion segmentation (to generate GT lesion QC report)
+copy_gt "${file_t2}"
+
 # Segment spinal cord using our nnUNet SCIseg model
-segment_sc_nnUNet "${file_t2}" '3d'
+segment_sc_nnUNet "${file_t2}" '3d_fullres'
 
 # Segment lesion using our nnUNet SCIlesion model
 # Note: SC seg is passed to generate QC report
-segment_lesion_nnUNet "${file_t2}" '3d' "${file_t2}_seg_nnunet_3d"
+segment_lesion_nnUNet "${file_t2}" '3d_fullres' "${file_t2}_sc_nnunet_3d_fullres"
 
-# Copy GT lesion segmentation (to generate GT lesion QC report)
-copy_gt "${file_t2}"
 # Generate QC report for manual lesion segmentation
 # Note: there is no manual SC segmentation, so we use the nnUNet SC segmentation
-sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_seg_nnunet_3d.nii.gz -d ${file_t2}_label-lesion.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT} -qc-dataset ${SUBJECT}
+sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_sc_nnunet_3d_fullres.nii.gz -d ${file_t2}_label-lesion.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT} -qc-dataset ${SUBJECT}
 
 # ------------------------------------------------------------------------------
 # End
