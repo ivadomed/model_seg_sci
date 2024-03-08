@@ -166,7 +166,7 @@ def main():
         tile_step_size=args.tile_step_size,     # changing it from 0.5 to 0.9 makes inference faster
         use_gaussian=True,                      # applies gaussian noise and gaussian blur
         use_mirroring=False,                    # test time augmentation by mirroring on all axes
-        perform_everything_on_gpu=True if args.use_gpu else False,
+        perform_everything_on_device=True if args.use_gpu else False,
         device=torch.device('cuda') if args.use_gpu else torch.device('cpu'),
         verbose=False,
         verbose_preprocessing=False,
