@@ -60,6 +60,32 @@ echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
 # ------------------------------------------------------------------------------
 # CONVENIENCE FUNCTIONS
 # ------------------------------------------------------------------------------
+# Get ANIMA binaries path
+anima_binaries_path=$(grep "^anima = " ~/.anima/config.txt | sed "s/.* = //" | sed 's/\/$//')
+
+# Compute ANIMA segmentation performance metrics
+compute_anima_metrics(){
+  local file_pred="$1"
+  local file_gt="$2"
+
+  # We have to copy qform matrix from seg-manual to the automatically generated segmentation to avoid ITK error:
+  # "Description: ITK ERROR: SegmentationMeasuresImageFilter(): Inputs do not occupy the same physical space!"
+  # Related to the following issue : https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4135
+  sct_image -i ${file_gt}.nii.gz -copy-header ${file_pred}.nii.gz -o ${file_pred}_updated_header.nii.gz
+
+  # Compute ANIMA segmentation performance metrics
+  # -i : input segmentation
+  # -r : GT segmentation
+  # -o : output file
+  # -d : surface distances evaluation
+  # -s : compute metrics to evaluate a segmentation
+  # -l : lesion detection evaluation
+  # -X : stores results into a xml file.
+  ${anima_binaries_path}/animaSegPerfAnalyzer -i ${file_pred}_updated_header.nii.gz -r ${file_gt}.nii.gz -o ${PATH_RESULTS}/${file_pred} -d -s -l -X
+
+  rm ${file_pred}_updated_header.nii.gz
+}
+
 
 # Segment spinal cord using our nnUNet model
 segment_sc_nnUNet(){
