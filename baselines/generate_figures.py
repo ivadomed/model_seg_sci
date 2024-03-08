@@ -26,7 +26,7 @@ import ptitprince as pt
 
 from functools import reduce
 from scipy.stats import wilcoxon, normaltest, kruskal
-# from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.multitest import multipletests
 
 # Initialize logging
 logger = logging.getLogger(__name__)
