@@ -106,7 +106,7 @@ file="${SUBJECT//[\/]/_}"
 file=${file}_acq-sag_T2w
 
 # Spinal cord segmentation using the T2w contrast
-segment_if_does_not_exist ${file} t2 ${CENTERLINE_METHOD}
+segment_if_does_not_exist ${file} t2
 
 # ==============================================================================
 # END
