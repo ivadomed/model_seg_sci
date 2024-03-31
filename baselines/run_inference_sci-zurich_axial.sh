@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Run inference using our nnUNet model on sci-zurich T2w axial images
+# Run inference (i.e., segment SC and lesions) using our nnUNet model on sci-zurich T2w axial images and generate QC report
 #
 # Note: conda environment with nnUNetV2 is required to run this script.
 # For details how to install nnUNetV2, see:
