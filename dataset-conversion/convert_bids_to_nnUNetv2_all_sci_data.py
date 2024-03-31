@@ -147,7 +147,7 @@ def main():
             # convert to a list
             axial_subjects = list(axial_subjects.values())[0]
 
-    logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
+        logger.info(f"Number of axial Zurich subjects in the YAML file: {len(axial_subjects)}")
 
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # temp dict for storing dataset commits
