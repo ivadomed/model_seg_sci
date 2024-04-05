@@ -32,29 +32,33 @@
 
 # Exit if no input arguments
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <json_file> <zurich_folder> <colorado_folder> <output_folder>"
+    echo "Usage: $0 <yaml_file> <zurich_folder> <colorado_folder> <output_folder>"
     exit 1
 fi
 
-JSON_FILE=$1
-ZURICH_FOLDER=$2
-COLORADO_FOLDER=$3
-OUTPUT_FOLDER=$4
+YAML_FILE=$1        # YAML file with train and test subjects, e.g., dataset_split_seed123.yaml
+ZURICH_FOLDER=$2    # Path to the sci-zurich BIDS dataset
+COLORADO_FOLDER=$3  # Path to the sci-colorado BIDS dataset
+OUTPUT_FOLDER=$4    # Path to the output folder where the combined dataset will be stored
 
+# Create the output folder and derivatives/labels subfolder
 mkdir -p $OUTPUT_FOLDER/derivatives/labels/
 
-# Loop across subjects in test_subjects_sci_seed50.json
-for subject in $(cat ${JSON_FILE} | jq -r 'keys[]'); do
-    echo $subject
+# Retrieve test participant IDs (e.g., `sub-6577` or `sub-zh63`) from the provided YAML file
+TEST_SUBJECTS=$(python -c "import yaml; print('\n'.join([item.split('_')[0] for item in yaml.safe_load(open('${YAML_FILE}'))['test']]))")
+
+# Loop across test subjects
+for subject in ${TEST_SUBJECTS}; do
+    echo "Processing: $subject"
     # sci-zurich
     if [[ $subject =~ "sub-zh" ]]; then
         cp -r $ZURICH_FOLDER/$subject $OUTPUT_FOLDER/
         cp -r $ZURICH_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/
-        echo "Copied $subject from sci-zurich to $OUTPUT_FOLDER"
+        echo "Copied $subject from $ZURICH_FOLDER to $OUTPUT_FOLDER"
+    # sci-colorado
     else
-        # sci-colorado
         cp -r $COLORADO_FOLDER/$subject $OUTPUT_FOLDER/
         cp -r $COLORADO_FOLDER/derivatives/labels/$subject $OUTPUT_FOLDER/derivatives/labels/
-        echo "Copied $subject from sci-colorado $OUTPUT_FOLDER"
+        echo "Copied $subject from $COLORADO_FOLDER $OUTPUT_FOLDER"
     fi
 done
