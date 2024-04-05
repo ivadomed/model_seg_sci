@@ -54,15 +54,15 @@ NOTE: the script has to be run for each seed, i.e., five times.
 
 `conda` environment with nnUNetV2 is required to run the `comparison_with_other_methods.sh` script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
 
-## MONAI
-
 ### ANIMA
 
 ANIMA is used to compute segmentation performance metrics. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/ANIMA_quick_start_guide.md).
 
-### SCT
+### SCT 6.2
 
 Follow installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox#installation).
+
+NOTE: SCT 6.2 is required for the contrast-agnostic MONAI SC model (`sct_deepseg -task seg_sc_contrast_agnostic`).
 
 ## Running the `comparison_with_other_methods_{sc,lesion}.sh` script
 
@@ -81,7 +81,7 @@ Example of the `config_sc_seed{XXX}.json` file:
   "path_output" : "<PATH_TO_COMBINED_DATASET>_2023-08-18",
   "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/comparison_with_other_methods_{sc/lesion}.sh",
   "jobs"        : 8, 
-  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX} <PATH_TO_CONTRAST-AGNOSTIC_REPO>/monai/run_inference_single_image.py <PATH_TO_CONTRAST-AGNOSTIC_MODEL>"
+  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX}"
  }
 ```
 
