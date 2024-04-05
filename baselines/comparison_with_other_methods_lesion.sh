@@ -98,7 +98,7 @@ segment_lesion_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run lesion segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILELESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type lesion
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILELESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainerDiceCELoss_noSmooth__nnUNetPlans__${kernel} -pred-type lesion
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
