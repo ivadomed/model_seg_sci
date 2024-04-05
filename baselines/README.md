@@ -5,7 +5,7 @@ generate raincloud plots.
 
 ## Data structure
 
-Subjects from both datasets have to be located in the same BIDS-like folder, example:
+Subjects from both datasets have to be located in the same BIDS-like folder, for example:
 
 ```
 ├── derivatives
