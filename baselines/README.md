@@ -46,6 +46,8 @@ Where:
 - `<colorado_folder>` is the path to the `sci-colorado` BIDS dataset
 - `<output_folder>` is the path to the output folder where the combined dataset will be stored
 
+NOTE: the script has to be run for each seed, i.e., five times.
+
 ## Dependencies
 
 ### nnUNet
