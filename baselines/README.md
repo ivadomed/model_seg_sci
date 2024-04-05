@@ -37,8 +37,14 @@ Subjects from both datasets have to be located in the same BIDS-like folder, exa
 You can create this folder structure using the `create_combined_dataset_for_inference.sh` script:
 
 ```
-create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_folder> <output_folder>
+create_combined_dataset_for_inference.sh <yaml_file> <zurich_folder> <colorado_folder> <output_folder>
 ```
+
+Where:
+- `<yaml_file>` is the path to the yaml file with train and test subjects, e.g., dataset_split_seed123.yaml
+- `<zurich_folder>` is the path to the `sci-zurich` BIDS dataset
+- `<colorado_folder>` is the path to the `sci-colorado` BIDS dataset
+- `<output_folder>` is the path to the output folder where the combined dataset will be stored
 
 ## Dependencies
 
