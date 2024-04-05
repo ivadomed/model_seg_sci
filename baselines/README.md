@@ -1,6 +1,7 @@
 
 Compare our nnUNet models (`3d` and `2d`) with other methods (`sct_propseg`, `sct_deepseg_sc -kernel 2d`, 
-`sct_deepseg_sc -kernel 3d`, `MONAI contrast-agnostic`) on `sci-zurich` and `sci-colorado` datasets.
+`sct_deepseg_sc -kernel 3d`, `MONAI contrast-agnostic`) on `sci-zurich` and `sci-colorado` datasets. And 
+generate raincloud plots.
 
 ## Data structure
 
