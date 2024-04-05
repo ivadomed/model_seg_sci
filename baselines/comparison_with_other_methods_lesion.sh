@@ -205,7 +205,7 @@ fi
 
 # Segment lesion using different methods and compute ANIMA segmentation performance metrics
 segment_lesion_nnUNet "${file_t2}" '2d'
-segment_lesion_nnUNet "${file_t2}" '3d'
+segment_lesion_nnUNet "${file_t2}" '3d_fullres'
 
 # ------------------------------------------------------------------------------
 # End
