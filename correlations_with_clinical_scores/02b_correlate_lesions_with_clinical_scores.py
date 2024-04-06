@@ -156,11 +156,11 @@ def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, inc
 
 def get_fnames(dir_paths):
     """
-    Get the list of file names across all input paths (i.e. all seeds), sort them and keep only the unique ones
+    Get the list of file names across all input paths (i.e., all seeds), sort them and keep only the unique ones.
     :param dir_paths: list of paths to the 'results' folders containing the XLS files with lesion metrics for each seed
     :return: pandas dataframe with the paths to the XLS files for manual and predicted lesions
     """
-    # Initialize an empty list file names across all input paths (i.e. all seeds)
+    # Initialize an empty list file names across all input paths (i.e., all seeds)
     fname_files_all = list()
 
     # Get all file names across all input paths (i.e. all seeds)
@@ -520,7 +520,7 @@ def main():
     fh = logging.FileHandler(os.path.join(os.path.abspath(output_dir), fname_log))
     logging.root.addHandler(fh)
 
-    # Parse input paths
+    # Parse input paths (folders that contain XLS files with lesion metrics for each seed)
     dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
 
     # Check if the input path exists
@@ -529,6 +529,7 @@ def main():
             raise ValueError(f'ERROR: {dir_path} does not exist.')
 
     # For each participant_id, get the lesion and spinal cord file names
+    # Get the list of file names across all input paths (i.e., all seeds), sort them and keep only the unique ones
     df = get_fnames(dir_paths)
 
     # Iterate over the rows of the dataframe and read the XLS files
