@@ -7,7 +7,7 @@ The script:
  - keep only the unique subjects (to avoid duplicates between seeds)
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
- - plot data and a linear regression model fit for each each metric (volume, length, max_axial_damage_ratio) manual vs
+ - plot data and a linear regression model fit for each metric (volume, length, max_axial_damage_ratio) manual vs
  nnUNet lesion segmentation and save them to the output folder
 
 Note: to read XLS files, you might need to install the following packages:
