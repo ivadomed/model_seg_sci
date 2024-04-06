@@ -95,7 +95,7 @@ segment_sc_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel}_fullres -pred-type sc
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainerDiceCELoss_noSmooth__nnUNetPlans__${kernel}_fullres -pred-type sc
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -119,7 +119,7 @@ segment_lesion_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run lesion segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILELESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel}_fullres -pred-type lesion
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILELESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainerDiceCELoss_noSmooth__nnUNetPlans__${kernel}_fullres -pred-type lesion
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -216,8 +216,8 @@ sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manu
 # ------------------------------------
 
 # Segment SC and lesion using our nnUNet model
-segment_sc_nnUNet "${file_t2}" '3d'
-segment_lesion_nnUNet "${file_t2}" '3d'
+segment_sc_nnUNet "${file_t2}" '3d_fullres'
+segment_lesion_nnUNet "${file_t2}" '3d_fullres'
 
 # Analyze SCI lesion segmentation obtained using our nnUNet model
 sct_analyze_lesion -m ${file_t2}_lesion_nnunet_3d.nii.gz -s ${file_t2}_seg_nnunet_3d.nii.gz -ofolder ${PATH_RESULTS}
