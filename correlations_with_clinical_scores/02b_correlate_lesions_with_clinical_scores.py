@@ -331,6 +331,10 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             else:
                 ax.set_ylim(-0.1, 1)
 
+            # Adjust x-axis limits by 5% of the range
+            ax.set_xlim(ax.get_xlim()[0] - 0.05 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
+                        ax.get_xlim()[1] + 0.05 * (ax.get_xlim()[1] - ax.get_xlim()[0]))
+
             # Make legend's box black
             frame = legend.get_frame()
             frame.set_edgecolor('black')
