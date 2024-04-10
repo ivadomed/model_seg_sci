@@ -1,6 +1,6 @@
 """
 Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCIseg 3D lesion segmentation
-BEFORE and AFTER active learning.
+BEFORE (phase1) and AFTER (phase3) active learning.
 
 The script:
  - fetch subjects from the provided /results folders (each one for a specific seed)
@@ -51,15 +51,17 @@ def get_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='TODO',
+        description='Plot MRI manual vs SCIseg 3D lesion segmentation metrics BEFORE (phase1) and AFTER (phase3) '
+                    'active learning',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
         '-method1',
         required=True,
         nargs='+',
-        help='Space separated list of paths to the \'results\' folders with XLS files. Each \'results\' folder '
-             'corresponds to a specific seed. The results folders were generated using the \'01_analyze_lesions.sh\'.'
+        help='BeforeAL (phase1): Space separated list of paths to the \'results\' folders with XLS files. '
+             'Each \'results\' folder corresponds to a specific seed. The results folders were generated using the '
+             '\'01_analyze_lesions.sh\'.'
              'The XLS files contain lesion metrics and were generated using \'sct_analyze_lesion.\' '
              'Example: clinical_correlation_2sites/seed7/results '
              'clinical_correlation_2sites/seed42/results ...'
@@ -68,8 +70,9 @@ def get_parser():
         '-method2',
         required=True,
         nargs='+',
-        help='Space separated list of paths to the \'results\' folders with XLS files. Each \'results\' folder '
-             'corresponds to a specific seed. The results folders were generated using the \'01_analyze_lesions.sh\'.'
+        help='AfterAL (phase3): Space separated list of paths to the \'results\' folders with XLS files. '
+             'Each \'results\' folder corresponds to a specific seed. The results folders were generated using the '
+             '\'01_analyze_lesions.sh\'.'
              'The XLS files contain lesion metrics and were generated using \'sct_analyze_lesion.\' '
              'Example: clinical_correlation_3sites_afterAL/seed7/results '
              'clinical_correlation_3sites_afterAL/seed42/results ...'
@@ -247,17 +250,17 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Create a subplot
         ax = fig.add_subplot(111)
         # Plot the data (manual vs nnunet_3d) and a linear regression model fit
-        # Method1 - Zurich (in dashed line)
+        # Method1 (beforeAL - phase 1) - Zurich (in dashed line)
         sns.regplot(x=metric+'_manual_method1', y=metric+'_nnunet_3d_method1', data=df[df['site'] == 'zurich'],
                     ax=ax, color='orangered', marker="^", line_kws={'ls': '--'}, scatter_kws={'s': 8})
-        # Method1 - Colorado
+        # Method1 (beforeAL - phase 1) - Colorado (in dashed line)
         sns.regplot(x=metric+'_manual_method1', y=metric+'_nnunet_3d_method1', data=df[df['site'] == 'colorado'],
                     ax=ax, color='deepskyblue', marker="^", line_kws={'ls': '--'}, scatter_kws={'s': 8})
 
-        # Method2 - Zurich
+        # Method2 (afterAL - phase 3) - Zurich
         sns.regplot(x=metric+'_manual_method2', y=metric+'_nnunet_3d_method2', data=df[df['site'] == 'zurich'],
                     ax=ax, color='red', scatter_kws={'s': 8})
-        # Method2 - Colorado
+        # Method2 (afterAL - phase 3) - Colorado
         sns.regplot(x=metric+'_manual_method2', y=metric+'_nnunet_3d_method2', data=df[df['site'] == 'colorado'],
                     ax=ax, color='darkblue', scatter_kws={'s': 8})
 
