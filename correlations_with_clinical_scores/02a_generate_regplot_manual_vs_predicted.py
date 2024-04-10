@@ -174,10 +174,6 @@ def get_fnames(dir_paths):
 
     print(f'Number of rows: {len(df)}')
 
-    # Keep only unique participant_id rows
-    df = df.drop_duplicates(subset=['participant_id'])
-    print(f'Number of unique participants: {len(df)}')
-
     # Add a column with fname_lesion_manual by replacing '_nnunet_3d' by '-manual_bin'
     df['fname_lesion_manual'] = df['fname_lesion_nnunet_3d'].apply(lambda x: x.replace('_nnunet_3d', '-manual_bin'))
 
@@ -405,6 +401,14 @@ def main():
         df_merged = fetch_lesion_metrics(index, row, 'nnunet_3d_method2', df_merged)
         # Read the XLS file with lesion metrics for manual (GT) lesion
         df_merged = fetch_lesion_metrics(index, row, 'manual_method2', df_merged)
+
+    logger.info(f'Number of participants before the aggregation: {len(df_merged)}')
+
+    # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
+    # metrics across seeds for the same subject.
+    df_merged = df_merged.groupby(['participant_id', 'site']).mean().reset_index()
+
+    logger.info(f'Number of unique participants after the aggregation: {len(df_merged)}')
 
     # Replace nan with 0 for the volume_nnunet_3d column
     # nan means that there is no lesion predicted by our 3D nnUNet model;

@@ -1,13 +1,22 @@
 """
-Parse the xml files with ANIMA segmentation metrics and execution_time.csv and create Raincloud plot.
-Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
+The script:
+ - fetch subjects from the provided /results folders (each one for a specific seed)
+ - read XML files with ANIMA segmentation metrics and execution_time.csv (located under /results) computed using
+ sct_analyze_lesion separately for GT and predicted using our 3D nnUNet model)
+ - average the  metrics across seeds based (because some subjects are present in multiple seeds)
+ - create Raincloud plot for each segmentation metrics (Dice, RVE, ...)
+ - Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
 
 Authors: Jan Valosek, Naga Karthik
 
 Example:
     python generate_figures.py
-    -i sci-multisite-test-data_seed42_sc_inference_2023-09-11/results sci-multisite-test-data_seed123_sc_inference_2023-09-11/results
+    -i sci-multisite-test-data_seed42_sc_inference_2023-09-11/results sci-multisite-test-data_seed123_sc_inference_2023-09-11/results ...
     -pred-type sc
+
+    python generate_figures.py
+    -i sci-multisite-test-data_seed42_lesion_inference_2023-09-11/results sci-multisite-test-data_seed123_lesion_inference_2023-09-11/results ...
+    -pred-type lesion
 """
 
 import os
@@ -236,13 +245,14 @@ def split_string_by_capital_letters(s):
     return re.sub(r'([a-z])([A-Z])', r'\1 \2', s)
 
 
-def create_rainplot(df, list_of_metrics, path_figures, pred_type):
+def create_rainplot(df, list_of_metrics, path_figures, pred_type, num_of_seeds):
     """
     Create Raincloud plots (violionplot + boxplot + individual points)
     :param df: dataframe with segmentation metrics
     :param list_of_metrics: list of metrics to be plotted
     :param path_figures: path to the folder where the figures will be saved
     :param pred_type: type of prediction to create plots for; sc: spinal cord segmentation; lesion: lesion segmentation
+    :param num_of_seeds: number of seeds (obtained from the number of input folders)
     :return:
     """
 
@@ -291,7 +301,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Include number of subjects for each site into the legend
         handles, labels = ax.get_legend_handles_labels()
         for i, label in enumerate(labels):
-            n = len(df_temp[(df_temp['site'] == label) & (df_temp['method'] == 'nnunet_3d')]['filename'])
+            n = len(df_temp[(df_temp['site'] == label) & (df_temp['method'] == 'nnunet_3d')]['participant_id'])
             labels[i] = f'{label} ' + '($\it{n}$' + f' = {n})'
         # Since the figure contains violionplot + boxplot + scatterplot we are keeping only last two legend entries
         handles = handles[-2:]
@@ -332,7 +342,6 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
             ax.set_ylim(0, 15)
 
         # Set title
-        num_of_seeds = len(df_temp['seed'].unique())
         if pred_type == 'sc':
             ax.set_title(f'Test {split_string_by_capital_letters(metric)} for Spinal Cord Segmentation across {num_of_seeds} seeds',
                          fontsize=LABEL_FONT_SIZE)
@@ -366,7 +375,7 @@ def print_colorado_subjects_with_dice_0(df_concat):
     df = df_concat[df_concat['site'] == 'colorado']
     df = df[df['Dice'] == 0]
     logger.info(f'Subjects with Dice = 0 for Colorado site:')
-    logger.info(df[['filename', 'method', 'Dice']])
+    logger.info(df[['participant_id', 'method', 'Dice']])
 
 
 def compute_wilcoxon_test(df_concat, list_of_metrics):
@@ -441,15 +450,15 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
 
             # Combine all dataframes based on participant_id and seed. Keep only metric column. Use reduce and lambda
-            df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id', 'seed']),
-                        [df_propseg[['participant_id', 'session_id', 'seed', metric]],
-                         df_deepseg_2d[['participant_id', 'session_id', 'seed', metric]],
-                         df_deepseg_3d[['participant_id', 'session_id', 'seed', metric]],
-                         df_contrast_agnostic[['participant_id', 'session_id', 'seed', metric]],
-                         df_nnunet_2d[['participant_id', 'session_id', 'seed', metric]],
-                         df_nnunet_3d[['participant_id', 'session_id', 'seed', metric]]])
+            df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id']),
+                        [df_propseg[['participant_id', 'session_id', metric]],
+                         df_deepseg_2d[['participant_id', 'session_id', metric]],
+                         df_deepseg_3d[['participant_id', 'session_id', metric]],
+                         df_contrast_agnostic[['participant_id', 'session_id', metric]],
+                         df_nnunet_2d[['participant_id', 'session_id', metric]],
+                         df_nnunet_3d[['participant_id', 'session_id', metric]]])
             # Rename columns
-            df.columns = ['participant_id', 'session_id', 'seed', metric + '_propseg', metric + '_deepseg_2d',
+            df.columns = ['participant_id', 'session_id', metric + '_propseg', metric + '_deepseg_2d',
                             metric + '_deepseg_3d', metric + '_monai', metric + '_nnunet_2d', metric + '_nnunet_3d']
 
             # Drop rows with NaN values
@@ -561,12 +570,16 @@ def main():
     # Concatenate the list of dataframes into a single dataframe
     df_concat = pd.concat(list_of_df, ignore_index=True)
 
+    # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
+    # metrics across seeds for the same subject.
+    df_concat = df_concat.groupby(['participant_id', 'session_id', 'site', 'method']).mean().reset_index()
+
     # Remove 'sub-5740' (https://github.com/ivadomed/model_seg_sci/issues/59)
     logger.info(f'Removing subject sub-5740 from the dataframe.')
     df_concat = df_concat[df_concat['participant_id'] != 'sub-5740']
 
     # Sort the dataframe by participant_id and seed
-    df_concat = df_concat.sort_values(by=['participant_id', 'seed'])
+    df_concat = df_concat.sort_values(by=['participant_id'])
 
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
@@ -583,7 +596,8 @@ def main():
 
     logger.info("")
     # Create Raincloud plot for each metric
-    create_rainplot(df_concat, list_of_metrics, output_dir, pred_type)
+    num_of_seeds = len(dir_paths)
+    create_rainplot(df_concat, list_of_metrics, output_dir, pred_type, num_of_seeds)
 
 
 if __name__ == '__main__':
