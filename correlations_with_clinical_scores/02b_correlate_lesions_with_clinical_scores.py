@@ -329,7 +329,7 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             if metric == 'length':
                 ax.set_ylim(-5, 120)
             elif metric == 'volume':
-                ax.set_ylim(-200, 3000)
+                ax.set_ylim(-200, 4000)
             else:
                 ax.set_ylim(-0.1, 1)
 
