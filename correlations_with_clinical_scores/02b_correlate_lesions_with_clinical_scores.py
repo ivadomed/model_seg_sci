@@ -572,8 +572,8 @@ def main():
     df['length_nnunet_3d'] = df['length_nnunet_3d'].fillna(0)
     df['max_axial_damage_ratio_nnunet_3d'] = df['max_axial_damage_ratio_nnunet_3d'].fillna(0)
 
-    # Remove rows with volume_manual > 4000
-    df = df[df['volume_manual'] <= 2500]
+    # Print number of subjects in df
+    logger.info(f'Number of subjects in df: {len(df)}')
 
     # If sci-colorado participants.tsv file is provided, plot data and a linear regression model fit
     if path_participants_colorado is not None:
