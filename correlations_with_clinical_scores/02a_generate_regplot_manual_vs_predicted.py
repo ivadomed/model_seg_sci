@@ -31,10 +31,15 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 from scipy.stats import wilcoxon
 
-metric_to_title = {'volume': 'Total Lesion Volume [mm$^3$]',
-                   'length': 'Intramedullary Lesion Length [mm]',
+metric_to_title = {'volume': 'Total Lesion Volume',
+                   'length': 'Intramedullary Lesion Length',
                    'max_axial_damage_ratio': 'Maximal Axial Damage Ratio'
                    }
+
+metric_to_axis = {'volume': '[mm$^3$]',
+                   'length': '[mm]',
+                   'max_axial_damage_ratio': ''
+                  }
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -263,9 +268,9 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Set the title
         ax.set_title(f'{metric_to_title[metric]}', fontsize=FONT_SIZE)
         # Set the x-axis label
-        ax.set_xlabel(f'Manual Ground Truth', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Manual Ground Truth {metric_to_axis[metric]}', fontsize=FONT_SIZE)
         # Set the y-axis label
-        ax.set_ylabel(f'SCIseg 3D Prediction', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'SCIseg 3D Prediction {metric_to_axis[metric]}', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Set the x-axis limits
