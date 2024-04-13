@@ -414,14 +414,16 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
 
             # Run normality test
             stat, p = normaltest(df[metric + '_2d'])
-            logger.info(f'{metric}, {site}: Normality test for nnunet_2d: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Normality test for nnunet_2d: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
             stat, p = normaltest(df[metric + '_3d'])
-            logger.info(f'{metric}, {site}: Normality test for nnunet_3d: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Normality test for nnunet_3d: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
 
             # Compute Wilcoxon signed-rank test
             stat, p = wilcoxon(df[metric + '_2d'], df[metric + '_3d'])
             logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_2d and nnunet_3d: '
-                        f'p{format_pvalue(p)}')
+                        f'formatted p{format_pvalue(p)}, unformatted p={p:0.6f}')
 
 
 def compute_kruskal_wallis_test(df_concat, list_of_metrics):
@@ -470,7 +472,8 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             # Compute Kruskal-Wallis H-test
             stat, p = kruskal(df[metric + '_propseg'], df[metric + '_deepseg_2d'], df[metric + '_deepseg_3d'],
                               df[metric + '_monai'], df[metric + '_nnunet_2d'], df[metric + '_nnunet_3d'])
-            logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
 
             # Run post-hoc tests between nnunet_3d and all other methods
             if p < 0.05:
