@@ -401,9 +401,9 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
             df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
 
             # Combine the two dataframes based on participant_id and seed. Keep only metric column
-            df = pd.merge(df_nnunet_2d[['participant_id', 'session_id', 'seed', metric]],
-                          df_nnunet_3d[['participant_id', 'session_id', 'seed', metric]],
-                          on=['participant_id', 'session_id', 'seed'],
+            df = pd.merge(df_nnunet_2d[['participant_id', 'session_id', metric]],
+                          df_nnunet_3d[['participant_id', 'session_id', metric]],
+                          on=['participant_id', 'session_id'],
                           suffixes=('_2d', '_3d'))
 
             # Drop rows with NaN values
@@ -585,7 +585,7 @@ def main():
     print_colorado_subjects_with_dice_0(df_concat)
 
     # For lesions, compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
-    if pred_type == 'lesions':
+    if pred_type == 'lesion':
         compute_wilcoxon_test(df_concat, list_of_metrics)
     # For SC, compute Kruskal-Wallis H-test (we have 6 methods)
     else:
