@@ -184,12 +184,17 @@ def fetch_participant_id_site_and_method(input_string, pred_type):
     # Fetch site
     if 'sub-zh' in input_string:
         site = 'zurich'
-    else:
+    elif re.match(r'sub-\d{4}', input_string):
         site = 'colorado'
+    elif re.match(r'sub-\d{2}', input_string):
+        site = 'dcm-zurich'
 
     # Fetch method
     if pred_type == 'sc':
-        method = input_string.split('_seg_')[1]
+        if site == 'dcm-zurich':
+            method = input_string.split('_sc_')[1]
+        else:
+            method = input_string.split('_seg_')[1]
     elif pred_type == 'lesion':
         method = input_string.split('_lesion_')[1]
     else:
@@ -511,7 +516,7 @@ def main():
     # Loop across provided directories and parse the xml files
     for dir_path in dir_paths:
         # Get all the xml files in the directory
-        xml_files = glob.glob(os.path.join(dir_path, '*.xml'))
+        xml_files = glob.glob(os.path.join(dir_path, f'*_{pred_type}_*.xml'))
         # if xml_files is empty, exit
         if len(xml_files) == 0:
             print(f'ERROR: No xml files found in {dir_path}')
