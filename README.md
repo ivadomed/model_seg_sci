@@ -1,13 +1,13 @@
-# Automated Segmentation of Spinal Cord and Hyperintense Lesions in Traumatic Spinal Cord Injury
+# SCISeg: Automatic Segmentation of T2-weighted Intramedullary Lesions in Spinal Cord Injury
 
-[![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v1-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v1)
+[![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v1-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf)
 
-This repository contains the code for deep learning-based segmentation of the spinal cord and hyperintense lesions in spinal cord injury (SCI). The code is based on the [nnUNet framework](https://github.com/MIC-DKFZ/nnUNet).
+This repository contains the code for deep learning-based segmentation of the spinal cord and hyperintense lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
 
 
 ## Model Overview
 
-The model was trained on raw T2-weighted images of SCI patients from multiple (three) sites. The data included images with both axial and sagittal resolutions. To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
+The model was trained on raw T2-weighted images of SCI patients from multiple (three) sites. The data included images with both axial and sagittal resolutions. To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. The model also works well on degenerative cervical myelopathy (DCM) lesions. 
 
 <img width="1000" alt="figure2" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e858bde3-1b6e-4adb-8897-a6d323b64c0e">
 
