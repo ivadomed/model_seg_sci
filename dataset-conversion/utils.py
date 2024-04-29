@@ -31,7 +31,8 @@ def create_region_based_label(lesion_label_file, seg_label_file, image_file, sub
 
     # binarize the labels
     lesion_label_npy = np.where(lesion_label_npy > thr, 1, 0)
-    seg_label_npy = np.where(seg_label_npy > thr, 1, 0)
+    # add the lesion seg to the spinal cord seg
+    seg_label_npy = np.where((seg_label_npy + lesion_label_npy) > thr, 1, 0)
 
     # check if the shapes of the labels match
     assert lesion_label_npy.shape == seg_label_npy.shape, \

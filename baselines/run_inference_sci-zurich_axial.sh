@@ -67,7 +67,7 @@ segment_sc_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type sc
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type sc -use-gpu
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -89,7 +89,7 @@ segment_lesion_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEGLESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNet_${kernel} -pred-type lesion
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEGLESION}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type lesion -use-gpu
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -97,7 +97,7 @@ segment_lesion_nnUNet(){
   echo "${FILESEGLESION},${execution_time}" >> ${PATH_RESULTS}/execution_time.csv
 
   # Generate QC report
-  sct_qc -i ${file}.nii.gz -s ${file_seg}.nii.gz -d ${FILESEGLESION}.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+  sct_qc -i ${file}.nii.gz -s ${file_seg}.nii.gz -d ${FILESEGLESION}.nii.gz -p sct_deepseg_lesion -plane axial -qc ${PATH_QC} -qc-subject ${SUBJECT}
 }
 
 # ------------------------------------------------------------------------------
@@ -135,13 +135,13 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     exit 1
 else
     # Segment SC
-    segment_sc_nnUNet "${file_t2}" '2d'
-    segment_sc_nnUNet "${file_t2}" '3d'
+    # segment_sc_nnUNet "${file_t2}" '2d'
+    segment_sc_nnUNet "${file_t2}" '3d_fullres'
 
     # Segment lesion
     # Note: SC seg is passed to generate QC report
-    segment_lesion_nnUNet "${file_t2}" '2d' "${file_t2}_seg_nnunet_2d"
-    segment_lesion_nnUNet "${file_t2}" '3d' "${file_t2}_seg_nnunet_3d"
+    # segment_lesion_nnUNet "${file_t2}" '2d' "${file_t2}_seg_nnunet_2d"
+    segment_lesion_nnUNet "${file_t2}" '3d_fullres' "${file_t2}_seg_nnunet_3d_fullres"
 fi
 
 # ------------------------------------------------------------------------------
