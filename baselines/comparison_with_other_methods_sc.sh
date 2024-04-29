@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Compare our nnUNet model with other methods (sct_propseg, sct_deepseg_sc 2d, sct_deepseg_sc 3d,
-# MONAI contrast-agnostic) on sci-zurich and sci-colorado datasets
+# MONAI contrast-agnostic (part of SCT v6.2)) on sci-zurich and sci-colorado datasets
 #
 # Note: subjects from both datasets have to be located in the same BIDS-like folder, example:
 # ├── derivatives
@@ -42,7 +42,7 @@
 #  "path_output" : "<PATH_TO_DATASET>_2023-08-18",
 #  "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/comparison_with_other_methods.sh",
 #  "jobs"        : 8,
-#  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model <PATH_TO_CONTRAST-AGNOSTIC_REPO>/monai/run_inference_single_image.py <PATH_TO_CONTRAST-AGNOSTIC_MODEL>"
+#  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
 # }
 #
 # The following global variables are retrieved from the caller sct_run_batch
@@ -75,14 +75,10 @@ echo "PATH_QC: ${PATH_QC}"
 SUBJECT=$1
 PATH_NNUNET_SCRIPT=$2   # path to the nnUNet SCIseg run_inference_single_subject.py
 PATH_NNUNET_MODEL=$3    # path to the nnUNet SCIseg model
-PATH_MONAI_SCRIPT=$4    # path to the MONAI contrast-agnostic run_inference_single_subject.py
-PATH_MONAI_MODEL=$5     # path to the MONAI contrast-agnostic model
 
 echo "SUBJECT: ${SUBJECT}"
 echo "PATH_NNUNET_SCRIPT: ${PATH_NNUNET_SCRIPT}"
 echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
-echo "PATH_MONAI_SCRIPT: ${PATH_MONAI_SCRIPT}"
-echo "PATH_MONAI_MODEL: ${PATH_MONAI_MODEL}"
 
 # ------------------------------------------------------------------------------
 # CONVENIENCE FUNCTIONS
@@ -143,7 +139,7 @@ segment_sc_nnUNet(){
   # Get the start time
   start_time=$(date +%s)
   # Run SC segmentation
-  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainer__nnUNetPlans__${kernel} -pred-type sc -use-gpu
+  python ${PATH_NNUNET_SCRIPT} -i ${file}.nii.gz -o ${FILESEG}.nii.gz -path-model ${PATH_NNUNET_MODEL}/nnUNetTrainerDiceCELoss_noSmooth__nnUNetPlans__${kernel} -pred-type sc
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
@@ -156,7 +152,7 @@ segment_sc_nnUNet(){
   compute_anima_metrics ${FILESEG} ${file}_seg-manual.nii.gz
 }
 
-# Segment spinal cord using the MONAI contrast-agnostic model
+# Segment spinal cord using the MONAI contrast-agnostic model (part of SCT v6.2)
 segment_sc_MONAI(){
   local file="$1"
 
@@ -164,18 +160,13 @@ segment_sc_MONAI(){
 
   # Get the start time
   start_time=$(date +%s)
-  # Run SC segmentation
-  python ${PATH_MONAI_SCRIPT} --path-img ${file}.nii.gz --path-out . --chkp-path ${PATH_MONAI_MODEL} --device gpu
-  # Rename MONAI output
-  mv ${file}_pred.nii.gz ${FILESEG}.nii.gz
+  # Run SC segmentation using SCT v6.2
+  sct_deepseg -i ${file}.nii.gz -o ${FILESEG}.nii.gz -task seg_sc_contrast_agnostic
   # Get the end time
   end_time=$(date +%s)
   # Calculate the time difference
   execution_time=$(python3 -c "print($end_time - $start_time)")
   echo "${FILESEG},${execution_time}" >> ${PATH_RESULTS}/execution_time.csv
-
-  # Binarize MONAI output (which is soft by default)
-  sct_maths -i ${FILESEG}.nii.gz -bin 0.5 -o ${FILESEG}.nii.gz
 
   # Generate QC report
   sct_qc -i ${file}.nii.gz -s ${FILESEG}.nii.gz -p sct_deepseg_sc -qc ${PATH_QC} -qc-subject ${SUBJECT}

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Segment spinal cord for sci-zurich dataset
+# Segment spinal cord from T2w sag for sci-zurich dataset
 #
 # Usage:
 #     sct_run_batch -script segment_sc_zurich.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
@@ -106,7 +106,7 @@ file="${SUBJECT//[\/]/_}"
 file=${file}_acq-sag_T2w
 
 # Spinal cord segmentation using the T2w contrast
-segment_if_does_not_exist ${file} t2 ${CENTERLINE_METHOD}
+segment_if_does_not_exist ${file} t2
 
 # ==============================================================================
 # END

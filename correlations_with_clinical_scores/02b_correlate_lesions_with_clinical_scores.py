@@ -1,9 +1,10 @@
 """
 The script:
  - fetch subjects from the provided /results folders (each one for a specific seed)
- - keep only the unique subjects (to avoid duplicates between seeds)
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
+ - keep only the unique subjects (to avoid duplicates between seeds) OR average the metrics across seeds based on
+ the '-type' input argument
  - save the aggregated data to a CSV file
  - plot data and a linear regression model fit for each each metric (volume, length, max_axial_damage_ratio) manual vs
  nnUNet lesion segmentation and save them to the output folder
@@ -92,6 +93,13 @@ def get_parser():
         help='Full path to the sci-colorado participants.tsv file containing the clinical scores.'
     )
     parser.add_argument(
+        '-type',
+        choices=['unique', 'average'],
+        default='average',
+        help='Type of the aggregation. If \'unique\', keep only the unique subjects (to avoid duplicates between '
+             'seeds). If \'average\', average the lesion metrics across seeds for the same subject.'
+    )
+    parser.add_argument(
         '-o',
         required=False,
         default='stats',
@@ -156,11 +164,11 @@ def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, inc
 
 def get_fnames(dir_paths):
     """
-    Get the list of file names across all input paths (i.e. all seeds), sort them and keep only the unique ones
+    Get the list of file names across all input paths (i.e., all seeds)
     :param dir_paths: list of paths to the 'results' folders containing the XLS files with lesion metrics for each seed
     :return: pandas dataframe with the paths to the XLS files for manual and predicted lesions
     """
-    # Initialize an empty list file names across all input paths (i.e. all seeds)
+    # Initialize an empty list file names across all input paths (i.e., all seeds)
     fname_files_all = list()
 
     # Get all file names across all input paths (i.e. all seeds)
@@ -183,14 +191,8 @@ def get_fnames(dir_paths):
     df['participant_id'] = df['fname_lesion_nnunet_3d'].apply(lambda x: fetch_subject_and_session(x))
     # Make the participant_id column the first column
     df = df[['participant_id', 'fname_lesion_nnunet_3d']]
-    # Add a column with site (if participant_id contains 'zh' --> site = 'zurich', otherwise site = 'colorado')
-    df['site'] = df['participant_id'].apply(lambda x: 'zurich' if 'zh' in x else 'colorado')
 
     print(f'Number of rows: {len(df)}')
-
-    # Keep only unique participant_id rows
-    df = df.drop_duplicates(subset=['participant_id'])
-    print(f'Number of unique participants: {len(df)}')
 
     # Add a column with fname_lesion_manual by replacing '_nnunet_3d' by '-manual_bin'
     df['fname_lesion_manual'] = df['fname_lesion_nnunet_3d'].apply(lambda x: x.replace('_nnunet_3d', '-manual_bin'))
@@ -258,7 +260,7 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
 
         # Compute Wilcoxon signed-rank test between manual and nnunet_3d
         stat, pval = wilcoxon(df_colorado[metric + '_manual'], df_colorado[metric + '_nnunet_3d'])
-        logger.info(f'{metric}: p{format_pvalue(pval, alpha=0.001)}')
+        logger.info(f'{metric}: Wilcoxon signed-rank test manual vs nnunet_3d p{format_pvalue(pval, alpha=0.001)}')
 
         # Loop across clinical scores
         for score in clinical_scores_list_final + ['diff_' + s for s in clinical_scores_list] + \
@@ -327,9 +329,13 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             if metric == 'length':
                 ax.set_ylim(-5, 120)
             elif metric == 'volume':
-                ax.set_ylim(-200, 3000)
+                ax.set_ylim(-200, 4000)
             else:
                 ax.set_ylim(-0.1, 1)
+
+            # Adjust x-axis limits by 5% of the range
+            ax.set_xlim(ax.get_xlim()[0] - 0.05 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
+                        ax.get_xlim()[1] + 0.05 * (ax.get_xlim()[1] - ax.get_xlim()[0]))
 
             # Make legend's box black
             frame = legend.get_frame()
@@ -516,7 +522,7 @@ def main():
     fh = logging.FileHandler(os.path.join(os.path.abspath(output_dir), fname_log))
     logging.root.addHandler(fh)
 
-    # Parse input paths
+    # Parse input paths (folders that contain XLS files with lesion metrics for each seed)
     dir_paths = [os.path.join(os.getcwd(), path) for path in args.i]
 
     # Check if the input path exists
@@ -525,6 +531,7 @@ def main():
             raise ValueError(f'ERROR: {dir_path} does not exist.')
 
     # For each participant_id, get the lesion and spinal cord file names
+    # Get the list of file names across all input paths (i.e., all seeds)
     df = get_fnames(dir_paths)
 
     # Iterate over the rows of the dataframe and read the XLS files
@@ -543,6 +550,21 @@ def main():
     df.to_excel(xls_fname, index=False)
     logger.info(f'Saved {xls_fname}')
 
+    logger.info(f'Number of participants before the aggregation: {len(df)}')
+
+    # Keep only the unique subjects to avoid duplicates between seeds
+    if args.type == 'unique':
+        df = df.drop_duplicates(subset=['participant_id'])
+    # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the lesion
+    # metrics across seeds for the same subject.
+    elif args.type == 'average':
+        df = df.groupby('participant_id').mean().reset_index()
+
+    logger.info(f'Number of unique participants after the aggregation ({args.type}): {len(df)}')
+
+    # Add a column with site (if participant_id contains 'zh' --> site = 'zurich', otherwise site = 'colorado')
+    df['site'] = df['participant_id'].apply(lambda x: 'zurich' if 'zh' in x else 'colorado')
+
     # Replace nan with 0 for the volume_nnunet_3d column
     # nan means that there is no lesion predicted by our 3D nnUNet model;
     # therefore, metrics are assigned to 0 to plot them
@@ -550,8 +572,8 @@ def main():
     df['length_nnunet_3d'] = df['length_nnunet_3d'].fillna(0)
     df['max_axial_damage_ratio_nnunet_3d'] = df['max_axial_damage_ratio_nnunet_3d'].fillna(0)
 
-    # Remove rows with volume_manual > 4000
-    #df = df[df['volume_manual'] <= 4000]
+    # Print number of subjects in df
+    logger.info(f'Number of subjects in df: {len(df)}')
 
     # If sci-colorado participants.tsv file is provided, plot data and a linear regression model fit
     if path_participants_colorado is not None:

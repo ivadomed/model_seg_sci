@@ -1,13 +1,22 @@
 """
-Parse the xml files with ANIMA segmentation metrics and execution_time.csv and create Raincloud plot.
-Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
+The script:
+ - fetch subjects from the provided /results folders (each one for a specific seed)
+ - read XML files with ANIMA segmentation metrics and execution_time.csv (located under /results) computed using
+ sct_analyze_lesion separately for GT and predicted using our 3D nnUNet model)
+ - average the  metrics across seeds based (because some subjects are present in multiple seeds)
+ - create Raincloud plot for each segmentation metrics (Dice, RVE, ...)
+ - Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
 
 Authors: Jan Valosek, Naga Karthik
 
 Example:
     python generate_figures.py
-    -i sci-multisite-test-data_seed42_sc_inference_2023-09-11/results sci-multisite-test-data_seed123_sc_inference_2023-09-11/results
+    -i sci-multisite-test-data_seed42_sc_inference_2023-09-11/results sci-multisite-test-data_seed123_sc_inference_2023-09-11/results ...
     -pred-type sc
+
+    python generate_figures.py
+    -i sci-multisite-test-data_seed42_lesion_inference_2023-09-11/results sci-multisite-test-data_seed123_lesion_inference_2023-09-11/results ...
+    -pred-type lesion
 """
 
 import os
@@ -91,13 +100,12 @@ def get_parser():
     return parser
 
 
-def format_pvalue(p_value, alpha=0.001, decimal_places=3, include_space=False, include_equal=True):
+def format_pvalue(p_value, decimal_places=3, include_space=False, include_equal=True):
     """
     Format p-value.
     If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
 
     :param p_value: input p-value as a float
-    :param alpha: significance level
     :param decimal_places: number of decimal places the p-value will be rounded
     :param include_space: include space or not (e.g., ' = 0.06')
     :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
@@ -109,9 +117,11 @@ def format_pvalue(p_value, alpha=0.001, decimal_places=3, include_space=False, i
         space = ''
 
     # If the p-value is lower than alpha, return '<alpha' (e.g., <0.001)
-    if p_value < alpha:
-        p_value = space + "<" + space + str(alpha)
-    # If the p-value is greater than alpha, round it number of decimals specified by decimal_places
+    for alpha in [0.001, 0.01, 0.05]:
+        if p_value < alpha:
+            p_value = space + "<" + space + str(alpha)
+            break
+    # If the p-value is greater than 0.05, round it number of decimals specified by decimal_places
     else:
         if include_equal:
             p_value = space + '=' + space + str(round(p_value, decimal_places))
@@ -241,13 +251,14 @@ def split_string_by_capital_letters(s):
     return re.sub(r'([a-z])([A-Z])', r'\1 \2', s)
 
 
-def create_rainplot(df, list_of_metrics, path_figures, pred_type):
+def create_rainplot(df, list_of_metrics, path_figures, pred_type, num_of_seeds):
     """
     Create Raincloud plots (violionplot + boxplot + individual points)
     :param df: dataframe with segmentation metrics
     :param list_of_metrics: list of metrics to be plotted
     :param path_figures: path to the folder where the figures will be saved
     :param pred_type: type of prediction to create plots for; sc: spinal cord segmentation; lesion: lesion segmentation
+    :param num_of_seeds: number of seeds (obtained from the number of input folders)
     :return:
     """
 
@@ -296,7 +307,7 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
         # Include number of subjects for each site into the legend
         handles, labels = ax.get_legend_handles_labels()
         for i, label in enumerate(labels):
-            n = len(df_temp[(df_temp['site'] == label) & (df_temp['method'] == 'nnunet_3d')]['filename'])
+            n = len(df_temp[(df_temp['site'] == label) & (df_temp['method'] == 'nnunet_3d')]['participant_id'])
             labels[i] = f'{label} ' + '($\it{n}$' + f' = {n})'
         # Since the figure contains violionplot + boxplot + scatterplot we are keeping only last two legend entries
         handles = handles[-2:]
@@ -337,7 +348,6 @@ def create_rainplot(df, list_of_metrics, path_figures, pred_type):
             ax.set_ylim(0, 15)
 
         # Set title
-        num_of_seeds = len(df_temp['seed'].unique())
         if pred_type == 'sc':
             ax.set_title(f'Test {split_string_by_capital_letters(metric)} for Spinal Cord Segmentation across {num_of_seeds} seeds',
                          fontsize=LABEL_FONT_SIZE)
@@ -371,7 +381,7 @@ def print_colorado_subjects_with_dice_0(df_concat):
     df = df_concat[df_concat['site'] == 'colorado']
     df = df[df['Dice'] == 0]
     logger.info(f'Subjects with Dice = 0 for Colorado site:')
-    logger.info(df[['filename', 'method', 'Dice']])
+    logger.info(df[['participant_id', 'method', 'Dice']])
 
 
 def compute_wilcoxon_test(df_concat, list_of_metrics):
@@ -397,9 +407,9 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
             df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
 
             # Combine the two dataframes based on participant_id and seed. Keep only metric column
-            df = pd.merge(df_nnunet_2d[['participant_id', 'session_id', 'seed', metric]],
-                          df_nnunet_3d[['participant_id', 'session_id', 'seed', metric]],
-                          on=['participant_id', 'session_id', 'seed'],
+            df = pd.merge(df_nnunet_2d[['participant_id', 'session_id', metric]],
+                          df_nnunet_3d[['participant_id', 'session_id', metric]],
+                          on=['participant_id', 'session_id'],
                           suffixes=('_2d', '_3d'))
 
             # Drop rows with NaN values
@@ -409,14 +419,16 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
 
             # Run normality test
             stat, p = normaltest(df[metric + '_2d'])
-            logger.info(f'{metric}, {site}: Normality test for nnunet_2d: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Normality test for nnunet_2d: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
             stat, p = normaltest(df[metric + '_3d'])
-            logger.info(f'{metric}, {site}: Normality test for nnunet_3d: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Normality test for nnunet_3d: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
 
             # Compute Wilcoxon signed-rank test
             stat, p = wilcoxon(df[metric + '_2d'], df[metric + '_3d'])
             logger.info(f'{metric}, {site}: Wilcoxon signed-rank test between nnunet_2d and nnunet_3d: '
-                        f'p{format_pvalue(p)}')
+                        f'formatted p{format_pvalue(p)}, unformatted p={p:0.6f}')
 
 
 def compute_kruskal_wallis_test(df_concat, list_of_metrics):
@@ -446,15 +458,15 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
 
             # Combine all dataframes based on participant_id and seed. Keep only metric column. Use reduce and lambda
-            df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id', 'seed']),
-                        [df_propseg[['participant_id', 'session_id', 'seed', metric]],
-                         df_deepseg_2d[['participant_id', 'session_id', 'seed', metric]],
-                         df_deepseg_3d[['participant_id', 'session_id', 'seed', metric]],
-                         df_contrast_agnostic[['participant_id', 'session_id', 'seed', metric]],
-                         df_nnunet_2d[['participant_id', 'session_id', 'seed', metric]],
-                         df_nnunet_3d[['participant_id', 'session_id', 'seed', metric]]])
+            df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id']),
+                        [df_propseg[['participant_id', 'session_id', metric]],
+                         df_deepseg_2d[['participant_id', 'session_id', metric]],
+                         df_deepseg_3d[['participant_id', 'session_id', metric]],
+                         df_contrast_agnostic[['participant_id', 'session_id', metric]],
+                         df_nnunet_2d[['participant_id', 'session_id', metric]],
+                         df_nnunet_3d[['participant_id', 'session_id', metric]]])
             # Rename columns
-            df.columns = ['participant_id', 'session_id', 'seed', metric + '_propseg', metric + '_deepseg_2d',
+            df.columns = ['participant_id', 'session_id', metric + '_propseg', metric + '_deepseg_2d',
                             metric + '_deepseg_3d', metric + '_monai', metric + '_nnunet_2d', metric + '_nnunet_3d']
 
             # Drop rows with NaN values
@@ -465,7 +477,8 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             # Compute Kruskal-Wallis H-test
             stat, p = kruskal(df[metric + '_propseg'], df[metric + '_deepseg_2d'], df[metric + '_deepseg_3d'],
                               df[metric + '_monai'], df[metric + '_nnunet_2d'], df[metric + '_nnunet_3d'])
-            logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: p{format_pvalue(p)}')
+            logger.info(f'{metric}, {site}: Kruskal-Wallis H-test: formatted p{format_pvalue(p)}, '
+                        f'unformatted p={p:0.6f}')
 
             # Run post-hoc tests between nnunet_3d and all other methods
             if p < 0.05:
@@ -566,18 +579,22 @@ def main():
     # Concatenate the list of dataframes into a single dataframe
     df_concat = pd.concat(list_of_df, ignore_index=True)
 
+    # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
+    # metrics across seeds for the same subject.
+    df_concat = df_concat.groupby(['participant_id', 'session_id', 'site', 'method']).mean().reset_index()
+
     # Remove 'sub-5740' (https://github.com/ivadomed/model_seg_sci/issues/59)
     logger.info(f'Removing subject sub-5740 from the dataframe.')
     df_concat = df_concat[df_concat['participant_id'] != 'sub-5740']
 
     # Sort the dataframe by participant_id and seed
-    df_concat = df_concat.sort_values(by=['participant_id', 'seed'])
+    df_concat = df_concat.sort_values(by=['participant_id'])
 
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
 
     # For lesions, compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
-    if pred_type == 'lesions':
+    if pred_type == 'lesion':
         compute_wilcoxon_test(df_concat, list_of_metrics)
     # For SC, compute Kruskal-Wallis H-test (we have 6 methods)
     else:
@@ -588,7 +605,8 @@ def main():
 
     logger.info("")
     # Create Raincloud plot for each metric
-    create_rainplot(df_concat, list_of_metrics, output_dir, pred_type)
+    num_of_seeds = len(dir_paths)
+    create_rainplot(df_concat, list_of_metrics, output_dir, pred_type, num_of_seeds)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,13 @@
 """
 Generate sns.regplot for each metric (volume, length, max_axial_damage_ratio) manual vs SCIseg 3D lesion segmentation
-BEFORE and AFTER active learning.
+BEFORE (phase1) and AFTER (phase3) active learning.
 
 The script:
  - fetch subjects from the provided /results folders (each one for a specific seed)
  - keep only the unique subjects (to avoid duplicates between seeds)
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion separately for GT
  and predicted using our 3D nnUNet model)
- - plot data and a linear regression model fit for each each metric (volume, length, max_axial_damage_ratio) manual vs
+ - plot data and a linear regression model fit for each metric (volume, length, max_axial_damage_ratio) manual vs
  nnUNet lesion segmentation and save them to the output folder
 
 Note: to read XLS files, you might need to install the following packages:
@@ -31,10 +31,15 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 from scipy.stats import wilcoxon
 
-metric_to_title = {'volume': 'Total Lesion Volume [mm$^3$]',
-                   'length': 'Intramedullary Lesion Length [mm]',
+metric_to_title = {'volume': 'Total Lesion Volume',
+                   'length': 'Intramedullary Lesion Length',
                    'max_axial_damage_ratio': 'Maximal Axial Damage Ratio'
                    }
+
+metric_to_axis = {'volume': '[mm$^3$]',
+                   'length': '[mm]',
+                   'max_axial_damage_ratio': ''
+                  }
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -51,15 +56,17 @@ def get_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='TODO',
+        description='Plot MRI manual vs SCIseg 3D lesion segmentation metrics BEFORE (phase1) and AFTER (phase3) '
+                    'active learning',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
         '-method1',
         required=True,
         nargs='+',
-        help='Space separated list of paths to the \'results\' folders with XLS files. Each \'results\' folder '
-             'corresponds to a specific seed. The results folders were generated using the \'01_analyze_lesions.sh\'.'
+        help='BeforeAL (phase1): Space separated list of paths to the \'results\' folders with XLS files. '
+             'Each \'results\' folder corresponds to a specific seed. The results folders were generated using the '
+             '\'01_analyze_lesions.sh\'.'
              'The XLS files contain lesion metrics and were generated using \'sct_analyze_lesion.\' '
              'Example: clinical_correlation_2sites/seed7/results '
              'clinical_correlation_2sites/seed42/results ...'
@@ -68,8 +75,9 @@ def get_parser():
         '-method2',
         required=True,
         nargs='+',
-        help='Space separated list of paths to the \'results\' folders with XLS files. Each \'results\' folder '
-             'corresponds to a specific seed. The results folders were generated using the \'01_analyze_lesions.sh\'.'
+        help='AfterAL (phase3): Space separated list of paths to the \'results\' folders with XLS files. '
+             'Each \'results\' folder corresponds to a specific seed. The results folders were generated using the '
+             '\'01_analyze_lesions.sh\'.'
              'The XLS files contain lesion metrics and were generated using \'sct_analyze_lesion.\' '
              'Example: clinical_correlation_3sites_afterAL/seed7/results '
              'clinical_correlation_3sites_afterAL/seed42/results ...'
@@ -171,10 +179,6 @@ def get_fnames(dir_paths):
 
     print(f'Number of rows: {len(df)}')
 
-    # Keep only unique participant_id rows
-    df = df.drop_duplicates(subset=['participant_id'])
-    print(f'Number of unique participants: {len(df)}')
-
     # Add a column with fname_lesion_manual by replacing '_nnunet_3d' by '-manual_bin'
     df['fname_lesion_manual'] = df['fname_lesion_nnunet_3d'].apply(lambda x: x.replace('_nnunet_3d', '-manual_bin'))
 
@@ -247,26 +251,26 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Create a subplot
         ax = fig.add_subplot(111)
         # Plot the data (manual vs nnunet_3d) and a linear regression model fit
-        # Method1 - Zurich (in dashed line)
+        # Method1 (beforeAL - phase 1) - Zurich (in dashed line)
         sns.regplot(x=metric+'_manual_method1', y=metric+'_nnunet_3d_method1', data=df[df['site'] == 'zurich'],
                     ax=ax, color='orangered', marker="^", line_kws={'ls': '--'}, scatter_kws={'s': 8})
-        # Method1 - Colorado
+        # Method1 (beforeAL - phase 1) - Colorado (in dashed line)
         sns.regplot(x=metric+'_manual_method1', y=metric+'_nnunet_3d_method1', data=df[df['site'] == 'colorado'],
                     ax=ax, color='deepskyblue', marker="^", line_kws={'ls': '--'}, scatter_kws={'s': 8})
 
-        # Method2 - Zurich
+        # Method2 (afterAL - phase 3) - Zurich
         sns.regplot(x=metric+'_manual_method2', y=metric+'_nnunet_3d_method2', data=df[df['site'] == 'zurich'],
                     ax=ax, color='red', scatter_kws={'s': 8})
-        # Method2 - Colorado
+        # Method2 (afterAL - phase 3) - Colorado
         sns.regplot(x=metric+'_manual_method2', y=metric+'_nnunet_3d_method2', data=df[df['site'] == 'colorado'],
                     ax=ax, color='darkblue', scatter_kws={'s': 8})
 
         # Set the title
         ax.set_title(f'{metric_to_title[metric]}', fontsize=FONT_SIZE)
         # Set the x-axis label
-        ax.set_xlabel(f'Manual Ground Truth', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Manual Ground Truth {metric_to_axis[metric]}', fontsize=FONT_SIZE)
         # Set the y-axis label
-        ax.set_ylabel(f'SCIseg 3D Prediction', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'SCIseg 3D Prediction {metric_to_axis[metric]}', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Set the x-axis limits
@@ -402,6 +406,14 @@ def main():
         df_merged = fetch_lesion_metrics(index, row, 'nnunet_3d_method2', df_merged)
         # Read the XLS file with lesion metrics for manual (GT) lesion
         df_merged = fetch_lesion_metrics(index, row, 'manual_method2', df_merged)
+
+    logger.info(f'Number of participants before the aggregation: {len(df_merged)}')
+
+    # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
+    # metrics across seeds for the same subject.
+    df_merged = df_merged.groupby(['participant_id', 'site']).mean().reset_index()
+
+    logger.info(f'Number of unique participants after the aggregation: {len(df_merged)}')
 
     # Replace nan with 0 for the volume_nnunet_3d column
     # nan means that there is no lesion predicted by our 3D nnUNet model;

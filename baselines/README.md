@@ -1,10 +1,11 @@
 
 Compare our nnUNet models (`3d` and `2d`) with other methods (`sct_propseg`, `sct_deepseg_sc -kernel 2d`, 
-`sct_deepseg_sc -kernel 3d`, `MONAI contrast-agnostic`) on `sci-zurich` and `sci-colorado` datasets.
+`sct_deepseg_sc -kernel 3d`, `MONAI contrast-agnostic`) on `sci-zurich` and `sci-colorado` datasets. And 
+generate raincloud plots.
 
 ## Data structure
 
-Subjects from both datasets have to be located in the same BIDS-like folder, example:
+Subjects from both datasets have to be located in the same BIDS-like folder, for example:
 
 ```
 ├── derivatives
@@ -36,8 +37,16 @@ Subjects from both datasets have to be located in the same BIDS-like folder, exa
 You can create this folder structure using the `create_combined_dataset_for_inference.sh` script:
 
 ```
-create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_folder> <output_folder>
+create_combined_dataset_for_inference.sh <yaml_file> <zurich_folder> <colorado_folder> <output_folder>
 ```
+
+Where:
+- `<yaml_file>` is the path to the yaml file with train and test subjects, e.g., dataset_split_seed123.yaml
+- `<zurich_folder>` is the path to the `sci-zurich` BIDS dataset
+- `<colorado_folder>` is the path to the `sci-colorado` BIDS dataset
+- `<output_folder>` is the path to the output folder where the combined dataset will be stored
+
+NOTE: the script has to be run for each seed, i.e., five times.
 
 ## Dependencies
 
@@ -45,15 +54,15 @@ create_combined_dataset_for_inference.sh <json_file> <zurich_folder> <colorado_f
 
 `conda` environment with nnUNetV2 is required to run the `comparison_with_other_methods.sh` script. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation).
 
-## MONAI
-
 ### ANIMA
 
 ANIMA is used to compute segmentation performance metrics. See installation instructions [here](https://github.com/ivadomed/utilities/blob/main/quick_start_guides/ANIMA_quick_start_guide.md).
 
-### SCT
+### SCT 6.2
 
 Follow installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox#installation).
+
+NOTE: SCT 6.2 is required for the contrast-agnostic MONAI SC model (`sct_deepseg -task seg_sc_contrast_agnostic`).
 
 ## Running the `comparison_with_other_methods_{sc,lesion}.sh` script
 
@@ -72,7 +81,7 @@ Example of the `config_sc_seed{XXX}.json` file:
   "path_output" : "<PATH_TO_COMBINED_DATASET>_2023-08-18",
   "script"      : "<PATH_TO_REPO>/model_seg_sci/baselines/comparison_with_other_methods_{sc/lesion}.sh",
   "jobs"        : 8, 
-  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX} <PATH_TO_CONTRAST-AGNOSTIC_REPO>/monai/run_inference_single_image.py <PATH_TO_CONTRAST-AGNOSTIC_MODEL>"
+  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model_seed{XXX}"
  }
 ```
 

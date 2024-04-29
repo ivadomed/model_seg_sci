@@ -1,15 +1,21 @@
 #!/bin/bash
 #
-# Preprocess data.
+# Generate QCs for T2w images:
+#     - sagittal lesion QC
+#     - single slice sagittal spinal cord QC (to check FOV coverage (C/Th/L))
 #
 # Dependencies (versions):
-# - SCT (5.4.0)
+# - SCT 6.0 and higher
 #
 # Usage:
-# sct_run_batch -script preprocess_data.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
+# sct_run_batch -script generate_qc.sh -path-data <PATH-TO-DATASET> -path-output <PATH-TO-OUTPUT> -jobs <num-cpu-cores>
 
-# Manual segmentations or labels should be located under:
+# Lesion and SC labels should be located under:
 # PATH_DATA/derivatives/labels/SUBJECT/anat/
+
+# With the following naming convention:
+# file_gt="${file}_lesion-manual"
+# file_seg="${file}_seg-manual"
 
 # The following global variables are retrieved from the caller sct_run_batch
 # but could be overwritten by uncommenting the lines below:
@@ -59,11 +65,12 @@ rsync -Ravzh $PATH_DATA/derivatives/labels/./${SUBJECT}/anat/${file}_*T2w* deriv
 cd ${SUBJECT}/anat
 
 # Add suffix corresponding to contrast
-file=${file}_acq-sag_T2w
-
-# Make sure the image metadata is a valid JSON object
-if [[ ! -s ${file}.json ]]; then
-  echo "{}" >> ${file}.json
+# for sci-colorado and sci-paris, use "T2w"
+if [[ $PATH_DATA =~ "colorado" ]] || [[ $PATH_DATA =~ "paris" ]]; then
+  file=${file}_T2w
+# for sci-zurich, use "acq-sag_T2w"
+else
+  file=${file}_acq-sag_T2w
 fi
 
 # Go to subject folder for segmentation GTs
@@ -73,16 +80,16 @@ cd $PATH_DATA_PROCESSED/derivatives/labels/$SUBJECT/anat
 file_gt="${file}_lesion-manual"
 file_seg="${file}_seg-manual"
 
-# Make sure the GT metadata is a valid JSON object
-if [[ ! -s ${file_gt}.json ]]; then
-  echo "{}" >> ${file_gt}.json
-fi
-
 # Binarize the GTs because QC only accepts binary images
 sct_maths -i ${file_gt}.nii.gz -bin 0 -o ${file_gt}_bin.nii.gz
 
-# Run the QC
+# Generate sagittal lesion QC
+# Note: `-s` is the SC segmentation provided to crop the image
 sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -d ${file_gt}_bin.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+
+# Generate single slice sagittal SC QC (to check FOV coverage (C/Th/L))
+# Note: `-p sct_label_vertebrae` is used to show a single sagittal slice (context: https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4011#issuecomment-1561736362)
+sct_qc -i ${PATH_DATA_PROCESSED}/${SUBJECT}/anat/${file}.nii.gz -s ${file_seg}.nii.gz -p sct_label_vertebrae -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # Display useful info for the log
 end=`date +%s`

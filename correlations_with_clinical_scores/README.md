@@ -57,4 +57,5 @@ convert volume_regplot_discharge_pin_prick_total.png volume_regplot_discharge_li
 convert length_regplot_discharge_pin_prick_total.png length_regplot_discharge_light_touch_total.png length_regplot_discharge_LEMS.png +append row2.png
 convert max_axial_damage_ratio_regplot_discharge_pin_prick_total.png max_axial_damage_ratio_regplot_discharge_light_touch_total.png max_axial_damage_ratio_regplot_discharge_LEMS.png +append row3.png
 convert row1.png row2.png row3.png -append combined.png
+rm row1.png row2.png row3.png
 ```
