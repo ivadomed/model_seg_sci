@@ -84,17 +84,17 @@ python packaging/run_inference.py --path-dataset /path/to/test-dataset --path-ou
 If you find this work and/or code useful for your research, please cite our paper:
 
 ```
-@article {Enamundram2024.01.03.24300794,
-	author = {Naga Karthik Enamundram* and Jan Valosek* and Andrew C Smith and Dario Pfyffer and Simon Schading-Sassenhausen and Lynn Farner and Kenneth Arnold Weber II and Patrick Freund and Julien Cohen-Adad},
-	title = {SCIseg: Automatic Segmentation of T2-weighted Hyperintense Lesions in Spinal Cord Injury},
+@article {Naga Karthik2024.01.03.24300794,
+	author = {Enamundram Naga Karthik* and Jan Valosek* and Andrew C. Smith and Dario Pfyffer and Simon Schading-Sassenhausen and Lynn Farner and Kenneth A. Weber II and Patrick Freund and Julien Cohen-Adad},
+	title = {SCIseg: Automatic Segmentation of T2-weighted Intramedullary Lesions in Spinal Cord Injury},
 	elocation-id = {2024.01.03.24300794},
 	year = {2024},
 	doi = {10.1101/2024.01.03.24300794},
 	publisher = {Cold Spring Harbor Laboratory Press},
-	URL = {https://www.medrxiv.org/content/early/2024/01/03/2024.01.03.24300794},
-	eprint = {https://www.medrxiv.org/content/early/2024/01/03/2024.01.03.24300794.full.pdf},
+	URL = {https://www.medrxiv.org/content/early/2024/04/21/2024.01.03.24300794},
+	eprint = {https://www.medrxiv.org/content/early/2024/04/21/2024.01.03.24300794.full.pdf},
 	journal = {medRxiv},
-    note = {*Shared first authorship}
+	note = {*Shared first authorship}
 }
 
 ```
