@@ -132,16 +132,16 @@ do
     fi
 
     # Process with incrementing warp file names
-    sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
-    mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
-    mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
-    mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
-    sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz
-    sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz
+    #sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
+    #mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
+    #mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
+    #mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
+    #sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz
+    #sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz
 
     # Threshold and other post-processing as needed
-    sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz -thr 0.10
-    sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz -thr 0.10
+    #sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz -thr 0.10
+    #sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz -thr 0.10
 
     # Increment the counter after processing each file
     ((counter++))
@@ -162,7 +162,7 @@ rsync -avzh $PATH_DATA_PROCESSED/participants.* $PATH_DATA_PROCESSED_CLEAN/
 rsync -avzh $PATH_DATA_PROCESSED/README $PATH_DATA_PROCESSED_CLEAN/
 
 # Images
-for file in $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*chunk*straight*T2w*" ! -name "*manu*" 
+for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*T2w_desc-straightened.nii.gz") 
 do
 # Image
   mkdir -p $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/
@@ -171,7 +171,7 @@ do
 done
 
 # Labels
-for file in $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*chunk*manual*straight*"
+for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*chunk*manual*straight*")
 do
 # Labels
   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
@@ -180,7 +180,7 @@ do
 done
 
 # Warp
-for file in $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*warp*"
+for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*warp*")
 do
 # Warp
   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
@@ -189,7 +189,7 @@ do
 done
 
 # Ref
-for file in $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*ref*"
+for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*ref*")
 do
 # Ref
   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/

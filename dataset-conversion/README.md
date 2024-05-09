@@ -1,6 +1,6 @@
 ## Data
 
-The data used for training the model are hosted on a private repository according to the [BIDS](https://bids.neuroimaging.io) standard. They are gathered from t a single site as shown below (in brackets: the name of the dataset at NeuroPoly's internal server):
+The data used for training the model are hosted on a private repository according to the [BIDS](https://bids.neuroimaging.io) standard. They are gathered from a single site as shown below (in brackets: the name of the dataset at NeuroPoly's internal server):
 
 - Technical University of Munich (`mslesion-munich`) 
   - Contrasts available: Sagittal T2w, Axial T2w
@@ -37,6 +37,7 @@ For uniformity across the multi-site data, all images are converted to RPI orien
 ```bash
 shopt -s globstar; for file in **/*.nii.gz;do sct_image -i ${file} -setorient RPI -o ${file}; done
 ``` 
+
 This should do an in-place conversion of all the images (and labels) to RPI orientation.
 
 #### Conversion to nnUNet format
