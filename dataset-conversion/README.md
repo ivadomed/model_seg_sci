@@ -44,8 +44,8 @@ This should do an in-place conversion of all the images (and labels) to RPI orie
 The next step is to convert the data to the nnUNet format. Run the following command:
 
 ```bash
-python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi
-          --path-out ${nnUNet_raw} -dname tSCICombinedRegion -dnum 275 --split 0.8 0.2 --seed 50 --region-based
+python convert_bids_to_nnUNetv2_munich.py --path-data ~/raid3/Julian/data/segmentation_project/datasets_processing
+          --path-out ${nnUNet_raw} -dname TUM_MS_Dataset_Stitched_BIDS_Region -dnum 901 --split 0.8 0.2 --seed 50 --region-based
 ```
 
 This command takes as inputs the list of RPI-reoriented datasets, the output path to store the converted data, the dataset name, number, the ratio in which train and test subjects are split, the seed and the flag `--region-based` which used to create multiclass labels (SC and lesion).

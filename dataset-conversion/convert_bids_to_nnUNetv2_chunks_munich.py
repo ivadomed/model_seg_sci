@@ -56,11 +56,6 @@ def get_parser():
     parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
                              '--split 0.8 0.2')
-    # input yaml file containing list of axial subjects to include for active learning
-    parser.add_argument('--include-axial', type=str, default=None,
-                        help='Path to yaml file containing list of axial subjects to include for active learning.')
-    parser.add_argument("--add-sci-paris", action="store_true", default=False,
-                        help="If set, the script will add the sci-paris dataset to the training set. Default: False")
 
     return parser
 
@@ -120,16 +115,6 @@ def main():
         Path(path_out_imagesTsMuc).mkdir(parents=True, exist_ok=True)
         Path(path_out_labelsTsMuc).mkdir(parents=True, exist_ok=True)
 
-    # load the yaml file and convert to a list
-    if args.include_axial is not None:
-        logger.info(f"Loading axial Munich subjects from the YAML file ...")
-        with open(args.include_axial) as f:
-            axial_subjects = yaml.load(f, Loader=yaml.FullLoader)
-            # convert to a list
-            axial_subjects = list(axial_subjects.values())[0]
-
-        logger.info(f"Number of axial Mucich subjects in the YAML file: {len(axial_subjects)}")
-
     all_subjects, train_subjects, test_subjects = [], {}, {}
     # temp dict for storing dataset commits
     dataset_commits = {}
@@ -143,165 +128,97 @@ def main():
         branch, commit = get_git_branch_and_commit(dataset)
         dataset_commits[dataset_name] = f"git-{branch}-{commit}"
 
-        # add the sci-paris dataset to the training set
-        if "sci-paris" in dataset and args.add_sci_paris:
-            logger.info(f"Adding the sci-paris dataset to the training set ...")
-            paris_subs = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+        # get the list of subjects in the root directory 
+        subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
 
-            # add all the subjects to train_subjects dict
-            train_subjects.update({sub: os.path.join(root, sub) for sub in paris_subs})
-
-            # add to the list of all subjects
-            all_subjects.extend(paris_subs)
+        # add to the list of all subjects
+        all_subjects.extend(subjects)
         
-        else:
-            # get the list of subjects in the root directory 
-            subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
+        # Get the training and test splits
+        tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
 
-            # add to the list of all subjects
-            all_subjects.extend(subjects)
-            
-            # Get the training and test splits
-            tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
+        # update the train and test subjects dicts with the key as the subject and value as the path to the subject
+        train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
+        test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
 
-            # get the length of the number of subjects common to both tr_subs and axial
-            if args.include_axial is not None and "sci-zurich" in dataset:
-                train_ax_subs = list(set(tr_subs).intersection(axial_subjects))
-                logger.info(f"Number of axial Mucich subjects added to the training set: {len(train_ax_subs)}")
-                test_ax_subs = list(set(te_subs).intersection(axial_subjects))
-                logger.info(f"Corrected axial images in the original test split of seed {args.seed} (hence cannot be added to the training set): {test_ax_subs}")
-
-            # update the train and test subjects dicts with the key as the subject and value as the path to the subject
-            train_subjects.update({sub: os.path.join(root, sub) for sub in tr_subs})
-            test_subjects.update({sub: os.path.join(root, sub) for sub in te_subs})
-
-    # logger.info(f"Total number of subjects combining all datasets: {len(all_subjects)}")
+    logger.info(f"Total number of subjects combining all datasets: {len(all_subjects)}")
     logger.info(f"Total number of subjects (not images) in the training set (combining all datasets): {len(train_subjects)}")
     logger.info(f"Total number of subjects (not images) in the test set: {len(test_subjects)}")
-    # print(f"subjects in the training set: {train_subjects.keys()}")
+    print(f"subjects in the training set: {train_subjects.keys()}")
 
     # print version of each dataset in a separate line
     for dataset_name, dataset_commit in dataset_commits.items():
         logger.info(f"{dataset_name} dataset version: {dataset_commit}")
 
-    train_ctr, test_ctr_zur, test_ctr_col = 0, 0, 0
+    train_ctr, test_ctr = 0, 0
+
     train_niftis, test_nifitis = [], []
     for subject in tqdm(all_subjects, desc="Iterating over all subjects"):
 
         if subject in train_subjects.keys():
 
-            # check if the subject is from sci-zurich
-            if subject.startswith('sub-zh'):
+            # check if the subject is from mslesion-tum
+            if subject.startswith('sub-m'):
                 # Another for loop for going through sessions
                 temp_subject_path = train_subjects[subject]
                 num_sessions_per_subject = sum(os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in
                                                os.listdir(temp_subject_path))
 
-                for ses_idx in range(1, num_sessions_per_subject+1):
+                for ses_idx in range(1, num_sessions_per_subject+1):    
+
+                    import pdb
+                    pdb.set_trace()             
+                   
+                    train_ctr += 1
+                    # Get paths with session numbers
+                    session = 'ses-0' + str(ses_idx)
+
+                    subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
+                    subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
+                                                    'labels', subject, session, 'anat')
+
+                    # only take the sagittal orientation (as default)
+                    subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-ax_T2w.nii.gz")
+                    subject_label_file = os.path.join(subject_labels_path, 
+                                                        f"{subject}_{session}_acq-ax_T2w_lesion-manual.nii.gz")
+
+                    # add the subject image file to the list of training niftis
+                    train_niftis.append(os.path.basename(subject_image_file))
                     
-                    if args.include_axial is not None and subject in train_ax_subs:
-                        
-                        orientations = ["sag", "ax"]
-                        for orientation in orientations:
-                            
-                            train_ctr += 1
-                            # Get paths with session numbers
-                            session = 'ses-0' + str(ses_idx)
+                    # create the new convention names for nnunet
+                    sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
+                    
+                    # use region-based labels if required
+                    if args.region_based:                        
+                        # overwritten the subject_label_file with the region-based label
+                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
+                                                                    subject_image_file, sub_ses_name, thr=0.5)
+                        if subject_label_file is None:
+                            print(f"Skipping since the region-based label could not be generated")
+                            continue
 
-                            subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
-                            subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
-                                                            'labels', subject, session, 'anat')
+                    subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
+                                                                f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
+                    subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                                f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
+                    
+                    # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
+                    shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+                    shutil.copyfile(subject_label_file, subject_label_file_nnunet)
 
-                            subject_image_file = os.path.join(subject_images_path, 
-                                                              f"{subject}_{session}_acq-{orientation}_T2w.nii.gz")
-                            subject_label_file = os.path.join(subject_labels_path, 
-                                                              f"{subject}_{session}_acq-{orientation}_T2w_lesion-manual.nii.gz")
+                    # convert the image and label to RPI using the Image class
+                    image = Image(subject_image_file_nnunet)
+                    image.change_orientation("RPI")
+                    image.save(subject_image_file_nnunet)
 
-                            # add the subject image file to the list of training niftis
-                            train_niftis.append(os.path.basename(subject_image_file))
+                    label = Image(subject_label_file_nnunet)
+                    label.change_orientation("RPI")
+                    label.save(subject_label_file_nnunet)
 
-                            # create the new convention names for nnunet
-                            sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
-                            
-                            # use region-based labels if required
-                            if args.region_based:                        
-                                # overwritten the subject_label_file with the region-based label
-                                subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
-                                                                            subject_image_file, sub_ses_name, thr=0.5)
-                                if subject_label_file is None:
-                                    print(f"Skipping since the region-based label could not be generated")
-                                    continue
+                # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
+                if not args.region_based:
+                    binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
-                            subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
-                                                                     f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
-                            subject_label_file_nnunet = os.path.join(path_out_labelsTr,
-                                                                     f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
-                            # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
-                            shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                            shutil.copyfile(subject_label_file, subject_label_file_nnunet)
-
-                            # convert the image and label to RPI using the Image class
-                            image = Image(subject_image_file_nnunet)
-                            image.change_orientation("RPI")
-                            image.save(subject_image_file_nnunet)
-
-                            label = Image(subject_label_file_nnunet)
-                            label.change_orientation("RPI")
-                            label.save(subject_label_file_nnunet)
-                                                
-                    else:                        
-                        train_ctr += 1
-                        # Get paths with session numbers
-                        session = 'ses-0' + str(ses_idx)
-
-                        subject_images_path = os.path.join(train_subjects[subject], session, 'anat')
-                        subject_labels_path = os.path.join(train_subjects[subject].replace(subject, ''), 'derivatives',
-                                                        'labels', subject, session, 'anat')
-
-                        # only take the sagittal orientation (as default)
-                        subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-sag_T2w.nii.gz")
-                        subject_label_file = os.path.join(subject_labels_path, 
-                                                          f"{subject}_{session}_acq-sag_T2w_lesion-manual.nii.gz")
-
-                        # add the subject image file to the list of training niftis
-                        train_niftis.append(os.path.basename(subject_image_file))
-                        
-                        # create the new convention names for nnunet
-                        sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
-                        
-                        # use region-based labels if required
-                        if args.region_based:                        
-                            # overwritten the subject_label_file with the region-based label
-                            subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
-                                                                        subject_image_file, sub_ses_name, thr=0.5)
-                            if subject_label_file is None:
-                                print(f"Skipping since the region-based label could not be generated")
-                                continue
-
-                        subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
-                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
-                        subject_label_file_nnunet = os.path.join(path_out_labelsTr,
-                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
-                        
-                        # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
-                        shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                        shutil.copyfile(subject_label_file, subject_label_file_nnunet)
-
-                        # convert the image and label to RPI using the Image class
-                        image = Image(subject_image_file_nnunet)
-                        image.change_orientation("RPI")
-                        image.save(subject_image_file_nnunet)
-
-                        label = Image(subject_label_file_nnunet)
-                        label.change_orientation("RPI")
-                        label.save(subject_label_file_nnunet)
-
-                    # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
-                    if not args.region_based:
-                        binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-
-
-            # subject is from sci-colorado
             else:
                 train_ctr += 1
                 subject_images_path = os.path.join(train_subjects[subject], 'anat')
@@ -350,7 +267,7 @@ def main():
 
         elif subject in test_subjects:
 
-            if subject.startswith('sub-zh'):
+            if subject.startswith('sub-m'):
                 # Another for loop for going through sessions
                 temp_subject_path = test_subjects[subject]
                 num_sessions_per_subject = sum(os.path.isdir(os.path.join(temp_subject_path, pth)) for pth in os.listdir(temp_subject_path))
@@ -405,48 +322,6 @@ def main():
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-
-            elif re.match(r'sub-\d{4}', subject):
-                test_ctr_col += 1
-                subject_images_path = os.path.join(test_subjects[subject], 'anat')
-                subject_labels_path = os.path.join(test_subjects[subject].replace(subject, ''),
-                                                   'derivatives', 'labels', subject, 'anat')
-
-                subject_image_file = os.path.join(subject_images_path, f"{subject}_T2w.nii.gz")
-                subject_label_file = os.path.join(subject_labels_path, f"{subject}_T2w_lesion-manual.nii.gz")
-
-                # add the subject image file to the list of testing niftis
-                test_nifitis.append(os.path.basename(subject_image_file))
-
-                # create the new convention names for nnunet
-                sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
-
-                # use region-based labels if required
-                if args.region_based:                        
-                    # overwritten the subject_label_file with the region-based label
-                    subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_name, thr=0.5)
-                    if subject_label_file is None:
-                        continue
-
-                subject_image_file_nnunet = os.path.join(path_out_imagesTsCol,f"{args.dataset_name}_{sub_name}_{test_ctr_col:03d}_0000.nii.gz")
-                subject_label_file_nnunet = os.path.join(path_out_labelsTsCol,f"{args.dataset_name}_{sub_name}_{test_ctr_col:03d}.nii.gz")
-                
-                # copy the files to new structure using symbolic links
-                shutil.copyfile(subject_image_file, subject_image_file_nnunet)
-                shutil.copyfile(subject_label_file, subject_label_file_nnunet)
-
-                # convert the image and label to RPI using the Image class
-                image = Image(subject_image_file_nnunet)
-                image.change_orientation("RPI")
-                image.save(subject_image_file_nnunet)
-
-                label = Image(subject_label_file_nnunet)
-                label.change_orientation("RPI")
-                label.save(subject_label_file_nnunet)
-
-                # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
-                if not args.region_based:
-                    binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
             
             else:
                 print(f"Skipping Subject {subject} as it is from sci-paris")
@@ -457,10 +332,8 @@ def main():
 
     logger.info(f"----- Dataset conversion finished! -----")
     logger.info(f"Number of training and validation images (not subjects) including sessions: {train_ctr}")
-    logger.info(f"Number of test images (not subjects) including sessions in SCI-Mucich: {test_ctr_zur}")
-    logger.info(f"Number of test images (not subjects) including sessions in SCI-Colorado: {test_ctr_col}")
-    if args.add_sci_paris:
-        logger.info(f"Training/Validation set contains images from 3 sites: SCI-Mucich, SCI-Colorado, and SCI-Paris")
+    logger.info(f"Number of test images (not subjects) including sessions in SCI-Munich: {test_ctr}")
+
     # assert train_ctr == len(train_subjects), 'No. of train/val images do not match'
     # assert test_ctr == len(test_subjects), 'No. of test images do not match'
 
@@ -488,7 +361,7 @@ def main():
     json_dict['licence'] = "TBD"
     json_dict['release'] = "0.0"
     json_dict['numTraining'] = train_ctr
-    json_dict['numTest'] = test_ctr_zur + test_ctr_col
+    json_dict['numTest'] = test_ctr
     json_dict['seed_used'] = args.seed
     json_dict['dataset_versions'] = dataset_commits
     json_dict['image_orientation'] = "RPI"
@@ -522,7 +395,7 @@ def main():
     """
 
     json_dict['channel_names'] = {
-        0: "acq-sag_T2w",
+        0: "acq-ax_T2w",
     }
 
     if not args.region_based:
@@ -534,7 +407,6 @@ def main():
         json_dict['labels'] = {
             "background": 0,
             "sc": [1, 2],
-            # "sc": 1,
             "lesion": 2,
         }
         json_dict['regions_class_order'] = [1, 2]
