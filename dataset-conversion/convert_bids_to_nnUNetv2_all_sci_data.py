@@ -1,30 +1,55 @@
 """
-Converts the BIDS-structured sci-zurich, sci-colorado, and sci-paris datasets to the nnUNetv2 dataset format. 
-Full details about the format can be found here: 
+Convert BIDS-structured SCI datasets (sci-zurich, sci-colorado, dcm-zurich-lesions, dcm-zurich-lesions-20231115, etc.) to the nnUNetv2 
+REGION-BASED and MULTICHANNEL training format depending on the input arguments.
+
+dataset.json:
+
+```json
+    "channel_names": {
+        "0": "acq-ax_T2w"
+    },
+    "labels": {
+        "background": 0,
+        "sc": [
+            1,
+            2
+        ],
+        "lesion": 2
+    },
+    "regions_class_order": [
+        1,
+        2
+    ],
+```
+
+Full details about the format can be found here:
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
 The script to be used on a single dataset or multiple datasets.
 
-An option to create region-based labels for segmenting both lesion and the spinal cord is also provided.
-Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
-modified to include those as well. 
+The script in default creates region-based labels for segmenting both lesion and the spinal cord.
+
+Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be
+modified to include those as well.
+
+Note: the script performs RPI reorientation of the images and labels
 
 Usage example multiple datasets:
-    python convert_bids_to_nnUNetv2_all_sci_data.py 
-        --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi ~/datasets/sci-paris-rpi 
+    python convert_bids_to_nnUNetv2_region-based.py
+        --path-data ~/data/dcm-zurich-lesions ~/data/dcm-zurich-lesions-20231115
         --path-out ${nnUNet_raw}
-        -dname tSCICombinedRegion
-        -dnum 275
+        -dname DCMlesions
+        -dnum 601
         --split 0.8 0.2
         --seed 50
         --region-based
 
 Usage example single dataset:
-    python convert_bids_to_nnUNetv2_all_sci_data.py
-        --path-data ~/datasets/sci-zurich-rpi
+    python convert_bids_to_nnUNetv2_region-based.py
+        --path-data ~/data/dcm-zurich-lesions
         --path-out ${nnUNet_raw}
-        -dname tSCIZurich
-        -dnum 275
+        -dname DCMlesions
+        -dnum 601
         --split 0.8 0.2
         --seed 50
         --region-based
