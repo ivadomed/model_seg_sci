@@ -188,6 +188,7 @@ def find_site_in_path(path):
     return match.group(0) if match else None
 
 
+def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits):
     # create a yaml file containing the list of training and test niftis
     niftis_dict = {
         f"train": sorted(train_niftis),
@@ -195,7 +196,7 @@ def find_site_in_path(path):
     }
 
     # write the train and test niftis to a yaml file
-    with open(f"dataset_split_seed{args.seed}.yaml", "w") as outfile:
+    with open(os.path.join(path_out, f"train_test_split_seed{args.seed}.yaml"), "w") as outfile:
         yaml.dump(niftis_dict, outfile, default_flow_style=False)
 
     # c.f. dataset json generation
@@ -212,41 +213,14 @@ def find_site_in_path(path):
     json_dict['licence'] = "TBD"
     json_dict['release'] = "0.0"
     json_dict['numTraining'] = train_ctr
-    json_dict['numTest'] = test_ctr_zur + test_ctr_col
+    json_dict['numTest'] = test_ctr
     json_dict['seed_used'] = args.seed
     json_dict['dataset_versions'] = dataset_commits
     json_dict['image_orientation'] = "RPI"
-    
-    # The following keys are the most important ones. 
-    """
-    channel_names:
-        Channel names must map the index to the name of the channel. For BIDS, this refers to the contrast suffix.
-        {
-            0: 'T1',
-            1: 'CT'
-        }
-    Note that the channel names may influence the normalization scheme!! Learn more in the documentation.
 
-    labels:
-        This will tell nnU-Net what labels to expect. Important: This will also determine whether you use region-based training or not.
-        Example regular labels:
-        {
-            'background': 0,
-            'left atrium': 1,
-            'some other label': 2
-        }
-        Example region-based training: https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/region_based_training.md
-        {
-            'background': 0,
-            'whole tumor': (1, 2, 3),
-            'tumor core': (2, 3),
-            'enhancing tumor': 3
-        }
-        Remember that nnU-Net expects consecutive values for labels! nnU-Net also expects 0 to be background!
-    """
-
+    # The following keys are the most important ones.
     json_dict['channel_names'] = {
-        0: "acq-sag_T2w",
+        0: "acq-ax_T2w",
     }
 
     if not args.region_based:
@@ -262,7 +236,7 @@ def find_site_in_path(path):
             "lesion": 2,
         }
         json_dict['regions_class_order'] = [1, 2]
-    
+
     # Needed for finding the files correctly. IMPORTANT! File endings must match between images and segmentations!
     json_dict['file_ending'] = ".nii.gz"
 
