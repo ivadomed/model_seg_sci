@@ -249,5 +249,270 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
         outfile.write(json_object)
 
 
+def main():
+    parser = get_parser()
+    args = parser.parse_args()
+
+    train_ratio, test_ratio = args.split
+    path_out = Path(os.path.join(os.path.abspath(args.path_out), f'Dataset{args.dataset_number}_{args.dataset_name}'))
+
+    # create individual directories for train and test images and labels
+    path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
+    path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
+    # create the training directories
+    Path(path_out).mkdir(parents=True, exist_ok=True)
+    Path(path_out_imagesTr).mkdir(parents=True, exist_ok=True)
+    Path(path_out_labelsTr).mkdir(parents=True, exist_ok=True)
+
+    # save output to a log file
+    logger.add(os.path.join(path_out, "logs.txt"), rotation="10 MB", level="INFO")
+
+    # Check if dataset paths exist
+    for path in args.path_data:
+        if not os.path.exists(path):
+            raise ValueError(f"Path {path} does not exist.")
+
+    # Get sites from the input paths
+    sites = set(find_site_in_path(path) for path in args.path_data if find_site_in_path(path))
+    # Single site
+    if len(sites) == 1:
+        create_directories(path_out, sites.pop())
+    # Multiple sites
+    else:
+        for site in sites:
+            create_directories(path_out, site)
+
+    all_lesion_files, train_images, test_images = [], {}, {}
+    # temp dict for storing dataset commits
+    dataset_commits = {}
+
+    # loop over the datasets
+    for dataset in args.path_data:
+        root = Path(dataset)
+
+        # get the git branch and commit ID of the dataset
+        dataset_name = os.path.basename(os.path.normpath(dataset))
+        branch, commit = get_git_branch_and_commit(dataset)
+        dataset_commits[dataset_name] = f"git-{branch}-{commit}"
+        site_name = find_site_in_path(dataset)
+
+        # get recursively all GT '_label-lesion' files
+        lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
+        lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
+
+        # add to the list of all subjects
+        all_lesion_files.extend(lesion_files)
+
+        # Get the training and test splits
+        tr_subs, te_subs = train_test_split(lesion_files, test_size=test_ratio, random_state=args.seed)
+
+        if site_name in TRAIN_ONLY_SITES:
+            print(f"{site_name}: Using all subjects from this site for training ...")
+            # use all subjects for training
+            tr_subs += te_subs
+            te_subs = []
+        
+        elif site_name in TEST_ONLY_SITES:
+            # use all subjects for testing (treated as external testing set)
+            te_subs += tr_subs
+            tr_subs = []
+        
+        else:
+            # keep the tr_subs and te_subs as is
+            pass
+
+        # update the train and test images dicts with the key as the subject and value as the path to the subject
+        train_images.update({sub: os.path.join(root, sub) for sub in tr_subs})
+        test_images.update({sub: os.path.join(root, sub) for sub in te_subs})
+
+    logger.info(f"Found subjects in the training set (combining all datasets): {len(train_images)}")
+    logger.info(f"Found subjects in the test set (combining all datasets): {len(test_images)}")
+    # Print test images for each site
+    for site in sites:
+        if site in TRAIN_ONLY_SITES:
+            continue
+        logger.info(f"Test subjects in {site}: {len([sub for sub in test_images if site in find_site_in_path(sub)])}")
+
+    # print version of each dataset in a separate line
+    for dataset_name, dataset_commit in dataset_commits.items():
+        logger.info(f"{dataset_name} dataset version: {dataset_commit}")
+
+    # Counters for train and test sets
+    train_ctr, test_ctr = 0, 0
+    train_niftis, test_nifitis = [], []
+    # Loop over all images
+    for subject_label_file in tqdm(all_lesion_files, desc="Iterating over all images"):
+
+        site_name = find_site_in_path(subject_label_file)
+        # Construct path to the background image
+        subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace(f'_{LABEL_SUFFIXES[site_name][1]}', '')
+
+        # Train images
+        if subject_label_file in train_images.keys():
+
+            train_ctr += 1
+            # add the subject image file to the list of training niftis
+            train_niftis.append(os.path.basename(subject_image_file))
+
+            # create the new convention names for nnunet
+            sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
+
+            subject_image_file_nnunet = os.path.join(path_out_imagesTr,
+                                                        f"{args.dataset_name}_{site_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
+            subject_label_file_nnunet = os.path.join(path_out_labelsTr,
+                                                    f"{args.dataset_name}_{site_name}_{sub_name}_{train_ctr:03d}.nii.gz")
+
+            if args.multichannel:
+                if args.region_based:
+                    raise ValueError("Multi-channel input is not supported with region-based labels.")
+                
+                # channel 0: image, channel 1: SC seg
+                subject_sc_file_nnunet = os.path.join(path_out_imagesTr, 
+                                                      f"{args.dataset_name}_{site_name}_{sub_name}_{train_ctr:03d}_0001.nii.gz")
+
+                # overwritten the subject_sc_file_nnunet with the label for multi-channel training (lesion is part of SC)
+                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file, 
+                                                                site_name, sub_name, thr=0.5)                
+                
+                if subject_sc_file is None:
+                    print(f"Skipping since the multi-channel label could not be generated")
+                    continue
+
+            # use region-based labels if required
+            elif args.region_based:
+                # overwritten the subject_label_file with the region-based label
+                subject_label_file = get_region_based_label(subject_label_file, subject_image_file, 
+                                                            site_name, sub_name, thr=0.5)
+                if subject_label_file is None:
+                    print(f"Skipping since the region-based label could not be generated")
+                    continue
+
+            # copy the files to new structure
+            shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+            shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+
+            # convert the image and label to RPI using the Image class
+            image = Image(subject_image_file_nnunet)
+            image.change_orientation("RPI")
+            image.save(subject_image_file_nnunet)
+
+            label = Image(subject_label_file_nnunet)
+            label.change_orientation("RPI")
+            label.save(subject_label_file_nnunet)
+
+            if args.multichannel:
+                shutil.copyfile(subject_sc_file, subject_sc_file_nnunet)
+                # convert the SC seg to RPI using the Image class
+                sc_image = Image(subject_sc_file_nnunet)
+                sc_image.change_orientation("RPI")
+                sc_image.save(subject_sc_file_nnunet)
+
+            # binarize the label file only if region-based training is not set (since the region-based labels are
+            # already binarized)
+            if not args.region_based or not args.multichannel:
+                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+        # Test images
+        elif subject_label_file in test_images:
+
+            test_ctr += 1
+            # add the image file to the list of testing niftis
+            test_nifitis.append(os.path.basename(subject_image_file))
+
+            # create the new convention names for nnunet
+            sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
+
+            subject_image_file_nnunet = os.path.join(Path(path_out,
+                                                          f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
+                                                     f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}_0000.nii.gz')
+            subject_label_file_nnunet = os.path.join(Path(path_out,
+                                                          f'labelsTs_{find_site_in_path(test_images[subject_label_file])}'),
+                                                     f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}.nii.gz')
+
+            if args.multichannel:
+                if args.region_based:
+                    raise ValueError("Multi-channel input is not supported with region-based labels.")
+                
+                # channel 0: image, channel 1: SC seg
+                subject_sc_file_nnunet = os.path.join(Path(path_out,
+                                                          f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
+                                                     f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}_0001.nii.gz')
+
+                # overwritten the subject_sc_file_nnunet with the label for multi-channel training (lesion is part of SC)
+                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file, 
+                                                                site_name, sub_name, thr=0.5)                
+                
+                if subject_sc_file is None:
+                    print(f"Skipping since the multi-channel label could not be generated")
+                    continue
+
+            # use region-based labels if required
+            elif args.region_based:
+                # overwritten the subject_label_file with the region-based label
+                subject_label_file = get_region_based_label(subject_label_file, subject_image_file, 
+                                                            site_name, sub_name, thr=0.5)
+                if subject_label_file is None:
+                    continue
+
+            # copy the files to new structure
+            shutil.copyfile(subject_image_file, subject_image_file_nnunet)
+            shutil.copyfile(subject_label_file, subject_label_file_nnunet)
+            # print(f"\nCopying {subject_image_file} to {subject_image_file_nnunet}")
+            # convert the image and label to RPI using the Image class
+            image = Image(subject_image_file_nnunet)
+            image.change_orientation("RPI")
+            image.save(subject_image_file_nnunet)
+
+            label = Image(subject_label_file_nnunet)
+            label.change_orientation("RPI")
+            label.save(subject_label_file_nnunet)
+
+            if args.multichannel:
+                shutil.copyfile(subject_sc_file, subject_sc_file_nnunet)
+                # convert the SC seg to RPI using the Image class
+                sc_image = Image(subject_sc_file_nnunet)
+                sc_image.change_orientation("RPI")
+                sc_image.save(subject_sc_file_nnunet)
+
+
+            # binarize the label file only if region-based training is not set (since the region-based labels are
+            # already binarized)
+            if not args.region_based or not args.multichannel:
+                binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+        else:
+            print("Skipping file, could not be located in the Train or Test splits split.", subject_label_file)
+
+    logger.info(f"----- Dataset conversion finished! -----")
+    logger.info(f"Number of training and validation images (across all sites): {train_ctr}")
+    # Get number of train and val images per site
+    train_images_per_site = {}
+    for train_subject in train_images:
+        site = find_site_in_path(train_subject)
+        if site in train_images_per_site:
+            train_images_per_site[site] += 1
+        else:
+            train_images_per_site[site] = 1
+    # Print number of train images per site
+    for site, num_images in train_images_per_site.items():
+        logger.info(f"Number of training and validation images in {site}: {num_images}")
+
+    logger.info(f"Number of test images (across all sites): {test_ctr}")
+    # Get number of test images per site
+    test_images_per_site = {}
+    for test_subject in test_images:
+        site = find_site_in_path(test_subject)
+        if site in test_images_per_site:
+            test_images_per_site[site] += 1
+        else:
+            test_images_per_site[site] = 1
+    # Print number of test images per site
+    for site, num_images in test_images_per_site.items():
+        logger.info(f"Number of test images in {site}: {num_images}")
+
+    # create the yaml file containing the train and test niftis
+    create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits)
+
+
 if __name__ == "__main__":
     main()
