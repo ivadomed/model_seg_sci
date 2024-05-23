@@ -59,7 +59,7 @@ Authors: Naga Karthik, Jan Valosek
 
 import argparse
 from pathlib import Path
-import json 
+import json
 import os
 import re
 import shutil
@@ -71,6 +71,20 @@ from utils import binarize_label, create_region_based_label, get_git_branch_and_
 from tqdm import tqdm
 
 import nibabel as nib
+
+
+LABEL_SUFFIXES = {
+    "dcm-zurich-lesions": ["label-SC_mask-manual", "label-lesion"],
+    "dcm-zurich-lesions-20231115": ["label-SC_mask-manual", "label-lesion"],
+    "sci-colorado": ["seg-manual", "lesion-manual"],
+    "sci-paris": ["seg-manual", "lesion-manual"],
+    "sci-zurich": ["seg-manual", "lesion-manual"],
+    "site-003": ["seg", "lesion"],
+    "site-012": ["seg", "lesion"],
+}
+# NOTE: these datasets only contain a few subjects (n<20), hence using them all for training
+TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site-012']
+TEST_ONLY_SITES = ['site-003']
 
 
 def get_parser():
