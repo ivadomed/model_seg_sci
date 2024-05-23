@@ -67,9 +67,8 @@ import yaml
 from collections import OrderedDict
 from loguru import logger
 from sklearn.model_selection import train_test_split
-from utils import binarize_label, create_region_based_label, get_git_branch_and_commit, Image
+from utils import binarize_label, create_region_based_label, get_git_branch_and_commit, Image, create_multi_channel_label_input
 from tqdm import tqdm
-
 import nibabel as nib
 
 
@@ -89,46 +88,47 @@ TEST_ONLY_SITES = ['site-003']
 
 def get_parser():
     # parse command line arguments
-    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 database format.')
+    parser = argparse.ArgumentParser(description='Convert BIDS-structured dataset to nnUNetV2 REGION-BASED format.')
     parser.add_argument('--path-data', nargs='+', required=True, type=str,
                         help='Path to BIDS dataset(s) (list).')
     parser.add_argument('--path-out', help='Path to output directory.', required=True)
-    parser.add_argument('--dataset-name', '-dname', default='tSCICombinedRegion', type=str,
+    parser.add_argument('--dataset-name', '-dname', default='DCMlesionsRegionBased', type=str,
                         help='Specify the task name.')
-    parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
+    parser.add_argument('--dataset-number', '-dnum', default=601, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
-    parser.add_argument('--seed', default=42, type=int, 
+    parser.add_argument('--seed', default=42, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     parser.add_argument('--region-based', action='store_true', default=False,
-                        help='If set, the script will create labels for region-based nnUNet training. Default: False')
+                        help='If set, the script will create labels for region-based nnUNet training. Default: True')
+    parser.add_argument('--multichannel', action='store_true', default=False,
+                        help='If set, the script will create multi-channel input (image + SC seg) nnUNet training. Default: False')
     # argument that accepts a list of floats as train val test splits
-    parser.add_argument('--split', nargs='+', required=True, type=float, default=[0.8, 0.2],
+    parser.add_argument('--split', nargs='+', type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
                              '--split 0.8 0.2')
-    # input yaml file containing list of axial subjects to include for active learning
-    parser.add_argument('--include-axial', type=str, default=None,
-                        help='Path to yaml file containing list of axial subjects to include for active learning.')
-    parser.add_argument("--add-sci-paris", action="store_true", default=False,
-                        help="If set, the script will add the sci-paris dataset to the training set. Default: False")
-
     return parser
 
 
-def get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5):
-    
+def get_region_based_label(subject_label_file, subject_image_file, site_name, sub_ses_name, thr=0.5):
     # define path for sc seg file
-    subject_seg_file = os.path.join(subject_labels_path, f"{sub_ses_name}_seg-manual.nii.gz")
-    
+    subject_seg_file = subject_label_file.replace(f'_{LABEL_SUFFIXES[site_name][1]}', f'_{LABEL_SUFFIXES[site_name][0]}')
+
     # check if the seg file exists
     if not os.path.exists(subject_seg_file):
-        logger.info(f"Segmentation file for subject {sub_ses_name} does not exist. Skipping.")
+        logger.info(f"Spinal cord segmentation file for subject {sub_ses_name} does not exist. Skipping.")
         return None
 
     # create region-based label
-    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, 
+    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file,
                                                sub_ses_name, thr=thr)
-    
+
     # save the region-based label
+    combined_seg_file = subject_label_file.replace(f'_{LABEL_SUFFIXES[site_name][1]}', '_sc-lesion')
+    nib.save(seg_lesion_nii, combined_seg_file)
+
+    return combined_seg_file
+
+
 def get_multi_channel_label_input(subject_label_file, subject_image_file, site_name, sub_ses_name, thr=0.5):
     # define path for sc seg file
     subject_seg_file = subject_label_file.replace(f'_{LABEL_SUFFIXES[site_name][1]}', f'_{LABEL_SUFFIXES[site_name][0]}')
