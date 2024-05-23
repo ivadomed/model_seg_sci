@@ -149,6 +149,24 @@ def get_multi_channel_label_input(subject_label_file, subject_image_file, site_n
 
     return combined_seg_file
 
+
+def create_directories(path_out, site):
+    """Create test directories for a specified site.
+
+    Args:
+    path_out (str): Base output directory.
+    site (str): Site identifier, such as 'dcm-zurich-lesions
+    """
+    if site in TRAIN_ONLY_SITES:
+        pass
+    else:
+        paths = [Path(path_out, f'imagesTs_{site}'),
+                Path(path_out, f'labelsTs_{site}')]
+
+        for path in paths:
+            path.mkdir(parents=True, exist_ok=True)
+
+
     # create a yaml file containing the list of training and test niftis
     niftis_dict = {
         f"train": sorted(train_niftis),
