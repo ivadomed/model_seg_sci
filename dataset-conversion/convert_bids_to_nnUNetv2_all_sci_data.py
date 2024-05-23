@@ -167,6 +167,27 @@ def create_directories(path_out, site):
             path.mkdir(parents=True, exist_ok=True)
 
 
+def find_site_in_path(path):
+    """Extracts site identifier from the given path.
+
+    Args:
+    path (str): Input path containing a site identifier.
+
+    Returns:
+    str: Extracted site identifier or None if not found.
+    """
+    # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
+    if 'dcm' in path:
+        match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
+    elif 'sci' in path:
+        match = re.search(r'sci-zurich|sci-colorado|sci-paris', path)
+    elif 'site' in path:
+        # NOTE: PRAXIS data has 'site-xxx' in the path (and doesn't have the site names themselves in the path)
+        match = re.search(r'site-\d{3}', path)
+
+    return match.group(0) if match else None
+
+
     # create a yaml file containing the list of training and test niftis
     niftis_dict = {
         f"train": sorted(train_niftis),
