@@ -219,23 +219,38 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
     json_dict['image_orientation'] = "RPI"
 
     # The following keys are the most important ones.
-    json_dict['channel_names'] = {
-        0: "acq-ax_T2w",
-    }
+    if args.region_based:
+        json_dict['channel_names'] = {
+            0: "T2w",
+        }
 
-    if not args.region_based:
+        json_dict['labels'] = {
+            "background": 0,
+            "sc": [1, 2],
+            "lesion": 2,
+        }
+        json_dict['regions_class_order'] = [1, 2]
+    
+    elif args.multichannel:
+        json_dict['channel_names'] = {
+            0: "T2w",
+            1: "sc",
+        }
+
         json_dict['labels'] = {
             "background": 0,
             "lesion": 1,
         }
+    
     else:
+        json_dict['channel_names'] = {
+            0: "T2w",
+        }
+
         json_dict['labels'] = {
             "background": 0,
-            "sc": [1, 2],
-            # "sc": 1,
-            "lesion": 2,
+            "lesion": 1,
         }
-        json_dict['regions_class_order'] = [1, 2]
 
     # Needed for finding the files correctly. IMPORTANT! File endings must match between images and segmentations!
     json_dict['file_ending'] = ".nii.gz"
