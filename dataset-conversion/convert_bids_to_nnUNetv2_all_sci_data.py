@@ -299,12 +299,14 @@ def main():
         # get recursively all GT '_label-lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
-
         # add to the list of all subjects
         all_lesion_files.extend(lesion_files)
 
         # Get the training and test splits
-        tr_subs, te_subs = train_test_split(lesion_files, test_size=test_ratio, random_state=args.seed)
+        # NOTE: we need a patient-wise split (not image-wise split) to ensure that the same patient is not present in both
+        # training and test sets
+        subs = sorted([sub for sub in os.listdir(os.path.join(root, 'derivatives', 'labels'))])
+        tr_subs, te_subs = train_test_split(subs, test_size=test_ratio, random_state=args.seed)
 
         if site_name in TRAIN_ONLY_SITES:
             print(f"{site_name}: Using all subjects from this site for training ...")
@@ -320,10 +322,28 @@ def main():
         else:
             # keep the tr_subs and te_subs as is
             pass
+        
+        for sub in tr_subs:
+            # get the lesion files for the subject
+            lesion_files_sub = [file for file in lesion_files if sub in file]
 
-        # update the train and test images dicts with the key as the subject and value as the path to the subject
-        train_images.update({sub: os.path.join(root, sub) for sub in tr_subs})
-        test_images.update({sub: os.path.join(root, sub) for sub in te_subs})
+            for lesion_file in lesion_files_sub:
+                if not os.path.exists(lesion_file):
+                    logger.info(f"Lesion file {lesion_file} does not exist. Skipping.")
+                    continue
+                # add the lesion file to the training set
+                train_images[lesion_file] = lesion_file
+        
+        for sub in te_subs:
+            # get the lesion files for the subject
+            lesion_files_sub = [file for file in lesion_files if sub in file]
+
+            for lesion_file in lesion_files_sub:
+                if not os.path.exists(lesion_file):
+                    logger.info(f"Lesion file {lesion_file} does not exist. Skipping.")
+                    continue
+                # add the lesion file to the test set
+                test_images[lesion_file] = lesion_file
 
     logger.info(f"Found subjects in the training set (combining all datasets): {len(train_images)}")
     logger.info(f"Found subjects in the test set (combining all datasets): {len(test_images)}")
