@@ -141,8 +141,8 @@ do
     sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -x linear -o ${base_name}_lesion-manual_desc-straightened.nii.gz
 
     # Threshold and other post-processing as needed
-    #sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz -thr 0.10
-    #sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz -thr 0.10
+    sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_seg-manual_desc-straightened.nii.gz
+    sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_lesion-manual_desc-straightened.nii.gz
 
     # Increment the counter after processing each file
     ((counter++))

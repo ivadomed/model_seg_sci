@@ -147,8 +147,9 @@ sct_apply_transfo -i ${file_seg}.nii.gz -d ${file}_straight.nii.gz -w warp_curve
 # Straighten the lesion mask using straightened SC as reference
 sct_apply_transfo -i ${file_lesion}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -x linear -o ${file_lesion}_straight.nii.gz
 
-# Threshold the lesion mask for very low values, this is something we need to discuss!
-# sct_maths -i ${file_lesion}_straight.nii.gz -o ${file_lesion}_straight.nii.gz -thr 0.90
+# Binarize the lesion and SC masks
+sct_maths -i ${file_seg}_straight.nii.gz -bin 0.5 -o ${file_seg}_straight.nii.gz
+sct_maths -i ${file_lesion}_straight.nii.gz -bin 0.5 -o ${file_lesion}_straight.nii.gz
 
 # Go back to the root output path
 cd $PATH_OUTPUT
