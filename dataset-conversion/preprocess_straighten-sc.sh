@@ -143,16 +143,16 @@ fi
 sct_straighten_spinalcord -i ${file}.nii.gz -s ${file_seg}.nii.gz -o ${file}_straight.nii.gz 
 
 # Straighten the SC mask using straightened SC as reference
-sct_apply_transfo -i ${file_seg}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -o ${file_seg}_straight.nii.gz
+sct_apply_transfo -i ${file_seg}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -o ${file_seg}_straight.nii.gz -x nn
 
 # Threshold the lesion mask for very low values, this is something we need to discuss!
 sct_maths -i ${file_seg}_straight.nii.gz -o ${file_seg}_straight.nii.gz -thr 0.90
 
 # Straighten the lesion mask using straightened SC as reference
-sct_apply_transfo -i ${file_lesion}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -o ${file_lesion}_straight.nii.gz
+sct_apply_transfo -i ${file_lesion}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -o ${file_lesion}_straight.nii.gz -x nn
 
 # Threshold the lesion mask for very low values, this is something we need to discuss!
-sct_maths -i ${file_lesion}_straight.nii.gz -o ${file_lesion}_straight.nii.gz -thr 0.90
+# sct_maths -i ${file_lesion}_straight.nii.gz -o ${file_lesion}_straight.nii.gz -thr 0.90
 
 # Go back to the root output path
 cd $PATH_OUTPUT

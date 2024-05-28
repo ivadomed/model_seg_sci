@@ -132,12 +132,12 @@ do
     fi
 
     # Process with incrementing warp file names
-    #sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
-    #mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
-    #mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
-    #mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
-    #sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz
-    #sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz
+    sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
+    mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
+    mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
+    mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
+    sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz -x nn
+    sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -o ${base_name}_lesion-manual_desc-straightened.nii.gz -x nn
 
     # Threshold and other post-processing as needed
     #sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -o ${base_name}_seg-manual_desc-straightened.nii.gz -thr 0.10
