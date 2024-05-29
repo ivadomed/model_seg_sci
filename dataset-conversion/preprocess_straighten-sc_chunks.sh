@@ -121,8 +121,7 @@ cd ${SUBJECT}/anat
 shopt -s nullglob # Handle the case where no files match the pattern
 counter=1  # Initialize counter at 1
 
-for file in $(find "$PWD" -type f -name "*acq-ax*" ! -name "*seg*" ! -name "*lesion*" -name "*.nii.gz" | sort)
-do
+for file in $(find "$PWD" -type f -name "*acq-ax*" ! -name "*seg*" ! -name "*lesion*" -name "*.nii.gz" | sort); do
     echo "Processing $file"
     base_name=$(echo "$file" | sed 's/\.nii\.gz$//')
 
@@ -131,21 +130,33 @@ do
       echo "{}" > ${base_name}.json
     fi
 
-    # Process with incrementing warp file names
-    sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
-    mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
-    mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
-    mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
-    # NOTE: NN interpolation is changing the GT by adding new voxels (originally not in GT). Linear interpolation does that too but it is less subtle than with NN interpolation
-    sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -x linear -o ${base_name}_seg-manual_desc-straightened.nii.gz
-    sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -x linear -o ${base_name}_lesion-manual_desc-straightened.nii.gz
+    # NOTE: some subjects have 4 chunks and there is no SC in the 4th chunk (anatomically, because it's after the lumbar cord)
+    # the SC seg mask exists for these subjects but it is empty, resulting in errors when straightening the cord. Hence, we skip straightening the 4th chunk
+    if [ $counter -lt 4 ]; then
+      # NOTE: the sform and qform matrices don't match for a few subjects (for both images and SC seg), setting sform to qform
+      sct_image -i ${file} -set-sform-to-qform -o ${file}
+      sct_image -i ${base_name}_seg-manual.nii.gz -set-sform-to-qform -o ${base_name}_seg-manual.nii.gz
 
-    # Threshold and other post-processing as needed
-    sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_seg-manual_desc-straightened.nii.gz
-    sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_lesion-manual_desc-straightened.nii.gz
+      # Process with incrementing warp file names
+      sct_straighten_spinalcord -i ${file} -s ${base_name}_seg-manual.nii.gz -o ${base_name}_desc-straightened.nii.gz
+      mv warp_curve2straight.nii.gz warp_curve2straight_chunk-${counter}.nii.gz
+      mv warp_straight2curve.nii.gz warp_straight2curve_chunk-${counter}.nii.gz
+      mv straight_ref.nii.gz straight_ref_chunk-${counter}.nii.gz
+      # NOTE: NN interpolation is changing the GT by adding new voxels (originally not in GT). Linear interpolation does that too but it is less subtle than with NN interpolation
+      sct_apply_transfo -i ${base_name}_seg-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -x linear -o ${base_name}_seg-manual_desc-straightened.nii.gz
+      sct_apply_transfo -i ${base_name}_lesion-manual.nii.gz -d ${base_name}_desc-straightened.nii.gz -w warp_curve2straight_chunk-${counter}.nii.gz -x linear -o ${base_name}_lesion-manual_desc-straightened.nii.gz
 
-    # Increment the counter after processing each file
-    ((counter++))
+      # Threshold and other post-processing as needed
+      sct_maths -i ${base_name}_seg-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_seg-manual_desc-straightened.nii.gz
+      sct_maths -i ${base_name}_lesion-manual_desc-straightened.nii.gz -bin 0.5 -o ${base_name}_lesion-manual_desc-straightened.nii.gz
+
+      # Increment the counter after processing each file
+      ((counter++))
+    
+    else
+      echo "Encountered $file with chunk-${counter} (which has no SC). Skipping..."
+
+    fi
 done
 
 shopt -u nullglob # Turn off nullglob to return to normal glob behavior
@@ -180,23 +191,23 @@ do
   rsync -avzh $file $file_clean
 done
 
-# Warp
-for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*warp*")
-do
-# Warp
-  mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-  file_clean="${file/$PATH_DATA_PROCESSED/$PATH_DATA_PROCESSED_CLEAN/derivatives/labels}"
-  rsync -avzh $file $file_clean
-done
+# # Warp
+# for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*warp*")
+# do
+# # Warp
+#   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
+#   file_clean="${file/$PATH_DATA_PROCESSED/$PATH_DATA_PROCESSED_CLEAN/derivatives/labels}"
+#   rsync -avzh $file $file_clean
+# done
 
-# Ref
-for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*ref*")
-do
-# Ref
-  mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
-  file_clean="${file/$PATH_DATA_PROCESSED/$PATH_DATA_PROCESSED_CLEAN/derivatives/labels}"
-  rsync -avzh $file $file_clean
-done
+# # Ref
+# for file in $(find $PATH_DATA_PROCESSED/${SUBJECT}/anat/ -name "*ref*")
+# do
+# # Ref
+#   mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
+#   file_clean="${file/$PATH_DATA_PROCESSED/$PATH_DATA_PROCESSED_CLEAN/derivatives/labels}"
+#   rsync -avzh $file $file_clean
+# done
 
 # Display useful info for the log
 end=`date +%s`
