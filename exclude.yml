@@ -1,0 +1,16 @@
+chunks:
+    - sub-m017255_ses-20120501      # empty SC seg file for sub-m017255_ses-20120501_acq-ax_chunk-2_T2w
+    - sub-m043194_ses-20130607      # ArithmeticError when "Fitting centerline using B-spline approximation"
+    - sub-m271612/ses-20160827      # session folder does not exist in derivatives/labels
+    - sub-m283728/ses-20120623      # session folder does not exist in derivatives/labels
+    - sub-m379862/ses-20140506      # session folder does not exist in derivatives/labels
+    - sub-m476758_ses-20140127      # ArithmeticError when "Fitting centerline using B-spline approximation"
+    - sub-m485215/ses-20130531      # session folder does not exist in derivatives/labels
+    - sub-m503367/ses-20130330      # session folder does not exist in derivatives/labels
+    - sub-m542486/ses-20130907      # session folder does not exist in derivatives/labels
+    - sub-m587549/ses-20140729      # session folder does not exist in derivatives/labels
+    - sub-m663069/ses-20161204      # session folder does not exist in derivatives/labels
+    - sub-m700863_ses-20210302      # spinalcordtoolbox.centerline.nurbs.ReconstructionError when "Fitting centerline using B-spline approximation"; sub-m700863_ses-20210302_acq-ax_chunk-3_T2w
+    - sub-m875654/ses-20170517      # session folder does not exist in derivatives/labels
+    - sub-m933730/ses-20121028      # session folder does not exist in derivatives/labels
+    - sub-m967774_ses-20210519      # IndexError: list index out of range when "Fitting centerline using B-spline approximation"; sub-m967774_ses-20210519_acq-ax_chunk-3_T2w
