@@ -12,3 +12,7 @@ chunks:
     - sub-m875654/ses-20170517      # session folder does not exist in derivatives/labels
     - sub-m933730/ses-20121028      # session folder does not exist in derivatives/labels
     - sub-m967774_ses-20210519      # IndexError: list index out of range when "Fitting centerline using B-spline approximation"; sub-m967774_ses-20210519_acq-ax_chunk-3_T2w
+
+stitched:
+    - sub-m700863_ses-20210302      # spinalcordtoolbox.centerline.nurbs.ReconstructionError when "Fitting centerline using B-spline approximation"
+    - sub-m848635_ses-20200519      # IndexError: shape mismatch: indexing arrays could not be broadcast together with shapes (79,) (79,) (81,) 
