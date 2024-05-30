@@ -106,7 +106,7 @@ rsync -Ravzh $PATH_DATA/derivatives/labels/./$SUBJECT . # derivatives/labels/.
 
 # print the current contents of the PATH_DATA_PROCESSED folder
 echo "The contents of the PATH_DATA_PROCESSED folder are:"
-ls -l  
+ls -l
 
 # Go to subject folder for source images
 cd ${SUBJECT}/anat
@@ -139,11 +139,15 @@ if [[ ! -s ${file_lesion}.json ]]; then
   echo "{}" >> ${file_lesion}.json
 fi
 
+# NOTE: the sform and qform matrices don't match for a few subjects (for both images and SC seg), setting sform to qform
+sct_image -i ${file}.nii.gz -set-sform-to-qform -o ${file}.nii.gz
+sct_image -i ${file_seg}.nii.gz -set-sform-to-qform -o ${file_seg}.nii.gz
+
 # Straighten the SC
-sct_straighten_spinalcord -i ${file}.nii.gz -s ${file_seg}.nii.gz -o ${file}_straight.nii.gz 
+sct_straighten_spinalcord -i ${file}.nii.gz -s ${file_seg}.nii.gz -o ${file}_straight.nii.gz
 
 # Straighten the SC mask using straightened SC as reference
-sct_apply_transfo -i ${file_seg}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -x linear -o ${file_seg}_straight.nii.gz 
+sct_apply_transfo -i ${file_seg}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -x linear -o ${file_seg}_straight.nii.gz
 # Straighten the lesion mask using straightened SC as reference
 sct_apply_transfo -i ${file_lesion}.nii.gz -d ${file}_straight.nii.gz -w warp_curve2straight.nii.gz -x linear -o ${file_lesion}_straight.nii.gz
 
@@ -166,9 +170,9 @@ rsync -avzh $PATH_DATA_PROCESSED/dataset_description.json $PATH_DATA_PROCESSED_C
 
 # Image
 rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}_straight.nii.gz $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}_desc-straightened.nii.gz
-rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}desc-straightened.json
+rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file}.json $PATH_DATA_PROCESSED_CLEAN/${SUBJECT}/anat/${file}_desc-straightened.json
 
-# Image
+# Label
 mkdir -p $PATH_DATA_PROCESSED_CLEAN/derivatives $PATH_DATA_PROCESSED_CLEAN/derivatives/labels $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT} $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/
 rsync -avzh $PATH_DATA_PROCESSED/${SUBJECT}/anat/${file_seg}_straight.nii.gz $PATH_DATA_PROCESSED_CLEAN/derivatives/labels/${SUBJECT}/anat/${file_seg}_desc-straightened.nii.gz
 # copy the straightened lesion mask
