@@ -1,13 +1,13 @@
 """
-Converts the BIDS-structured mslesion_muc datasets to the nnUNetv2 dataset format. 
-Full details about the format can be found here: 
+Converts the BIDS-structured mslesion_muc datasets to the nnUNetv2 dataset format.
+Full details about the format can be found here:
 https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md
 
 The script to be used on a single dataset or multiple datasets.
 
 An option to create region-based labels for segmenting both lesion and the spinal cord is also provided.
-Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be 
-modified to include those as well. 
+Currently only supports the conversion of a single contrast. In case of multiple contrasts, the script should be
+modified to include those as well.
 
 Usage example single dataset:
     python convert_bids_to_nnUNetv2_all_sci_data.py
@@ -24,7 +24,7 @@ Authors: Julian McGinnis, Naga Karthik, Jan Valosek
 
 import argparse
 from pathlib import Path
-import json 
+import json
 import os
 import re
 import shutil
@@ -48,7 +48,7 @@ def get_parser():
                         help='Specify the task name.')
     parser.add_argument('--dataset-number', '-dnum', default=501, type=int,
                         help='Specify the task number, has to be greater than 500 but less than 999. e.g 502')
-    parser.add_argument('--seed', default=42, type=int, 
+    parser.add_argument('--seed', default=42, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     parser.add_argument('--region-based', action='store_true', default=False,
                         help='If set, the script will create labels for region-based nnUNet training. Default: False')
@@ -61,19 +61,19 @@ def get_parser():
 
 
 def get_region_based_label(subject_labels_path, subject_label_file, subject_image_file, sub_ses_name, thr=0.5):
-    
+
     # define path for sc seg file
     subject_seg_file = os.path.join(subject_labels_path, f"{sub_ses_name}_seg-manual.nii.gz")
-    
+
     # check if the seg file exists
     if not os.path.exists(subject_seg_file):
         logger.info(f"Segmentation file for subject {sub_ses_name} does not exist. Skipping.")
         return None
 
     # create region-based label
-    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file, 
+    seg_lesion_nii = create_region_based_label(subject_label_file, subject_seg_file, subject_image_file,
                                                sub_ses_name, thr=thr)
-    
+
     # save the region-based label
     nib.save(seg_lesion_nii, os.path.join(subject_labels_path, f"{sub_ses_name}_seg-lesion-manual.nii.gz"))
 
@@ -128,12 +128,12 @@ def main():
         branch, commit = get_git_branch_and_commit(dataset)
         dataset_commits[dataset_name] = f"git-{branch}-{commit}"
 
-        # get the list of subjects in the root directory 
+        # get the list of subjects in the root directory
         subjects = [subject for subject in sorted(os.listdir(root)) if subject.startswith('sub-')]
 
         # add to the list of all subjects
         all_subjects.extend(subjects)
-        
+
         # Get the training and test splits
         tr_subs, te_subs = train_test_split(subjects, test_size=test_ratio, random_state=args.seed)
 
@@ -163,7 +163,7 @@ def main():
                 temp_subject_path = train_subjects[subject]
                 num_sessions_per_subject = len(os.listdir(temp_subject_path))
 
-                for session in os.listdir(temp_subject_path):    
+                for session in os.listdir(temp_subject_path):
 
                     train_ctr += 1
 
@@ -173,29 +173,29 @@ def main():
 
                     # only take the sagittal orientation (as default)
                     subject_image_file = os.path.join(subject_images_path, f"{subject}_{session}_acq-ax_T2w.nii.gz")
-                    subject_label_file = os.path.join(subject_labels_path, 
+                    subject_label_file = os.path.join(subject_labels_path,
                                                         f"{subject}_{session}_acq-ax_T2w_lesion-manual.nii.gz")
 
                     # add the subject image file to the list of training niftis
                     train_niftis.append(os.path.basename(subject_image_file))
-                    
+
                     # create the new convention names for nnunet
                     sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
-                    
+
                     # use region-based labels if required
-                    if args.region_based:                        
+                    if args.region_based:
                         # overwritten the subject_label_file with the region-based label
-                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file, 
+                        subject_label_file = get_region_based_label(subject_labels_path, subject_label_file,
                                                                     subject_image_file, sub_ses_name, thr=0.5)
                         if subject_label_file is None:
                             print(f"Skipping since the region-based label could not be generated")
                             continue
 
-                    subject_image_file_nnunet = os.path.join(path_out_imagesTr, 
+                    subject_image_file_nnunet = os.path.join(path_out_imagesTr,
                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}_0000.nii.gz")
                     subject_label_file_nnunet = os.path.join(path_out_labelsTr,
                                                                 f"{args.dataset_name}_{sub_ses_name}_{train_ctr:03d}.nii.gz")
-                    
+
                     # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                     shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                     shutil.copyfile(subject_label_file, subject_label_file_nnunet)
@@ -224,12 +224,12 @@ def main():
 
                 # add the subject image file to the list of training niftis
                 train_niftis.append(os.path.basename(subject_image_file))
-                
+
                 # create the new convention names for nnunet
                 sub_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
                 # use region-based labels if required
-                if args.region_based:                        
+                if args.region_based:
                     # overwritten the subject_label_file with the region-based label
                     subject_label_file = get_region_based_label(subject_labels_path, subject_label_file,
                                                                 subject_image_file, sub_name, thr=0.5)
@@ -241,7 +241,7 @@ def main():
                                                          f"{args.dataset_name}_{sub_name}_{train_ctr:03d}_0000.nii.gz")
                 subject_label_file_nnunet = os.path.join(path_out_labelsTr,
                                                          f"{args.dataset_name}_{sub_name}_{train_ctr:03d}.nii.gz")
-                
+
                 # copy the files to new structure using symbolic links (prevents duplication of data and saves space)
                 shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                 shutil.copyfile(subject_label_file, subject_label_file_nnunet)
@@ -266,7 +266,7 @@ def main():
                 temp_subject_path = test_subjects[subject]
                 num_sessions_per_subject = len(os.listdir(temp_subject_path))
 
-                for session in os.listdir(temp_subject_path):  
+                for session in os.listdir(temp_subject_path):
                     test_ctr += 1
                     # Get paths with session numbers
 
@@ -286,7 +286,7 @@ def main():
                     sub_ses_name = f"{str(Path(subject_image_file).name).replace('.nii.gz', '')}"
 
                     # use region-based labels if required
-                    if args.region_based:                        
+                    if args.region_based:
                         # overwritten the subject_label_file with the region-based label
                         subject_label_file = get_region_based_label(subject_labels_path, subject_label_file,
                                                                     subject_image_file, sub_ses_name, thr=0.5)
@@ -298,7 +298,7 @@ def main():
                                                              f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}_0000.nii.gz")
                     subject_label_file_nnunet = os.path.join(path_out_labelsTsMuc,
                                                              f"{args.dataset_name}_{sub_ses_name}_{test_ctr:03d}.nii.gz")
-                    
+
                     # copy the files to new structure using symbolic links
                     shutil.copyfile(subject_image_file, subject_image_file_nnunet)
                     shutil.copyfile(subject_label_file, subject_label_file_nnunet)
@@ -315,7 +315,7 @@ def main():
                     # binarize the label file only if region-based training is not set (since the region-based labels are already binarized)
                     if not args.region_based:
                         binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
-            
+
             else:
                 print(f"Skipping Subject {subject} as it is from sci-paris")
                 continue
@@ -358,8 +358,8 @@ def main():
     json_dict['seed_used'] = args.seed
     json_dict['dataset_versions'] = dataset_commits
     json_dict['image_orientation'] = "RPI"
-    
-    # The following keys are the most important ones. 
+
+    # The following keys are the most important ones.
     """
     channel_names:
         Channel names must map the index to the name of the channel. For BIDS, this refers to the contrast suffix.
@@ -403,7 +403,7 @@ def main():
             "lesion": 2,
         }
         json_dict['regions_class_order'] = [1, 2]
-    
+
     # Needed for finding the files correctly. IMPORTANT! File endings must match between images and segmentations!
     json_dict['file_ending'] = ".nii.gz"
 
