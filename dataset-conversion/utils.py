@@ -20,7 +20,7 @@ def binarize_label(subject_path, label_path):
 
 def create_region_based_label(lesion_label_file, seg_label_file, image_file, sub_ses_name, thr=0.5):
     """
-    Creates region-based labels for nnUNet training. The regions are: 
+    Creates region-based labels for nnUNet training. The regions are:
     0: background
     1: spinal cord seg
     2: lesion seg
@@ -48,7 +48,7 @@ def create_region_based_label(lesion_label_file, seg_label_file, image_file, sub
 
     # print unique values in the label array
     # print(f'Unique values in the label array for subject {sub_ses_name}: {np.unique(label_npy)}')
-    
+
     # save the new label file
     ref = nib.load(image_file)
     label_nii = nib.Nifti1Image(label_npy, ref.affine, ref.header)
@@ -56,10 +56,44 @@ def create_region_based_label(lesion_label_file, seg_label_file, image_file, sub
     return label_nii
 
 
+def create_multi_channel_label_input(lesion_label_file, seg_label_file, image_file, sub_ses_name, thr=0.5):
+    """
+    Ensures lesion seg is part of SC seg (which will be the 2nd channel) in multi-channel input for nnUNet training.
+    The label has 1 single channel --> 0: background, 1: lesion seg
+    The input has 2 channels --> image and spinal cord seg
+    """
+    # load the labels
+    lesion_label_npy = nib.load(lesion_label_file).get_fdata()
+    seg_label_npy = nib.load(seg_label_file).get_fdata()
+
+    # binarize the labels
+    lesion_label_npy = np.where(lesion_label_npy > thr, 1, 0)
+    seg_label_npy = np.where(seg_label_npy > thr, 1, 0)
+
+    # check if the shapes of the labels match
+    assert lesion_label_npy.shape == seg_label_npy.shape, \
+        f'Shape mismatch between lesion label and segmentation label for subject {sub_ses_name}. Check the labels.'
+
+    # create a new label array with the same shape as the original labels
+    label_npy = np.zeros(lesion_label_npy.shape, dtype=np.int16)
+    # spinal cord
+    label_npy[seg_label_npy == 1] = 1
+    # lesion seg
+    label_npy[lesion_label_npy == 1] = 1
+
+    # print unique values in the label array
+    # print(f'Unique values in the label array for subject {sub_ses_name}: {np.unique(label_npy)}')
+
+    # save the new label file
+    ref = nib.load(image_file)
+    label_nii = nib.Nifti1Image(label_npy, ref.affine, ref.header)
+
+    return label_nii
+
 def get_git_branch_and_commit(dataset_path=None):
     """
     :return: git branch and commit ID, with trailing '*' if modified
-    Taken from: https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/utils/sys.py#L476 
+    Taken from: https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/utils/sys.py#L476
     and https://github.com/spinalcordtoolbox/spinalcordtoolbox/blob/master/spinalcordtoolbox/utils/sys.py#L461
     """
 
@@ -122,7 +156,7 @@ class Image(object):
 
         if absolutepath is not None:
             self._path = os.path.abspath(absolutepath)
-        
+
         # Case 1: load an image from file
         if isinstance(param, str):
             self.loadFromPath(param)
@@ -141,18 +175,18 @@ class Image(object):
             self.hdr.set_data_shape(self.data.shape)
         else:
             raise TypeError('Image constructor takes at least one argument.')
-    
+
         # Fix any mismatch between the array's datatype and the header datatype
         self.fix_header_dtype()
 
     @property
     def dim(self):
         return get_dimension(self)
-    
+
     @property
     def orientation(self):
         return get_orientation(self)
-    
+
     @property
     def absolutepath(self):
         """
@@ -170,7 +204,7 @@ class Image(object):
         the best way to set it.
         """
         return self._path
-    
+
     @absolutepath.setter
     def absolutepath(self, value):
         if value is None:
@@ -181,7 +215,7 @@ class Image(object):
         elif not os.path.isabs(value):
             value = os.path.abspath(value)
         self._path = value
-    
+
     @property
     def header(self):
         return self.hdr
@@ -233,7 +267,7 @@ class Image(object):
         """
         change_orientation(self, orientation, self, inverse=inverse)
         return self
-    
+
     def getNonZeroCoordinates(self, sorting=None, reverse_coord=False):
         """
         This function return all the non-zero coordinates that the image contains.
@@ -277,7 +311,7 @@ class Image(object):
                 raise ValueError("sorting parameter must be either 'x', 'y', 'z' or 'value'")
 
         return list_coordinates
-    
+
     def change_type(self, dtype):
         """
         Change data type on image.
@@ -286,7 +320,7 @@ class Image(object):
         """
         change_type(self, dtype, self)
         return self
-    
+
     def fix_header_dtype(self):
         """
         Change the header dtype to the match the datatype of the array.
@@ -302,7 +336,7 @@ class Image(object):
             logger.warning(f"Image header specifies datatype '{dtype_header}', but array is of type "
                            f"'{dtype_data}'. Header metadata will be overwritten to use '{dtype_data}'.")
             self.hdr.set_data_dtype(dtype_data)
-    
+
     def save(self, path=None, dtype=None, verbose=0, mutable=False):
         """
         Write an image in a nifti file
