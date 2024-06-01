@@ -301,6 +301,12 @@ def main():
         # get recursively all GT '_label-lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
+
+        # for straigteneing preprocessing, chunk-4 images were removed because there was no SC to straighten
+        # remove the chunk-4 images from the list
+        if sites[0] == 'muc':
+            lesion_files = [file for file in lesion_files if 'chunk-4' not in file]
+
         # add to the list of all subjects
         all_lesion_files.extend(lesion_files)
 
