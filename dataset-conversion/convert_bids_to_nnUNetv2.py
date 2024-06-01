@@ -63,6 +63,7 @@ import nibabel as nib
 
 LABEL_SUFFIXES = {
     "muc": ["seg-manual", "lesion-manual"],
+    "straight": ["seg-manual_desc-straightened", "lesion-manual_desc-straightened"],
 }
 
 
@@ -148,6 +149,24 @@ def create_directories(path_out, site):
     for path in paths:
         path.mkdir(parents=True, exist_ok=True)
 
+
+def find_type_in_path(path):
+    """Extracts site identifier from the given path.
+
+    Args:
+    path (str): Input path containing a site identifier.
+
+    Returns:
+    str: Extracted site identifier or None if not found.
+    """
+    # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
+    if 'prepro' in path:
+        match = 'straight'
+    elif 'spine' in path:
+        match = 'muc'
+
+    return [match] if match else None
+    # return match.group(0) if match else None
 
 def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits):
     # create a yaml file containing the list of training and test niftis
@@ -261,7 +280,7 @@ def main():
         logger.info(f"Number of excluded subjects: {len(excluded_subs)}")
 
     # define site
-    sites = ['muc']
+    sites = find_type_in_path(args.path_data[0])
     # Single site
     create_directories(path_out, sites[0])
 
