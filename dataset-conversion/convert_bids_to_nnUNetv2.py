@@ -36,11 +36,12 @@ Usage example single dataset:
     python convert_bids_to_nnUNetv2.py
         --path-data <path/to/dataset>
         --path-out ${nnUNet_raw}
-        -dname DCMlesions
+        -dname bavariaMSChunks
         -dnum 601
         --split 0.8 0.2
-        --seed 50
+        --seed 42
         --region-based
+        --exclude <path/to/exclude.yml>
 
 Authors: Julian McGinnis, Naga Karthik, Jan Valosek
 """
