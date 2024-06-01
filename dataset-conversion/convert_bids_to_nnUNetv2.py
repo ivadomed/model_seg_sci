@@ -85,6 +85,8 @@ def get_parser():
     parser.add_argument('--split', nargs='+', type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
                              '--split 0.8 0.2')
+    parser.add_argument('--exclude', type=str, default=None,
+                        help='YAML file containing the list of subjects to exclude from the dataset.')
     return parser
 
 
@@ -245,6 +247,18 @@ def main():
         if not os.path.exists(path):
             raise ValueError(f"Path {path} does not exist.")
 
+    if args.exclude is not None:
+        subjects_to_exclude = []
+        with open(args.exclude, "r") as f:
+            file = yaml.safe_load(f)
+            subjects_to_exclude += file['chunks']
+            subjects_to_exclude += file['stitched']
+
+        excluded_subs = [re.search(r'(sub-m\d{6})', subject).group(0) for subject in subjects_to_exclude]
+        excluded_subs = list(set(excluded_subs))
+        logger.info(f"Excluded subjects: {excluded_subs}")
+        logger.info(f"Number of excluded subjects: {len(excluded_subs)}")
+
     # define site
     sites = ['muc']
     # Single site
@@ -274,6 +288,10 @@ def main():
         # NOTE: we need a patient-wise split (not image-wise split) to ensure that the same patient is not present in both
         # training and test sets
         subs = sorted([sub for sub in os.listdir(os.path.join(root, 'derivatives', 'labels'))])
+        # exclude the subjects that are in the exclude list
+        if args.exclude is not None:
+            subs = [sub for sub in subs if sub not in excluded_subs]
+
         tr_subs, te_subs = train_test_split(subs, test_size=test_ratio, random_state=args.seed)
 
         for sub in tr_subs:
