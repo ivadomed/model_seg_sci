@@ -67,8 +67,6 @@ This command takes as inputs the list of datasets, the output path to store the 
 dataset number, the ratio in which train and test subjects are split, the random seed, 
 and `--region-based` or `--multichannel` flag.
 
-> **Note**
-> This assumes the nnUNet has been successfully installed and the necessary nnUNet-related environment variables have been set. Please refer to the [nnUNet documentation](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/installation_instructions.md) for more details.
 
 #### Cropping around the spinal cord
 
