@@ -442,9 +442,8 @@ def main():
                 sc_image.change_orientation("RPI")
                 sc_image.save(subject_sc_file_nnunet)
 
-            # binarize the label file only if region-based training is not set (since the region-based labels are
-            # already binarized)
-            if not args.region_based or not args.multichannel:
+            # don't binarize the label if either of the region-based or multi-channel training is set
+            if not args.region_based and not args.multichannel:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
         # Test images
@@ -509,10 +508,8 @@ def main():
                 sc_image.change_orientation("RPI")
                 sc_image.save(subject_sc_file_nnunet)
 
-
-            # binarize the label file only if region-based training is not set (since the region-based labels are
-            # already binarized)
-            if not args.region_based or not args.multichannel:
+            # don't binarize the label if either of the region-based or multi-channel training is set
+            if not args.region_based and not args.multichannel:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
         else:
