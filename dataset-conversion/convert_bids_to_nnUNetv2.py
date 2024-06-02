@@ -357,7 +357,10 @@ def main():
 
         site_name = sites[0]
         # Construct path to the background image
-        subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace(f'_{LABEL_SUFFIXES[site_name][1]}', '')
+        if site_name == 'muc':
+            subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace(f'_{LABEL_SUFFIXES[site_name][1]}', '')
+        elif site_name == 'straight':
+            subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace(f'_{LABEL_SUFFIXES[site_name][1]}', '').replace('T2w', 'T2w_desc-straightened')
 
         # Train images
         if subject_label_file in train_images.keys():
