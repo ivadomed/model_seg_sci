@@ -228,20 +228,26 @@ def print_mean_and_std(df, list_of_metrics, pred_type):
         logger.info(f'{metric}:')
         # Loop across methods (e.g., nnUNet 2D, nnUNet 3D, etc.)
         for method in df['method'].unique():
+            num_of_subjects = len(df['participant_id'].unique())
             # Mean +- std across sites
             if pred_type == 'sc':
-                logger.info(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                logger.info(f'\t{method} (all sites, n={num_of_subjects}): '
+                            f'{df[df["method"] == method][metric].mean():.2f} +/- '
                             f'{df[df["method"] == method][metric].std():.2f}')
             elif pred_type == 'lesion':
-                logger.info(f'\t{method} (all sites): {df[df["method"] == method][metric].mean():.2f} +/- '
+                logger.info(f'\t{method} (all sites, n={num_of_subjects}): '
+                            f'{df[df["method"] == method][metric].mean():.2f} +/- '
                             f'{df[df["method"] == method][metric].std():.2f}')
             # Loop across sites
             for site in df['site'].unique():
                 df_tmp = df[(df['method'] == method) & (df['site'] == site)]
+                num_of_subjects = len(df_tmp['participant_id'].unique())
                 if pred_type == 'sc':
-                    logger.info(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                    logger.info(f'\t{method} ({site}, n={num_of_subjects}): '
+                                f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
                 elif pred_type == 'lesion':
-                    logger.info(f'\t{method} ({site}): {df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                    logger.info(f'\t{method} ({site}, n={num_of_subjects}): '
+                                f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
 
 
 def split_string_by_capital_letters(s):
