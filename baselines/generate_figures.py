@@ -237,12 +237,14 @@ def fetch_participant_id_site_and_method(input_string, pred_type):
     return participant_id, session_id, site, method
 
 
-def print_mean_and_std(df, list_of_metrics, pred_type):
+def print_mean_and_std(df, list_of_metrics, pred_type, args):
     """
-    Print the mean and std for each metric
+    Print the mean and std for each metric across sites and across MagneticFieldStrength
     :param df: dataframe with segmentation metrics
     :param list_of_metrics: list of metrics
     :param pred_type: type of prediction to create plots for; sc: spinal cord segmentation; lesion: lesion segmentation
+    :param args: arguments from the command line -- this is used to check whether CSV files with MagneticFieldStrength
+    are provided
     :return:
     """
     # Loop across metrics
@@ -270,6 +272,19 @@ def print_mean_and_std(df, list_of_metrics, pred_type):
                 elif pred_type == 'lesion':
                     logger.info(f'\t{method} ({site}, n={num_of_subjects}): '
                                 f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+
+            # If CSV files with MagneticFieldStrength are provided, loop across MagneticFieldStrength
+            if args.sequence_details_zurich and args.sequence_details_colorado:
+                # Loop across MagneticFieldStrength (1.5T, 3T)
+                for field in df['MagneticFieldStrength'].unique():
+                    df_tmp = df[(df['method'] == method) & (df['MagneticFieldStrength'] == field)]
+                    num_of_subjects = len(df_tmp['participant_id'].unique())
+                    if pred_type == 'sc':
+                        logger.info(f'\t{method} ({field}T, n={num_of_subjects}): '
+                                    f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
+                    elif pred_type == 'lesion':
+                        logger.info(f'\t{method} ({field}T, n={num_of_subjects}): '
+                                    f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
 
 
 def split_string_by_capital_letters(s):
@@ -631,8 +646,25 @@ def main():
     else:
         compute_kruskal_wallis_test(df_concat, list_of_metrics)
 
-    # Print mean and std for each metric
-    print_mean_and_std(df_concat, list_of_metrics, pred_type)
+    if args.sequence_details_zurich and args.sequence_details_colorado:
+        # Load sequence details for Zurich and Colorado
+        df_colorado = pd.read_csv(args.sequence_details_colorado, usecols=['filename', 'MagneticFieldStrength'])
+        df_zurich = pd.read_csv(args.sequence_details_zurich, usecols=['filename', 'MagneticFieldStrength'])
+        # Get participant_id from the filename using fetch_participant_id_site_and_method
+        df_colorado['participant_id'] = df_colorado['filename'].apply(lambda x: fetch_participant_id(x))
+        df_zurich['participant_id'] = df_zurich['filename'].apply(lambda x: fetch_participant_id(x))
+        # Drop filename column as we don't need it anymore
+        df_colorado = df_colorado.drop(columns=['filename'])
+        df_zurich = df_zurich.drop(columns=['filename'])
+        # Merge df_colorado and df_zurich
+        df_sequence_details = pd.concat([df_colorado, df_zurich], ignore_index=True)
+        # Round 1.49T etc to 1.5T (i.e., one decimal place)
+        df_sequence_details['MagneticFieldStrength'] = df_sequence_details['MagneticFieldStrength'].apply(lambda x: round(x, 1))
+        # Merge df_sequence_details into df_concat
+        df_concat = pd.merge(df_concat, df_sequence_details, on='participant_id')
+
+    # Print the mean and std for each metric across sites and across MagneticFieldStrength
+    print_mean_and_std(df_concat, list_of_metrics, pred_type, args)
 
     logger.info("")
     # Create Raincloud plot for each metric
