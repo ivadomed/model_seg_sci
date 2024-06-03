@@ -9,6 +9,8 @@ Loop across JSON sidecar files and nii headers in the input path and parse from 
 
 If JSON sidecar is not available (sci-paris), fetch only PixDim and SliceThickness from nii header.
 
+The fetched information is saved to a CSV file (parsed_data.csv).
+
 Example usage:
     python utils/fetch_sequence_parameters.py -i /path/to/dataset -contrast T2w
 
