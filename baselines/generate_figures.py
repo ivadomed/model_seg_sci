@@ -1,9 +1,11 @@
 """
 The script:
  - fetch subjects from the provided /results folders (each one for a specific seed)
- - read XML files with ANIMA segmentation metrics and execution_time.csv (located under /results) computed using
- sct_analyze_lesion separately for GT and predicted using our 3D nnUNet model)
- - average the  metrics across seeds based (because some subjects are present in multiple seeds)
+ - read XML files with ANIMA segmentation metrics (Dice, Surface Distance, ...) and execution_time.csv
+ (located under /results) computed using sct_analyze_lesion separately for GT and predicted using our 3D nnUNet model)
+ - average the metrics across seeds based (because some subjects are present in multiple seeds)
+ - print the metrics into terminal for each method and each site (and also all sites together) in order to create
+ Table 2 and Table 3
  - create Raincloud plot for each segmentation metrics (Dice, RVE, ...)
  - Raincloud plot are saved in the folder defined by the '-o' flag (Default: ./figures).
 
