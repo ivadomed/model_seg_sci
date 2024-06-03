@@ -175,6 +175,17 @@ def parse_xml_file(file_path):
     return filename, segmentation_metrics
 
 
+def fetch_participant_id(input_string):
+    """
+    Fetch the participant_id from the input string
+    :param input_string: input string or path, e.g. 'sub-5416_T2w_seg_nnunet'
+    :return participant_id: subject id, e.g. 'sub-5416'
+    """
+    participant = re.search('sub-(.*?)[_/]', input_string)  # [_/] slash or underscore
+    participant_id = participant.group(0)[:-1] if participant else ""  # [:-1] removes the last underscore or slash
+    return participant_id
+
+
 def fetch_participant_id_site_and_method(input_string, pred_type):
     """
     Fetch the participant_id, site and method from the input string
@@ -186,8 +197,7 @@ def fetch_participant_id_site_and_method(input_string, pred_type):
     """
 
     # Fetch participant_id
-    participant = re.search('sub-(.*?)[_/]', input_string)  # [_/] slash or underscore
-    participant_id = participant.group(0)[:-1] if participant else ""  # [:-1] removes the last underscore or slash
+    participant_id = fetch_participant_id(input_string)
 
     # Fetch session_id
     session = re.search('ses-(.*?)[_/]', input_string)  # [_/] slash or underscore
