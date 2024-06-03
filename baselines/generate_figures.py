@@ -541,6 +541,7 @@ def main():
         # if xml_files is empty, exit
         if len(xml_files) == 0:
             print(f'ERROR: No xml files found in {dir_path}')
+            sys.exit(1)
 
         # Fetch train-test split seed (e.g., 42) from the directory path
         seed = re.search(r'seed(\d+)', dir_path).group(1)
