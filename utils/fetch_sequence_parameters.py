@@ -18,6 +18,7 @@ Author: Jan Valosek
 """
 
 import os
+import re
 import glob
 import json
 import argparse
@@ -54,6 +55,12 @@ def get_parser():
         required=True,
         type=str,
         help='Image contrast. Examples: T2w (sci-colorado, sci-paris), acq-sag_T2w or acq-ax_T2w (sci-zurich)',
+    )
+    parser.add_argument(
+        '-participants-tsv',
+        required=False,
+        type=str,
+        help='Path to participants.tsv file. If provided, MagneticFieldStrength will be saved into it.'
     )
 
     return parser
@@ -120,6 +127,17 @@ def parse_nii_file(file_path):
     return parsed_info
 
 
+def fetch_participant_id(input_string):
+    """
+    Fetch the participant_id from the input string
+    :param input_string: input string or path, e.g. 'sub-5416_T2w_seg_nnunet'
+    :return participant_id: subject id, e.g. 'sub-5416'
+    """
+    participant = re.search('sub-(.*?)[_/]', input_string)  # [_/] slash or underscore
+    participant_id = participant.group(0)[:-1] if participant else ""  # [:-1] removes the last underscore or slash
+    return participant_id
+
+
 def main():
     # Parse the command line arguments
     parser = get_parser()
@@ -156,6 +174,24 @@ def main():
     # Save the DataFrame to a CSV file
     df.to_csv(os.path.join(dir_path, 'parsed_data.csv'), index=False)
     print(f'Parsed data saved to {os.path.join(dir_path, "parsed_data.csv")}')
+
+    if args.participants_tsv:
+        # Read the participants.tsv file
+        participants_df = pd.read_csv(args.participants_tsv, sep='\t')
+
+        # Fetch the participant_id from the filename for df
+        df['participant_id'] = df['filename'].apply(fetch_participant_id)
+
+        # Insert the MagneticFieldStrength column from df into participants_df based on the filename
+        participants_df = participants_df.merge(df[['participant_id', 'MagneticFieldStrength']],
+                                                on='participant_id', how='left')
+
+        # Use n/a for missing values in all columns
+        participants_df.fillna('n/a', inplace=True)
+
+        # Save the updated participants.tsv file
+        participants_df.to_csv(args.participants_tsv, sep='\t', index=False)
+        print(f'MagneticFieldStrength saved to {args.participants_tsv}')
 
     # For sci-paris, we do not have JSON sidecars --> we can fetch only PixDim and SliceThickness from nii header
     if 'sci-paris' in dir_path:
