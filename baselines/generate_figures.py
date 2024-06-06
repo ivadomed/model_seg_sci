@@ -253,7 +253,8 @@ def print_mean_and_std(df, list_of_metrics, pred_type, args):
         logger.info(f'{metric}:')
         # Loop across methods (e.g., nnUNet 2D, nnUNet 3D, etc.)
         for method in df['method'].unique():
-            num_of_subjects = len(df['participant_id'].unique())
+            # NOTE: we cannot use 'len(df['participant_id'].unique())' because some subjects have multiple sessions
+            num_of_subjects = len(df[df["method"] == method][metric])
             # Mean +- std across sites
             if pred_type == 'sc':
                 logger.info(f'\t{method} (all sites, n={num_of_subjects}): '
@@ -266,7 +267,8 @@ def print_mean_and_std(df, list_of_metrics, pred_type, args):
             # Loop across sites
             for site in df['site'].unique():
                 df_tmp = df[(df['method'] == method) & (df['site'] == site)]
-                num_of_subjects = len(df_tmp['participant_id'].unique())
+                # NOTE: we cannot use 'len(df['participant_id'].unique())' because some subjects have multiple sessions
+                num_of_subjects = len(df_tmp[metric])
                 if pred_type == 'sc':
                     logger.info(f'\t{method} ({site}, n={num_of_subjects}): '
                                 f'{df_tmp[metric].mean():.2f} ± {df_tmp[metric].std():.2f}')
