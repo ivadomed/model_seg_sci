@@ -1,5 +1,5 @@
 """
-Convert BIDS-structured SCI datasets (sci-zurich, sci-colorado, dcm-zurich-lesions, dcm-zurich-lesions-20231115, etc.) to the nnUNetv2 
+Convert BIDS-structured SCI datasets (sci-zurich, sci-colorado, dcm-zurich-lesions, dcm-zurich-lesions-20231115, etc.) to the nnUNetv2
 REGION-BASED and MULTICHANNEL training format depending on the input arguments.
 
 dataset.json:
@@ -140,7 +140,7 @@ def get_multi_channel_label_input(subject_label_file, subject_image_file, site_n
 
     # create label for the multi-channel training. Here, the label is the SC seg that will be the 2nd channel in the input
     # along with the image. (we ensure that the lesion seg is part of the spinal cord seg
-    seg_lesion_nii = create_multi_channel_label_input(subject_label_file, subject_seg_file, subject_image_file, 
+    seg_lesion_nii = create_multi_channel_label_input(subject_label_file, subject_seg_file, subject_image_file,
                                                       sub_ses_name, thr=thr)
 
     # save the region-based label
@@ -230,7 +230,7 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
             "lesion": 2,
         }
         json_dict['regions_class_order'] = [1, 2]
-    
+
     elif args.multichannel:
         json_dict['channel_names'] = {
             0: "T2w",
@@ -241,7 +241,7 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
             "background": 0,
             "lesion": 1,
         }
-    
+
     else:
         json_dict['channel_names'] = {
             0: "T2w",
@@ -328,16 +328,16 @@ def main():
             # use all subjects for training
             tr_subs += te_subs
             te_subs = []
-        
+
         elif site_name in TEST_ONLY_SITES:
             # use all subjects for testing (treated as external testing set)
             te_subs += tr_subs
             tr_subs = []
-        
+
         else:
             # keep the tr_subs and te_subs as is
             pass
-        
+
         for sub in tr_subs:
             # get the lesion files for the subject
             lesion_files_sub = [file for file in lesion_files if sub in file]
@@ -348,7 +348,7 @@ def main():
                     continue
                 # add the lesion file to the training set
                 train_images[lesion_file] = lesion_file
-        
+
         for sub in te_subs:
             # get the lesion files for the subject
             lesion_files_sub = [file for file in lesion_files if sub in file]
@@ -400,15 +400,15 @@ def main():
             if args.multichannel:
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
-                
+
                 # channel 0: image, channel 1: SC seg
-                subject_sc_file_nnunet = os.path.join(path_out_imagesTr, 
+                subject_sc_file_nnunet = os.path.join(path_out_imagesTr,
                                                       f"{args.dataset_name}_{site_name}_{sub_name}_{train_ctr:03d}_0001.nii.gz")
 
                 # overwritten the subject_sc_file_nnunet with the label for multi-channel training (lesion is part of SC)
-                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file, 
-                                                                site_name, sub_name, thr=0.5)                
-                
+                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
+                                                                site_name, sub_name, thr=0.5)
+
                 if subject_sc_file is None:
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
@@ -416,7 +416,7 @@ def main():
             # use region-based labels if required
             elif args.region_based:
                 # overwritten the subject_label_file with the region-based label
-                subject_label_file = get_region_based_label(subject_label_file, subject_image_file, 
+                subject_label_file = get_region_based_label(subject_label_file, subject_image_file,
                                                             site_name, sub_name, thr=0.5)
                 if subject_label_file is None:
                     print(f"Skipping since the region-based label could not be generated")
@@ -443,7 +443,7 @@ def main():
                 sc_image.save(subject_sc_file_nnunet)
 
             # don't binarize the label if either of the region-based or multi-channel training is set
-            if not args.region_based and not args.multichannel:
+            if not args.region_based:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
         # Test images
@@ -466,16 +466,16 @@ def main():
             if args.multichannel:
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
-                
+
                 # channel 0: image, channel 1: SC seg
                 subject_sc_file_nnunet = os.path.join(Path(path_out,
                                                           f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}_0001.nii.gz')
 
                 # overwritten the subject_sc_file_nnunet with the label for multi-channel training (lesion is part of SC)
-                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file, 
-                                                                site_name, sub_name, thr=0.5)                
-                
+                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
+                                                                site_name, sub_name, thr=0.5)
+
                 if subject_sc_file is None:
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
@@ -483,7 +483,7 @@ def main():
             # use region-based labels if required
             elif args.region_based:
                 # overwritten the subject_label_file with the region-based label
-                subject_label_file = get_region_based_label(subject_label_file, subject_image_file, 
+                subject_label_file = get_region_based_label(subject_label_file, subject_image_file,
                                                             site_name, sub_name, thr=0.5)
                 if subject_label_file is None:
                     continue
@@ -509,7 +509,7 @@ def main():
                 sc_image.save(subject_sc_file_nnunet)
 
             # don't binarize the label if either of the region-based or multi-channel training is set
-            if not args.region_based and not args.multichannel:
+            if not args.region_based:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
 
         else:
