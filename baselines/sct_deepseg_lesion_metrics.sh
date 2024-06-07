@@ -126,7 +126,7 @@ for file in $(find "$PWD" -type f -name "*acq-ax*" ! -name "*seg*" ! -name "*les
       -reference  ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${modified_file_name}.nii.gz \
       -prediction ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_${suffix}.nii.gz \
       -output ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_metrics-deepseglesion_${suffix}.csv \
-      -metrics dsc nsd vol_diff rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score
+      -metrics dsc nsd rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score ref_count pred_count lcwa
 
     else
       rsync -avzh ${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file_name}_lesion-manual.nii.gz ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_lesion-manual.nii.gz
@@ -139,7 +139,7 @@ for file in $(find "$PWD" -type f -name "*acq-ax*" ! -name "*seg*" ! -name "*les
       -reference  ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_lesion-manual.nii.gz \
       -prediction ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion.nii.gz \
       -output ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_metrics-deepseglesion.csv \
-      -metrics dsc nsd vol_diff rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score
+      -metrics dsc nsd rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score ref_count pred_count lcwa
 
     fi
 
