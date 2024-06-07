@@ -112,18 +112,20 @@ for file in $(find "$PWD" -type f -name "*acq-ax*" ! -name "*seg*" ! -name "*les
 
     if [[ "$STRAIGHTENED" == True ]]; then
 
+      suffix="desc-straightened"
+
       # Use sed to replace desc-straightened with lesion-manual_desc-straightened
-      modified_file_name=$(echo "$file_name" | sed 's/desc-straightened/lesion-manual_desc-straightened/')
+      modified_file_name=$(echo "$file_name" | sed 's/desc-straightened/lesion-manual_${suffix}/')
       rsync -avzh ${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${modified_file_name}.nii.gz ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${modified_file_name}.nii.gz
-      rsync -avzh ${path_base}_lesionseg.nii.gz ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_desc-straightened.nii.gz
-      sct_qc -i ${file} -s ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_desc-straightened.nii.gz \
-      -d ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_desc-straightened.nii.gz \
+      rsync -avzh ${path_base}_lesionseg.nii.gz ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_${suffix}.nii.gz
+      sct_qc -i ${file} -s ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_${suffix}.nii.gz \
+      -d ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_${suffix}.nii.gz \
       -p sct_deepseg_lesion -qc ${PATH_QC} -qc-subject ${SUBJECT} -plane axial
 
       python3 /home/$(whoami)/git_repositories/MetricsReloaded/compute_metrics_reloaded.py \
       -reference  ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${modified_file_name}.nii.gz \
-      -prediction ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_desc-straightened.nii.gz \
-      -output ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_metrics-deepseglesion_desc-straightened.csv \
+      -prediction ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_seg-deepseglesion_${suffix}.nii.gz \
+      -output ${PATH_DATA_PROCESSED}/derivatives/labels/${SUBJECT}/anat/${file_name}_metrics-deepseglesion_${suffix}.csv \
       -metrics dsc nsd vol_diff rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score
 
     else
