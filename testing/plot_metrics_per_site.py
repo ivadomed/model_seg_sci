@@ -16,9 +16,9 @@ sites_to_rename = {
   'dcm-zurich-lesions-20231115': 'site-01 \n(nontraumatic SCI)',
   'sci-colorado': 'site-02 \n(traumatic SCI)',
   'sci-zurich': 'site-01 \n(traumatic SCI)',
-  'sci-paris': 'site-03',   # not shown in the figure (training only), but listing here for completeness
+  'sci-paris': 'site-03',                           # not shown in the figure (training only), but listing here for completeness
   'site-003': 'site-04 \n(acute traumatic SCI)',
-  'site-012': 'site-05 \n(acute traumatic SCI)',   # not shown in the figure (training only), but listing here for completeness
+  'site-012': 'site-05 \n(acute traumatic SCI)',    # not shown in the figure (training only), but listing here for completeness
   'site-013': 'site-06 \n(acute traumatic SCI)',
   'site-014': 'site-07 \n(acute traumatic SCI)',
 }
@@ -122,7 +122,7 @@ def main():
                 # print(f"Processing: {csv_file.replace('/home/GRAMES.POLYMTL.CA/u114716/', '~/')}")
 
                 df = pd.read_csv(csv_file)
-                df['site'] = site
+                df['site'] = sites_to_rename[site]
                 df['fold'] = fld
                 df['model'] = find_model_in_path(fldr)
 
@@ -150,15 +150,6 @@ def main():
     df_mega = df_mega.groupby(['model', 'site', 'label']).mean(numeric_only=True).reset_index()
     # print(df_mega.reset_index(drop=True))
 
-    # # bring `model` and `site` columns to the front
-    # cols = df_mega.columns.tolist()
-    # cols = cols[0] + cols[2] + cols[1] + cols[3:]
-    # df_mega = df_mega[cols]
-
-    # rename site names
-    for site in df_mega['site'].unique():
-        df_mega['site'] = df_mega['site'].replace(site, sites_to_rename[site])
-
     print("Generating plots for Lesions")
     for metric in metrics_lesion:
         # keep the only the dataset, model, and metric columns
@@ -175,7 +166,6 @@ def main():
         g = sns.catplot(
             data=df_metric, x='site', y=f'{metric}_mean',
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
-            # errorbar='sd'
         )
         # y-axis limits
         g.set(ylim=(0, 1))
@@ -216,7 +206,6 @@ def main():
         g = sns.catplot(
             data=df_metric, x='site', y=f'{metric}_mean',
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
-            # errorbar='sd'
         )
         # y-axis limits
         g.set(ylim=(0, 1))
