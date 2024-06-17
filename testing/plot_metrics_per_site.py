@@ -9,8 +9,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 test_sites = {
-    "SCI": ["dcm-zurich-lesions-20231115", "sci-colorado", "sci-zurich", "site-003", "site-013", "site-014"],
+    "SCI": ["dcm-zurich-lesions-20231115", "sci-colorado", "sci-zurich", "site-003", "site-014"],
     }
+
+sites_to_rename = {
+  'dcm-zurich-lesions-20231115': 'site-01 \n(nontraumatic SCI)',
+  'sci-colorado': 'site-02 \n(traumatic SCI)',
+  'sci-zurich': 'site-01 \n(traumatic SCI)',
+  'sci-paris': 'site-03',   # not shown in the figure (training only), but listing here for completeness
+  'site-003': 'site-04 \n(acute traumatic SCI)',
+  'site-012': 'site-05 \n(acute traumatic SCI)',   # not shown in the figure (training only), but listing here for completeness
+  'site-013': 'site-06 \n(acute traumatic SCI)',
+  'site-014': 'site-07 \n(acute traumatic SCI)',
+}
 
 metrics_lesion = ['dsc', 'nsd', 'lesion_ppv', 'lesion_sensitivity', 'lesion_f1_score', 'lcwa']
 metrics_sc = ['dsc', 'nsd']
@@ -129,8 +140,12 @@ def main():
 
     # # bring `model` and `site` columns to the front
     # cols = df_mega.columns.tolist()
-    # cols = cols[-2:] + cols[:-2]
+    # cols = cols[0] + cols[2] + cols[1] + cols[3:]
     # df_mega = df_mega[cols]
+
+    # rename site names
+    for site in df_mega['site'].unique():
+        df_mega['site'] = df_mega['site'].replace(site, sites_to_rename[site])
 
     print("Generating plots for Lesions")
     for metric in metrics_lesion:
