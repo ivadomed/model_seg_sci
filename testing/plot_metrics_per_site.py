@@ -72,11 +72,23 @@ def find_model_in_path(path):
     """
     # Find 'nnUNetTrainer' followed by the model name
     if 'Dataset501_allSCIsegV2RegionSeed710' in path:
-        model = 'SCIsegV2Region'
+        if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
+            model = 'SCIsegV2Region_OriginalDA'
+        elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
+            model = 'SCIsegV2Region_AggressiveDA'
+    
+    elif 'Dataset502_allSCIsegV2MultichannelSeed710' in path:
+        if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
+            model = 'SCIsegV2Multi_OriginalDA'
+        elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
+            model = 'SCIsegV2Multi_AggressiveDA'
+    
+    elif 'Dataset521_DCMsegV2RegionSeed710' in path:
+        model = 'DCM'
+    
     elif 'Dataset511_acuteSCIsegV2RegionSeed710' in path:
         model = 'acuteSCI'
-    elif 'Dataset502_allSCIsegV2MultichannelSeed710' in path:
-        model = 'SCIsegV2Multi'
+    
     else:
         model = 'SCIsegV1'
 
@@ -116,7 +128,7 @@ def main():
 
                 # NOTE: because multi-channel model has only 1 label, it has to be renamed to 2.0 to match
                 # the label id with the region-based models
-                if df['model'].values[0] == 'SCIsegV2Multi':
+                if 'SCIsegV2Multi' in df['model'].values[0]:
                     df['label'] = 2.0
 
                 df_sites = pd.concat([df_sites, df])
@@ -182,12 +194,11 @@ def main():
             )
 
         g.despine(left=True)
-        g.set_axis_labels("Site", f"{metric}")
+        g.set_axis_labels("", f"{metric.upper()}")
         g.legend.set_title("Model")
 
         print(f"\tSaving the plot for {metric}")
         plt.savefig(os.path.join(path_out, f"{metric}_lesion.png"))
-
     
     print("Generating plots for SC")
     for metric in metrics_sc:
