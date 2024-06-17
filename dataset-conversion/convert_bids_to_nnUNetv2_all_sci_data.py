@@ -84,8 +84,8 @@ LABEL_SUFFIXES = {
     "site-014": ["seg", "lesion"],
 }
 # NOTE: these datasets only contain a few subjects (n<20), hence using them all for training
-TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site-012']
-TEST_ONLY_SITES = ['site-003', 'site-013', 'site-014']
+TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site-012', 'site-013']
+TEST_ONLY_SITES = ['site-003', 'site-014']
 
 
 def get_parser():
