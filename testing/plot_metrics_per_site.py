@@ -73,15 +73,15 @@ def find_model_in_path(path):
     # Find 'nnUNetTrainer' followed by the model name
     if 'Dataset501_allSCIsegV2RegionSeed710' in path:
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Region_OriginalDA'
+            model = 'SCIsegV2Region\n_OriginalDA'
         elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Region_AggressiveDA'
+            model = 'SCIsegV2Region\n_AggressiveDA'
     
     elif 'Dataset502_allSCIsegV2MultichannelSeed710' in path:
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Multi_OriginalDA'
+            model = 'SCIsegV2Multi\n_OriginalDA'
         elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Multi_AggressiveDA'
+            model = 'SCIsegV2Multi\n_AggressiveDA'
     
     elif 'Dataset521_DCMsegV2RegionSeed710' in path:
         model = 'DCM'
@@ -106,6 +106,7 @@ def main():
     if num_models_to_compare < 2:
         raise ValueError("Please provide at least two models to compare")
 
+    num_subs_per_site = {}
     df_mega = pd.DataFrame()
     for fldr in args.i:
 
@@ -150,6 +151,14 @@ def main():
     df_mega = df_mega.groupby(['model', 'site', 'label']).mean(numeric_only=True).reset_index()
     # print(df_mega.reset_index(drop=True))
 
+    # count the number of subjects per site
+    for site in test_sites["SCI"]:
+        csv_all = os.path.join(args.i[0], 'fold_0', f'test_{site}', f'{site}_metrics.csv')
+        df = pd.read_csv(csv_all)
+        # keep only the rows with label 2.0 (lesions)
+        df = df[df['label'] == 2.0]
+        num_subs_per_site[sites_to_rename[site]] = df.shape[0]
+
     print("Generating plots for Lesions")
     for metric in metrics_lesion:
         # keep the only the dataset, model, and metric columns
@@ -187,6 +196,10 @@ def main():
         g.set_axis_labels("", f"{metric.upper()}")
         g.legend.set_title("Model")
 
+        # Update the x-axis labels with the number of subjects per site
+        new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
+        g.ax.set_xticklabels(new_labels) #, rotation=45, ha='right')
+            
         print(f"\tSaving the plot for {metric}")
         plt.savefig(os.path.join(path_out, f"{metric}_lesion.png"))
     
@@ -226,6 +239,10 @@ def main():
         g.despine(left=True)
         g.set_axis_labels("Site", f"{metric}")
         g.legend.set_title("Model")
+
+        # Update the x-axis labels with the number of subjects per site
+        new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
+        g.ax.set_xticklabels(new_labels) #, rotation=45, ha='right')
 
         print(f"\tSaving the plot for {metric}_sc")
         plt.savefig(os.path.join(path_out, f"{metric}_sc.png"))
