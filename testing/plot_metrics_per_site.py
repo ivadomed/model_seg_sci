@@ -132,7 +132,7 @@ def main():
 
                 # NOTE: because multi-channel model has only 1 label, it has to be renamed to 2.0 to match
                 # the label id with the region-based models
-                if 'SCIsegV2Multi' in df['model'].values[0]:
+                if 'SCIsegV2_multi' in df['model'].values[0]:
                     df['label'] = 2.0
 
                 df_sites = pd.concat([df_sites, df])
@@ -177,16 +177,16 @@ def main():
 
         # use seaborn catplot to plot the metrics
         sns.set_theme(style="whitegrid")
-        # set font to Helvetica
-        plt.rcParams['font.family'] = 'serif'
-        plt.rcParams['font.serif'] = ['Helvetica'] #+ plt.rcParams['font.serif']
+        # # set font to Helvetica
+        # plt.rcParams['font.family'] = 'serif'
+        # plt.rcParams['font.serif'] = ['Helvetica'] #+ plt.rcParams['font.serif']
         # figure size
         g = sns.catplot(
             data=df_metric, x='site', y=f'{metric}_mean',
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
             hue_order=order_models,
         )
-        g.ax.figure.set_size_inches(15, 7)
+        g.ax.figure.set_size_inches(14, 7)
         # y-axis limits
         g.set(ylim=(0, 1))
         g.ax.set_yticks(np.arange(0, 1.1, 0.1))
@@ -213,7 +213,7 @@ def main():
             g.set_axis_labels("", f"{metric.upper()}", fontsize=14, fontweight='bold')
 
         # Add space on top for the legend
-        plt.subplots_adjust(top=0.85)
+        plt.subplots_adjust(left=0.05, right=0.97, top=0.85, bottom=0.125)
         
         # create a horizontal legend with the model names
         g.ax.legend(loc='upper center', ncol=num_models_to_compare, bbox_to_anchor=(0.485, 1.15), 
@@ -224,7 +224,7 @@ def main():
         g.ax.set_xticklabels(new_labels, fontsize=12, fontweight='bold')
             
         print(f"\tSaving the plot for {metric}")
-        plt.savefig(os.path.join(path_out, f"{metric}_lesion.png"))
+        plt.savefig(os.path.join(path_out, f"{metric}_lesion.png"), dpi=300)
 
     # create a df only of lesions
     df_mega = df_mega[df_mega['label'] == 2.0]
@@ -240,7 +240,7 @@ def main():
         'lesion_f1_score_mean', 'lesion_f1_score_std']]
     # print(df_mega.reset_index(drop=True)) #.to_latex(index=False))
     # save the df_mega dataframe to a csv file
-    df_mega.to_csv(os.path.join(path_out, 'lesions_metrics.csv'), index=False)
+    df_mega.to_csv(os.path.join(path_out, 'lesion_metrics.csv'), index=False)
 
     
     # print("Generating plots for SC")
