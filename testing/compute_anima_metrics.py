@@ -89,6 +89,7 @@ import argparse
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 import numpy as np
+import pandas as pd
 import nibabel as nib
 from test_utils import fetch_filename_details
 
@@ -276,6 +277,7 @@ def main():
                                                         training_type=training_type)
 
         test_metrics = defaultdict(list)
+        subject_files_final = []
 
         # Update the test metrics dictionary by iterating over all subjects
         for subject_filepath in subject_filepaths:
@@ -294,24 +296,52 @@ def main():
             for metric in list(root_node):
                 name, value = metric.get('name'), float(metric.text)
 
-                if np.isinf(value) or np.isnan(value):
-                    print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
-                    continue
+                # if np.isinf(value) or np.isnan(value):
+                #     print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
+                #     continue
 
                 test_metrics[name].append(value)
 
-        # Print aggregation of each metric via mean and standard dev.
-        with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-            print('Test Phase Metrics [ANIMA]: ', file=f)
+            subject_files_final.append(subject_filepath)
 
-        print('Test Phase Metrics [ANIMA]: ')
-        for key in test_metrics:
-            print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
+        # convert test_metrics to a dataframe
+        df = pd.DataFrame(test_metrics)
+        # create a column Prediction and add the sub_ses to it
+        df['Prediction'] = [f"{os.path.split(subject_file)[-1]}" for subject_file in subject_files_final]
+        # bring the `Prediction` and `Label` columns to the front
+        df = df[['Prediction', 'Label'] + [col for col in df.columns if col not in ['Prediction', 'Label']]]
+        # sort the dataframe by the `Prediction` column
+        df = df.sort_values(by='Prediction')
+        # drop any rows iwth NaN values
+        df = df.dropna()
+        # format output up to 3 decimal places
+        df = df.round(3)
+        # save the dataframe to a csv file
+        df.to_csv(os.path.join(output_folder, f'anima_metrics.csv'), index=False)
+
+        df_mean = (df.drop(columns=['Prediction']).groupby('Label').agg(['mean', 'std']).reset_index())
+        # Convert multi-index to flat index
+        df_mean.columns = ['_'.join(col).strip() for col in df_mean.columns.values]
+        # Rename column `label_` back to `label`
+        df_mean.rename(columns={'Label_': 'Label'}, inplace=True)
+
+        df_mean = df_mean.round(3)
+        
+        # save the dataframe to a csv file
+        df_mean.to_csv(os.path.join(output_folder, f'anima_metrics_mean.csv'), index=False)
+
+        # # Print aggregation of each metric via mean and standard dev.
+        # with open(os.path.join(output_folder, f'logs.txt'), 'a') as f:
+        #     print('Test Phase Metrics [ANIMA]: ', file=f)
+
+        # print('Test Phase Metrics [ANIMA]: ')
+        # for key in test_metrics:
+        #     print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
             
-            # save the metrics to a log file
-            with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                        print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
-                                (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
+        #     # save the metrics to a log file
+        #     with open(os.path.join(output_folder, f'logs.txt'), 'a') as f:
+        #                 print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
+        #                         (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
         
     else:
 
@@ -324,6 +354,7 @@ def main():
         for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
         
             test_metrics = defaultdict(list)
+            subject_files_final = []
 
             # Update the test metrics dictionary by iterating over all subjects
             for subject_filepath in subject_filepaths:
@@ -344,24 +375,52 @@ def main():
                 for metric in list(root_node):
                     name, value = metric.get('name'), float(metric.text)
 
-                    if np.isinf(value) or np.isnan(value):
-                        print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
-                        continue
+                    # if np.isinf(value) or np.isnan(value):
+                    #     print(f'Skipping Metric={name} for Subject={int(subject):03d} Due to INF or NaNs!')
+                    #     continue
 
                     test_metrics[name].append(value)
-
-            # Print aggregation of each metric via mean and standard dev.
-            with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                print(f'Test Phase Metrics [ANIMA] for {seg_type}: ', file=f)
-
-            print(f'Test Phase Metrics [ANIMA] for {seg_type}: ')
-            for key in test_metrics:
-                print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
                 
-                # save the metrics to a log file
-                with open(os.path.join(output_folder, f'log_{dataset_name}.txt'), 'a') as f:
-                            print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
-                                    (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
+                subject_files_final.append(subject_filepath)
+
+            # convert test_metrics to a dataframe
+            df = pd.DataFrame(test_metrics)
+            # create a column Prediction and add the sub_ses to it
+            df['Prediction'] = [f"{os.path.split(subject_file)[-1]}" for subject_file in subject_files_final]
+            # bring the `Prediction` and `Label` columns to the front
+            df = df[['Prediction', 'Label'] + [col for col in df.columns if col not in ['Prediction', 'Label']]]
+            # sort the dataframe by the `Prediction` column
+            df = df.sort_values(by='Prediction')
+            # drop any rows iwth NaN values
+            df = df.dropna()
+            # format output up to 3 decimal places
+            df = df.round(3)
+            # save the dataframe to a csv file
+            df.to_csv(os.path.join(output_folder, f'anima_metrics_{seg_type}.csv'), index=False)
+
+            df_mean = (df.drop(columns=['Prediction']).groupby('Label').agg(['mean', 'std']).reset_index())
+            # Convert multi-index to flat index
+            df_mean.columns = ['_'.join(col).strip() for col in df_mean.columns.values]
+            # Rename column `label_` back to `label`
+            df_mean.rename(columns={'Label_': 'Label'}, inplace=True)
+
+            df_mean = df_mean.round(3)
+            
+            # save the dataframe to a csv file
+            df_mean.to_csv(os.path.join(output_folder, f'anima_metrics_mean_{seg_type}.csv'), index=False)
+
+            # # Print aggregation of each metric via mean and standard dev.
+            # with open(os.path.join(output_folder, f'logs.txt'), 'a') as f:
+            #     print(f'Test Phase Metrics [ANIMA] for {seg_type}: ', file=f)
+
+            # print(f'Test Phase Metrics [ANIMA] for {seg_type}: ')
+            # for key in test_metrics:
+            #     print('\t%s -> Mean: %0.4f Std: %0.2f' % (key, np.mean(test_metrics[key]), np.std(test_metrics[key])))
+                
+            #     # save the metrics to a log file
+            #     with open(os.path.join(output_folder, f'logs.txt'), 'a') as f:
+            #                 print("\t%s --> Mean: %0.3f, Std: %0.3f" % 
+            #                         (key, np.mean(test_metrics[key]), np.std(test_metrics[key])), file=f)
 
 
 if __name__ == '__main__':
