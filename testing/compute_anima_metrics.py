@@ -106,27 +106,21 @@ def get_parser():
                         help='Path to the folder containing nifti images of test predictions')
     parser.add_argument('--gt-folder', required=True, type=str,
                         help='Path to the folder containing nifti images of GT labels')
-    parser.add_argument('-dname', '--dataset-name', required=True, type=str,
-                        help='Dataset name used for storing on git-annex. For region-based metrics, '
-                             'append "-region" to the dataset name')
-    parser.add_argument('--label-type', required=True, type=str, choices=['sc', 'lesion'],
-                        help='Type of prediction and GT label to be used for ANIMA evaluation.'
-                            'Options: "sc" for spinal cord segmentation, "lesion" for lesion segmentation'
-                            'NOTE: when label-type is "lesion", additional lesion detection metrics, namely,'
-                            'Lesion PPV, Lesion Sensitivity, and F1_score are computed')
+    parser.add_argument('--training-type', required=True, type=str, choices=['region-based', 'multi-channel'],
+                        help='Type of training used for the model. Options: "region-based", "multi-channel"')
     # parser.add_argument('-o', '--output-folder', required=True, type=str,
     #                     help='Path to the output folder to save the test metrics results')
 
     return parser
 
 
-def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, data_set, label_type):
+def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path, training_type):
     """
     Computes the test metrics given folders containing nifti images of test predictions 
     and GT images by running the "animaSegPerfAnalyzer" command
     """
     
-    if data_set in REGION_BASED_DATASETS:
+    if training_type == 'region-based':
 
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
@@ -193,7 +187,7 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
         
         return subject_sc_filepaths, subject_lesion_filepaths
 
-    elif data_set in STANDARD_DATASETS:
+    elif training_type == 'multi-channel':
         # glob all the predictions and GTs and get the last three digits of the filename
         pred_files = sorted(glob.glob(os.path.join(pred_folder, "*.nii.gz")))
         gt_files = sorted(glob.glob(os.path.join(gt_folder, "*.nii.gz")))
@@ -231,12 +225,9 @@ def get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_bin
             nib.save(img=gtc_nib, filename=os.path.join(gt_folder, f"{dataset_name_nnunet}_{idx_gt}_bin.nii.gz"))
 
             # Run ANIMA segmentation performance metrics on the predictions            
-            if label_type == 'lesion':
-                 seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -l -s -X'
-            elif label_type == 'sc':
-                seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -s -X'
-            else:
-                raise ValueError('Please specify a valid label type: lesion or sc')
+            # if label_type == 'lesion':
+            # running metrics for lesion segmentaion as multi-channel model segments only the lesions
+            seg_perf_analyzer_cmd = '%s -i %s -r %s -o %s -d -l -s -X'
 
             os.system(seg_perf_analyzer_cmd %
                         (os.path.join(anima_binaries_path, 'animaSegPerfAnalyzer'),
@@ -271,19 +262,18 @@ def main():
 
     # define variables
     pred_folder, gt_folder = args.pred_folder, args.gt_folder
-    dataset_name = args.dataset_name
-    label_type = args.label_type
+    training_type = args.training_type
 
     output_folder = os.path.join(pred_folder, f"anima_stats")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
     print(f"Saving ANIMA performance metrics to {output_folder}")
 
-    if dataset_name not in REGION_BASED_DATASETS:
+    if training_type == 'multi-channel':
 
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_filepaths = get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                                        data_set=dataset_name, label_type=label_type)
+                                                        training_type=training_type)
 
         test_metrics = defaultdict(list)
 
@@ -296,8 +286,10 @@ def main():
             # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
             # with empty GTs by checked if the length of the .xml file is 2
             if len(root_node) == 2:
-                print(f"Skipping Subject={int(subject):03d} ENTIRELY Due to Empty GT!")
+                print(f"Skipping Subject={os.path.split(subject_filepath)[-1]} ENTIRELY Due to Empty GT!")
                 continue
+
+            test_metrics['Label'] = 2.0  # corresponds to lesion
 
             for metric in list(root_node):
                 name, value = metric.get('name'), float(metric.text)
@@ -326,7 +318,7 @@ def main():
         # Get all XML filepaths where ANIMA performance metrics are saved for each hold-out subject
         subject_sc_filepaths, subject_lesion_filepaths = \
             get_test_metrics_by_dataset(pred_folder, gt_folder, output_folder, anima_binaries_path,
-                                        data_set=dataset_name, label_type=label_type)
+                                        training_type=training_type)
 
         # loop through the sc and lesion filepaths and get the metrics
         for subject_filepaths in [subject_sc_filepaths, subject_lesion_filepaths]:
@@ -344,8 +336,10 @@ def main():
                 # NbTestedLesions and VolTestedLesions, both of which are zero. Hence, we can skip subjects
                 # with empty GTs by checked if the length of the .xml file is 2
                 if len(root_node) == 2:
-                    print(f"Skipping Subject={int(subject):03d} ENTIRELY Due to Empty GT!")
+                    print(f"Skipping Subject={os.path.split(subject_filepath)[-1]} ENTIRELY Due to Empty GT!")
                     continue
+
+                test_metrics['Label'] = 1.0 if seg_type == 'sc' else 2.0
 
                 for metric in list(root_node):
                     name, value = metric.get('name'), float(metric.text)
