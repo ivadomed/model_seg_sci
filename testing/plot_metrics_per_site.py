@@ -4,16 +4,18 @@ import argparse
 import seaborn as sns
 from loguru import logger
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 test_sites = {
     "SCI": ["dcm-zurich-lesions-20231115", "sci-colorado", "sci-zurich", "site-003", "site-014"],
     }
 
 sites_to_rename = {
-  'dcm-zurich-lesions-20231115': 'site-01 \n(nontraumatic SCI)',
+  'dcm-zurich-lesions-20231115': 'site-01 \n(non-traumatic SCI)',
   'sci-colorado': 'site-02 \n(traumatic SCI)',
   'sci-zurich': 'site-01 \n(traumatic SCI)',
   'sci-paris': 'site-03',                           # not shown in the figure (training only), but listing here for completeness
@@ -73,21 +75,21 @@ def find_model_in_path(path):
     # Find 'nnUNetTrainer' followed by the model name
     if 'Dataset501_allSCIsegV2RegionSeed710' in path:
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Region\n_OriginalDA'
+            model = 'SCIsegV2_single\ndefaultDA'
         elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Region\n_AggressiveDA'
+            model = 'SCIsegV2_single\naggressiveDA'
     
     elif 'Dataset502_allSCIsegV2MultichannelSeed710' in path:
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Multi\n_OriginalDA'
+            model = 'SCIsegV2_multi\ndefaultDA'
         elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2Multi\n_AggressiveDA'
+            model = 'SCIsegV2_multi\naggressiveDA'
     
     elif 'Dataset521_DCMsegV2RegionSeed710' in path:
         model = 'DCM'
     
     elif 'Dataset511_acuteSCIsegV2RegionSeed710' in path:
-        model = 'acuteSCI'
+        model = 'AcuteSCI'
     
     else:
         model = 'SCIsegV1'
@@ -98,7 +100,8 @@ def find_model_in_path(path):
 def main():
 
     args = get_parser().parse_args()
-    path_out = args.o
+    now = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path_out = f"{args.o}" #_{now}"
     if not os.path.exists(path_out):
         os.makedirs(path_out, exist_ok=True)
 
@@ -142,11 +145,6 @@ def main():
 
         df_mega = pd.concat([df_mega, df_folds])
     
-    # print(df_mega.reset_index(drop=True)))
-    # print the df belong to model SCIsegV2Region
-    # df_temp = df_mega[df_mega['model'] == 'SCIsegV2Region'].reset_index(drop=True)
-    # print(df_temp)
-
     # compute the mean and std over sites for each model
     df_mega = df_mega.groupby(['model', 'site', 'label']).mean(numeric_only=True).reset_index()
     # print(df_mega.reset_index(drop=True))
@@ -159,8 +157,15 @@ def main():
         df = df[df['label'] == 2.0]
         num_subs_per_site[sites_to_rename[site]] = df.shape[0]
 
+    # define the order for models
+    order_models = [
+        'AcuteSCI', 
+        'DCM', 'SCIsegV1',
+        'SCIsegV2_single\ndefaultDA', 'SCIsegV2_single\naggressiveDA',
+        'SCIsegV2_multi\ndefaultDA', 'SCIsegV2_multi\naggressiveDA']
+    
     print("Generating plots for Lesions")
-    for metric in metrics_lesion:
+    for metric in ['dsc', 'lesion_ppv', 'lesion_sensitivity', 'lesion_f1_score']:
         # keep the only the dataset, model, and metric columns
         df_metric = df_mega.copy()
         df_metric = df_metric[df_metric['label'] == 2.0]
@@ -172,13 +177,21 @@ def main():
 
         # use seaborn catplot to plot the metrics
         sns.set_theme(style="whitegrid")
+        # set font to Helvetica
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = ['Helvetica'] #+ plt.rcParams['font.serif']
+        # figure size
         g = sns.catplot(
             data=df_metric, x='site', y=f'{metric}_mean',
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
+            hue_order=order_models,
         )
+        g.ax.figure.set_size_inches(15, 7)
         # y-axis limits
         g.set(ylim=(0, 1))
         g.ax.set_yticks(np.arange(0, 1.1, 0.1))
+        # remove the legend
+        g._legend.remove()       
 
         # add error bars from the std values in hte dataframe
         for bar, std in zip(g.ax.patches, df_metric[f'{metric}_std']):
@@ -193,59 +206,86 @@ def main():
             )
 
         g.despine(left=True)
-        g.set_axis_labels("", f"{metric.upper()}")
-        g.legend.set_title("Model")
+        # set in bold and increase the font size
+        if metric == 'dsc':
+            g.set_axis_labels("", "Dice Score", fontsize=14, fontweight='bold')
+        else:
+            g.set_axis_labels("", f"{metric.upper()}", fontsize=14, fontweight='bold')
+
+        # Add space on top for the legend
+        plt.subplots_adjust(top=0.85)
+        
+        # create a horizontal legend with the model names
+        g.ax.legend(loc='upper center', ncol=num_models_to_compare, bbox_to_anchor=(0.485, 1.15), 
+                    fontsize=12)
 
         # Update the x-axis labels with the number of subjects per site
         new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
-        g.ax.set_xticklabels(new_labels) #, rotation=45, ha='right')
+        g.ax.set_xticklabels(new_labels, fontsize=12, fontweight='bold')
             
         print(f"\tSaving the plot for {metric}")
         plt.savefig(os.path.join(path_out, f"{metric}_lesion.png"))
+
+    # create a df only of lesions
+    df_mega = df_mega[df_mega['label'] == 2.0]
+    # keep only the SCIsegV2 models
+    df_mega = df_mega[df_mega['model'].str.contains('SCIsegV2')]
+    # keep only the following metrics
+    df_mega = df_mega[[
+        'model', 'site', 
+        'nsd_mean', 'nsd_std',
+        'rel_vol_error_mean', 'rel_vol_error_std',
+        'lesion_ppv_mean', 'lesion_ppv_std', 
+        'lesion_sensitivity_mean', 'lesion_sensitivity_std', 
+        'lesion_f1_score_mean', 'lesion_f1_score_std']]
+    # print(df_mega.reset_index(drop=True)) #.to_latex(index=False))
+    # save the df_mega dataframe to a csv file
+    df_mega.to_csv(os.path.join(path_out, 'lesions_metrics.csv'), index=False)
+
     
-    print("Generating plots for SC")
-    for metric in metrics_sc:
-        # keep the only the dataset, model, and metric columns
-        df_metric = df_mega.copy()
-        df_metric = df_metric[df_metric['label'] == 1.0]
-        df_metric = df_metric[['model', 'site', f'{metric}_mean', f'{metric}_std']]
+    # print("Generating plots for SC")
+    # for metric in metrics_sc:
+    #     # keep the only the dataset, model, and metric columns
+    #     df_metric = df_mega.copy()
+    #     df_metric = df_metric[df_metric['label'] == 1.0]
+    #     df_metric = df_metric[['model', 'site', f'{metric}_mean', f'{metric}_std']]
 
-        # convert the metric values to float
-        df_metric[f'{metric}_mean'] = df_metric[f'{metric}_mean'].astype(float)
-        df_metric[f'{metric}_std'] = df_metric[f'{metric}_std'].astype(float)
+    #     # convert the metric values to float
+    #     df_metric[f'{metric}_mean'] = df_metric[f'{metric}_mean'].astype(float)
+    #     df_metric[f'{metric}_std'] = df_metric[f'{metric}_std'].astype(float)
 
-        # use seaborn catplot to plot the metrics
-        sns.set_theme(style="whitegrid")
-        g = sns.catplot(
-            data=df_metric, x='site', y=f'{metric}_mean',
-            hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
-        )
-        # y-axis limits
-        g.set(ylim=(0, 1))
-        g.ax.set_yticks(np.arange(0, 1.1, 0.1))
+    #     # use seaborn catplot to plot the metrics
+    #     sns.set_theme(style="whitegrid")
+    #     g = sns.catplot(
+    #         data=df_metric, x='site', y=f'{metric}_mean',
+    #         hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
+    #     )
+    #     # y-axis limits
+    #     g.set(ylim=(0, 1))
+    #     g.ax.set_yticks(np.arange(0, 1.1, 0.1))
 
-        # add error bars from the std values in hte dataframe
-        for bar, std in zip(g.ax.patches, df_metric[f'{metric}_std']):
-            bar_height = bar.get_height()
-            # plot with dashed lines
-            g.ax.errorbar(
-                bar.get_x() + bar.get_width() / 2,
-                bar_height, 
-                yerr=std, fmt='o', markersize=3,
-                color='k', linewidth=1,
-                capsize=3, capthick=1,
-            )
+    #     # add error bars from the std values in hte dataframe
+    #     for bar, std in zip(g.ax.patches, df_metric[f'{metric}_std']):
+    #         bar_height = bar.get_height()
+    #         # plot with dashed lines
+    #         g.ax.errorbar(
+    #             bar.get_x() + bar.get_width() / 2,
+    #             bar_height, 
+    #             yerr=std, fmt='o', markersize=3,
+    #             color='k', linewidth=1,
+    #             capsize=3, capthick=1,
+    #         )
 
-        g.despine(left=True)
-        g.set_axis_labels("Site", f"{metric}")
-        g.legend.set_title("Model")
+    #     g.despine(left=True)
+    #     g.set_axis_labels("Site", f"{metric}")
+    #     g.legend.set_title("Model")
 
-        # Update the x-axis labels with the number of subjects per site
-        new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
-        g.ax.set_xticklabels(new_labels) #, rotation=45, ha='right')
+    #     # Update the x-axis labels with the number of subjects per site
+    #     new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
+    #     g.ax.set_xticklabels(new_labels) #, rotation=45, ha='right')
 
-        print(f"\tSaving the plot for {metric}_sc")
-        plt.savefig(os.path.join(path_out, f"{metric}_sc.png"))
+    #     print(f"\tSaving the plot for {metric}_sc")
+    #     plt.savefig(os.path.join(path_out, f"{metric}_sc.png"))
 
 
 if __name__ == '__main__':
