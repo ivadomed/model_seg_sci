@@ -186,7 +186,7 @@ def main():
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
             hue_order=order_models,
         )
-        g.ax.figure.set_size_inches(14, 7)
+        g.ax.figure.set_size_inches(14, 6.5)
         # y-axis limits
         g.set(ylim=(0, 1))
         g.ax.set_yticks(np.arange(0, 1.1, 0.1))
@@ -212,12 +212,12 @@ def main():
         else:
             g.set_axis_labels("", f"{metric.upper()}", fontsize=14, fontweight='bold')
 
-        # Add space on top for the legend
-        plt.subplots_adjust(left=0.05, right=0.97, top=0.85, bottom=0.125)
+        # Add space on the bottom for the legend
+        plt.subplots_adjust(left=0.05, right=0.97, top=0.95, bottom=0.275)
         
         # create a horizontal legend with the model names
-        g.ax.legend(loc='upper center', ncol=num_models_to_compare, bbox_to_anchor=(0.485, 1.15), 
-                    fontsize=12)
+        g.ax.legend(loc='upper center', ncol=num_models_to_compare, bbox_to_anchor=(0.5, -0.2),
+                    fontsize=12.5)
 
         # Update the x-axis labels with the number of subjects per site
         new_labels = [f"{site}\n(n={num_subs_per_site[site]})" for site in df_metric['site'].unique()]
@@ -228,8 +228,8 @@ def main():
 
     # create a df only of lesions
     df_mega = df_mega[df_mega['label'] == 2.0]
-    # keep only the SCIsegV2 models
-    df_mega = df_mega[df_mega['model'].str.contains('SCIsegV2')]
+    # keep only the SCIsegV2 and SCIsegV1 models
+    df_mega = df_mega[df_mega['model'].str.contains('SCIsegV2|SCIsegV1')]
     # keep only the following metrics
     df_mega = df_mega[[
         'model', 'site', 
