@@ -11,8 +11,6 @@ sites_to_rename = {
 }
 
 metrics_to_rename = {
-    'nsd_mean': 'NSD',
-    'rel_vol_error_mean': 'RVE',
     'lesion_ppv_mean': 'PPVL',
     'lesion_sensitivity_mean': 'SensL',
     'lesion_f1_score_mean': 'F1ScoreL'
@@ -82,8 +80,9 @@ def main():
             \hline
     """
 
-    # drop column with 'rel_vol_error'
+    # drop column with 'rel_vol_error' and 'nsd'
     df.drop(columns=['rel_vol_error_mean', 'rel_vol_error_std'], inplace=True)
+    df.drop(columns=['nsd_mean', 'nsd_std'], inplace=True)
 
     metrics_mean_list = df.columns[df.columns.str.contains('mean')].tolist()
     metrics_std_list = df.columns[df.columns.str.contains('std')].tolist()
@@ -92,7 +91,6 @@ def main():
     df['site'] = df['site'].map(sites_to_rename)
     # Rename models
     df['model'] = df['model'].map(models_to_rename)
-
 
     # Generate rows for each model
     for model in df['model'].unique():
