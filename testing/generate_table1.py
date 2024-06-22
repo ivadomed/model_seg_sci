@@ -17,10 +17,11 @@ metrics_to_rename = {
 }
 
 models_to_rename = {
-    'SCIsegV2Multi\n_AggressiveDA': 'SCIsegV2\nmulti\naggressiveDA',
-    'SCIsegV2Multi\n_OriginalDA': 'SCIsegV2\nmulti\ndefaultDA',
-    'SCIsegV2Region\n_AggressiveDA': 'SCIsegV2\nsingle\naggressiveDA',
-    'SCIsegV2Region\n_OriginalDA': 'SCIsegV2\nsingle\ndefaultDA',
+    'SCIsegV1': 'SCIsegV1',
+    'SCIsegV2_multi\naggressiveDA': 'SCIsegV2\nmulti\naggressiveDA',
+    'SCIsegV2_multi\ndefaultDA': 'SCIsegV2\nmulti\ndefaultDA',
+    'SCIsegV2_single\naggressiveDA': 'SCIsegV2\nsingle\naggressiveDA',
+    'SCIsegV2_single\ndefaultDA': 'SCIsegV2\nsingle\ndefaultDA',
 }
 
 def get_parser():
@@ -68,8 +69,8 @@ def main():
     latex_table = r"""
     \begin{table}[htbp]
         \centering
-        \setlength{\tabcolsep}{5pt} % Adjust the length as needed
-        \caption{Metrics per site for different models}
+        \setlength{\tabcolsep}{4pt} % Adjust the length as needed
+        \caption{Comparison of lesion-wise metrics for \texttt{SCIsegV1} various \texttt{SCIsegV2} models across the 5 testing sites}
         \resizebox{\textwidth}{!}{%
         \begin{tabular}{llccccc}
         \toprule
