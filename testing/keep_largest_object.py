@@ -1,3 +1,6 @@
+"""
+This script iterates through all the predictions and keeps only the largest connected object in each lesion mask.
+"""
 import os
 import glob
 import subprocess
