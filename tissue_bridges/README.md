@@ -46,6 +46,7 @@ Example usage:
 
 ```bash
 cd ~/code/sci-zurich/tissue_bridges
+
 ./01b_compute_tissue_bridges_from_predictions.sh ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0
 ```
 
@@ -63,11 +64,10 @@ Example usage:
 
 ```bash
 cd ~/code/sci-zurich/tissue_bridges
+
 python 02_read_xls_files.py
--dir
-~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/results
--o
-~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/stats
+-dir ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/results
+-o ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/stats
 ```
 
 
@@ -79,8 +79,8 @@ Example usage:
 
 ```bash
 cd ~/code/sci-zurich/tissue_bridges
+
 python 03_compute_statistics.py
--dir 
-tissue_bridges.csv
+-dir tissue_bridges.csv
 ```
 
