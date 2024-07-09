@@ -7,6 +7,8 @@ This folder contains scripts to compare tissue bridges obtained using different 
 
 ## 0. Generate QC
 
+Generate QC to compare ground truth vs predicted lesions.
+
 ### Ground truth
 ```bash
 cd ~/data/data.neuro.polymtl.ca/sci-zurich
