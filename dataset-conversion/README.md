@@ -59,7 +59,7 @@ labels before running the script.
 Note: create venv and install `dataset-conversion/requirements.txt` before running the script.
 
 ```bash
-python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich-rpi ~/datasets/sci-colorado-rpi
+python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zurich ~/datasets/sci-colorado ...
           --path-out ${nnUNet_raw} -dname tSCICombinedRegion -dnum 275 --split 0.8 0.2 --seed 50 --region-based
 ```
 
