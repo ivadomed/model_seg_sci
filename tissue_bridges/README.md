@@ -1,9 +1,10 @@
 # Tissue bridges
 
 This folder contains scripts to compare tissue bridges obtained using different methods:
-    1. manual: manual measurement of tissue bridges on manually segmented (GT) intramedullary lesions -- values provided by collaborators
-    2. semi-automatic: automatic measurement of the tissue bridges using the proposed method on manually segmented (GT) intramedullary lesions (located under `derivatives/labels`)
-    3. automatic: automatic measurement of tissue bridges using SCIsegV2 predictions
+
+1. **_manual_**: manual measurement of tissue bridges on manually segmented (GT) intramedullary lesions -- values provided by collaborators
+2. **_semi-automatic_**: automatic measurement of the tissue bridges using the proposed method on manually segmented (GT) intramedullary lesions (located under `derivatives/labels`)
+3. **_automatic_**: automatic measurement of tissue bridges using SCIsegV2 predictions
 
 ## 0. Generate QC
 
