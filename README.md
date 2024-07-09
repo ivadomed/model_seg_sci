@@ -17,6 +17,7 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 * We have released **SCIsegV2: A Universal Model for Intramedually Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. The new model is available for download using the same installation instructions as below.
 * The computation of midsagittal tissue bridges is now fully-automatied and powered by SCIsegV2. 
+* We have moved away from ANIMA metrics and have started to use MetricsReloaded instead. This [wrapper script](https://github.com/ivadomed/MetricsReloaded/blob/main/compute_metrics_reloaded.py) is used to compute metrics and an internal fork of the package is maintained [here](https://github.com/ivadomed/MetricsReloaded).
 
 
 ## Using SCIsegV2
