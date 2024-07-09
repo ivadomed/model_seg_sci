@@ -1,3 +1,11 @@
+"""
+This (cool) script generates a LaTeX table with the lesion-wise metrics for the SCIsegV2 paper.
+The input to the script is a CSV file containing the metrics across all the sites and models, which is 
+output by the 'plot_metrics_per_site.py' script in the 'model_seg_sci/testing' directory.
+The table is printed to the terminal, which can be copied to the .tex file.
+
+"""
+
 import pandas as pd
 import argparse
 
