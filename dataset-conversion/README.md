@@ -17,6 +17,18 @@ The data used for training the model are hosted on a private repository accordin
   - Single session
   - Number of subjects: 80
   - Post-operative subjects only
+- University of Paris (`sci-paris`) 🇫🇷
+  - Contrasts used for training: Sagittal T2w
+  - Manual segmentations for both SC and lesion only available for Sagittal T2w
+  - Single session
+  - Number of subjects: 14
+  - Lesion etiology: traumatic lesions
+  - Surgery: Mix of operated and non-operated subjects
+- PRAXIS Spinal Cord Institue 🇨🇦
+  - Sites: 
+  - Number of subjects (total): 84
+  - Lesion etiology: Acute pre-operative traumatic SCI
+  
 
 
 ### Names and Versions of the Datasets
