@@ -1,3 +1,8 @@
+"""
+This script generates bar plots for the selected metrics across all sites and models. It automatically
+iterates through all the available folds, plots the metrics and also saves them into a CSV file. 
+The output CSV file is then used to generate the lesion-wise metrics table for the SCIsegV2 paper.
+"""
 import os
 import re
 import argparse
