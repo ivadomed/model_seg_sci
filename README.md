@@ -56,7 +56,7 @@ and `_sc_seg.nii.gz` for the spinal cord.
 This new functionality is available via [SCT](https://github.com/spinalcordtoolbox/spinalcordtoolbox)'s `sct_analyze_lesion`. The function computes the midsagittal tissue bridges and outputs the ventral and dorsal tissue bridges. 
 
 ```bash
-sct_analyze_lesion -h
+sct_analyze_lesion -m <SUBJECT>_lesion_seg.nii.gz -s <SUBJECT>_sc_seg.nii.gz
 ```
 
 
