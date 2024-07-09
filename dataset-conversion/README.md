@@ -66,9 +66,3 @@ python convert_bids_to_nnUNetv2_all_sci_data.py --path-data ~/datasets/sci-zuric
 This command takes as inputs the list of datasets, the output path to store the converted data, the dataset name, the 
 dataset number, the ratio in which train and test subjects are split, the random seed, 
 and `--region-based` or `--multichannel` flag.
-
-
-#### Cropping around the spinal cord
-
-The cropping of the input images, spinal cord GT, and lesion GT around the spinal cord segmentation can be done using 
-the `crop_around_sc.sh` script. The cropping is done based on the dilated spinal cord GT.
