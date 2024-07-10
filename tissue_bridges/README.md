@@ -87,7 +87,7 @@ Example usage:
 ```bash
 cd ~/code/sci-zurich/tissue_bridges
 
-python 03_compute_statistics.py
+python 03_compute_statistics.py \
 -dir tissue_bridges.csv
 ```
 
