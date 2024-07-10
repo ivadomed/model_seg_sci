@@ -3,6 +3,14 @@
 The data used for training the model are hosted on a private repository according to the [BIDS](https://bids.neuroimaging.io) standard. They are gathered from three different sites as shown below (in brackets: the name of the dataset at NeuroPoly's internal server):
 
 - University of Zurich (`sci-zurich`) 🇨🇭
+  - Traumatic SCI
+    - Lesion etiology: Mix of traumatic and ischemic lesions
+    - Surgery: Mix of operated and non-operated subjects
+    - Contrasts available: Sagittal T1w, Sagittal T2w, Axial T2w
+    - Contrasts used for training: Sagittal T2w
+    - Manual segmentations for both spinal cord (SC) and lesion only available for Sagittal T2w
+    - Mix of single and multiple (up to 3) sessions
+    - Number of subjects: 97
   - Non-traumatic SCI
     - Lesion etiology: Degenerative Cervical Myelopathy (DCM)
     - Contrasts used for training: Axial T2w
