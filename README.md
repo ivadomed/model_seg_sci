@@ -2,16 +2,25 @@
 
 [![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf)
 
-This repository contains the code for deep learning-based segmentation of the spinal cord and hyperintense lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
+This repository contains the code for deep learning-based segmentation of the spinal cord and intramedually lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
 
 
 ## Model Overview
 
-The model was trained on raw T2-weighted images of SCI patients from multiple (three) sites. The data included images with both axial and sagittal resolutions. To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. The model also works well on degenerative cervical myelopathy (DCM) lesions. 
+The model was trained on raw T2-weighted images of SCI patients from seven sites comprising traumatic (acute preoperative, intermediate, chronic) and non-traumatic (ischemic SCI and degenerative cervical myelopathy, DCM) SCI lesions. The data included images with heterogenous resolutions (both axial and sagittal) and scanner strengths (1T/1.5T/3T). To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
 
 <img width="1000" alt="figure2_fixed" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e7492462-18aa-4f7d-a03e-22863efaff72">
 
-## Using SCIseg
+## Updates
+
+### 2024-XX-XX
+
+* We have released **SCIsegV2: A Universal Model for Intramedually Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. The new model is available for download using the same installation instructions as below.
+* The computation of midsagittal tissue bridges is now fully-automatied and powered by SCIsegV2. 
+* We have moved away from ANIMA metrics and have started to use MetricsReloaded instead. This [wrapper script](https://github.com/ivadomed/MetricsReloaded/blob/main/compute_metrics_reloaded.py) is used to compute metrics and an internal fork of the package is maintained [here](https://github.com/ivadomed/MetricsReloaded).
+
+
+## Using SCIsegV2
 
 ### Install dependencies
 
@@ -41,6 +50,16 @@ sct_deepseg -i sub-001_T2w.nii.gz -task seg_sc_lesion_t2w_sci
 
 The outputs will be saved in the same directory as the input image, with the suffix `_lesion_seg.nii.gz` for the lesion 
 and `_sc_seg.nii.gz` for the spinal cord.
+
+
+### Automatic measurements of midsagittal tissue bridges
+
+This new functionality is available via [SCT](https://github.com/spinalcordtoolbox/spinalcordtoolbox)'s `sct_analyze_lesion`. The function computes the midsagittal tissue bridges and outputs the ventral and dorsal tissue bridges. 
+
+```bash
+sct_analyze_lesion -m <SUBJECT>_lesion_seg.nii.gz -s <SUBJECT>_sc_seg.nii.gz
+```
+
 
 ## Citation Info
 
