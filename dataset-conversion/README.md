@@ -48,13 +48,20 @@ The data used for training the model are hosted on a private repository accordin
 
 - `sci-zurich`
   - Name: git@data.neuro.polymtl.ca:datasets/sci-zurich
-  - Commit: b3cb6f51  (can be checked by running `git log --oneline` after downloading the dataset)
+  - Commit: 3ba898e0  (can be checked by running `git log --oneline` after downloading the dataset)
 - `sci-colorado`
   - Name: git@data.neuro.polymtl.ca:datasets/sci-colorado
-  - Commit: 1518ecd
+  - Commit: 558303f
 - `sci-paris`   (not used for training)
   - Name: git@data.neuro.polymtl.ca:datasets/sci-paris
-  - Commit: c4e3bf7
+  - Commit: 0a0d252
+- `dcm-zurich-lesions`
+  - Name: git@data.neuro.polymtl.ca:datasets/dcm-zurich-lesions
+  - Commit: d214e06
+- `dcm-zurich-lesions-20231115`
+  - Name: git@data.neuro.polymtl.ca:datasets/dcm-zurich-lesions-20231115
+  - Commit: 28a70d9
+
 
 ### Downloading the Data
 
