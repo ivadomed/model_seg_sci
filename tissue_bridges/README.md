@@ -72,9 +72,9 @@ Example usage:
 ```bash
 cd ~/code/sci-zurich/tissue_bridges
 
-python 02_read_xls_files.py
--dir ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/results
--o ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/stats
+python 02_read_xls_files.py \
+-dir ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/results \
+-o ~/data/results/sci-zurich/sci-zurich_2024-06-24_SCIsegV2_DA5_predictions/fold_0/stats \
 ```
 
 
