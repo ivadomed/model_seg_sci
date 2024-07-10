@@ -62,17 +62,17 @@ The data used for training the model are hosted on a private repository accordin
   - Name: git@data.neuro.polymtl.ca:datasets/dcm-zurich-lesions-20231115
   - Commit: 28a70d9
 - `site-003` (PRAXIS)
-  - Name:
-  - Commit:
+  - Name: gitea@spineimage.ca:TOH/site_03.git
+  - Commit: 92ee944
 - `site-012` (PRAXIS)
-  - Name:
-  - Commit:
+  - Name: gitea@spineimage.ca:NSHA/site_012.git
+  - Commit: 375059b
 - `site-013` (PRAXIS)
-  - Name:
-  - Commit:
+  - Name: gitea@spineimage.ca:HGH/site_013.git
+  - Commit: 7cd7611
 - `site-014` (PRAXIS)
-  - Name:
-  - Commit:
+  - Name: gitea@spineimage.ca:HEJ/site_014.git
+  - Commit: bd8099e
 
 
 ### Downloading the Data
