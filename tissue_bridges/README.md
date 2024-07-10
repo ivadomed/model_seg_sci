@@ -10,6 +10,9 @@ This folder contains scripts to compare tissue bridges obtained using different 
 
 Generate QC to compare ground truth vs predicted lesions.
 
+> Note
+> Manual measurements were provided only for `sub-zh101` to `sub-zh119`.
+
 ### Ground truth
 ```bash
 cd ~/data/data.neuro.polymtl.ca/sci-zurich
