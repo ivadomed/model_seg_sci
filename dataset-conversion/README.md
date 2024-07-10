@@ -25,7 +25,10 @@ The data used for training the model are hosted on a private repository accordin
   - Lesion etiology: traumatic lesions
   - Surgery: Mix of operated and non-operated subjects
 - PRAXIS Spinal Cord Institue 🇨🇦
-  - Sites: 
+  - Sites: `site-003`, `site-012` (training only), `site-013`, `site-014`
+  - Contrasts used for training: Sagittal T2w
+  - Manual segmentations for both spinal cord (SC) and lesion available for Sagittal T2w
+  - Single session
   - Number of subjects (total): 84
   - Lesion etiology: Acute pre-operative traumatic SCI
   
