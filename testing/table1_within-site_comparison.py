@@ -103,23 +103,23 @@ def compare_age(df):
         train_age = site_df[site_df['train_test'] == 'train']['age']
         test_age = site_df[site_df['train_test'] == 'test']['age']
 
-        print(f"{site}: Train subjects: {train_age.mean():.2f} +- {train_age.std():.2f} years")
-        print(f"{site}: Test subjects: {test_age.mean():.2f} +- {test_age.std():.2f} years")
+        print(f"{site}, train subjects: {train_age.mean():.2f} +- {train_age.std():.2f} years")
+        print(f"{site}, test subjects: {test_age.mean():.2f} +- {test_age.std():.2f} years")
 
         # Test data normality
         stat, p_value = normaltest(train_age)
-        print(f"{site}, Train data: normality test p-value: {p_value:.4f}")
+        print(f"{site}, train data: normality test p-value: {p_value:.4f}")
         if p_value > alpha:
-            print(f'{site}: Train data is normally distributed')
+            print(f'{site}, train data is normally distributed')
         else:
-            print(f'{site}: Train data is NOT normally distributed')
+            print(f'{site}, train data is NOT normally distributed')
 
         stat, p_value = normaltest(test_age)
-        print(f"{site}, Test data: normality test p-value: {p_value:.4f}")
+        print(f"{site}, test data: normality test p-value: {p_value:.4f}")
         if p_value > alpha:
-            print(f'{site}: Test data is normally distributed')
+            print(f'{site}, test data is normally distributed')
         else:
-            print(f'{site}: Test data is NOT normally distributed')
+            print(f'{site}, test data is NOT normally distributed')
 
         # Perform Mann-Whitney U test
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mannwhitneyu.html
@@ -147,8 +147,8 @@ def compare_sex_ratios(df):
         test_counts = (len(site_df[(site_df['train_test'] == 'test') & (site_df['sex'] == 'F')]),
                        len(site_df[(site_df['train_test'] == 'test') & (site_df['sex'] == 'M')]))
 
-        print(f'{site}: Train counts (F/M): {train_counts}')
-        print(f'{site}: Test counts (F/M): {test_counts}')
+        print(f'{site}, train counts (F/M): {train_counts}')
+        print(f'{site}, test counts (F/M): {test_counts}')
 
         # Create a contingency table
         contingency_table = np.array([train_counts, test_counts])
