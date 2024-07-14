@@ -3,7 +3,7 @@ Perform within-site age and sex comparison between test and train subjects.
 
 Relevant for Table 1 from https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.
 
-The subjects are listed in `dataset-conversion/dataset_split_seed710.yaml` file.
+The test/train subjects are listed in `dataset-conversion/dataset_split_seed710.yaml` file.
 Note that we need to use the SCIsegV1 version of the dataset:
     https://github.com/ivadomed/model_seg_sci/blob/9832c82f25d2a7803c94cb53fb29303202cd1b31/dataset-conversion/dataset_split_seed710.yaml
 Thus, I downloaded the file and passed the path to the script as an argument ('-yml-file').
