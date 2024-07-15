@@ -97,8 +97,13 @@ def compare_age(df):
     :return:
     """
     alpha = 0.05
-    for site in ['sci-zurich', 'sci-colorado']:
-        site_df = df[df['site'] == site]
+    for site in ['sci-zurich', 'sci-colorado', 'both']:
+
+        # if site is 'both', we combine subjects from both sites
+        if site == 'both':
+            site_df = df
+        else:
+            site_df = df[df['site'] == site]
 
         train_age = site_df[site_df['train_test'] == 'train']['age']
         test_age = site_df[site_df['train_test'] == 'test']['age']
@@ -138,8 +143,13 @@ def compare_sex_ratios(df):
     """
     alpha = 0.05
     # Create a contingency table
-    for site in ['sci-zurich', 'sci-colorado']:
-        site_df = df[df['site'] == site]
+    for site in ['sci-zurich', 'sci-colorado', 'both']:
+
+        # if site is 'both', we combine subjects from both sites
+        if site == 'both':
+            site_df = df
+        else:
+            site_df = df[df['site'] == site]
 
         # Get a tuple containing the counts of females and males
         train_counts = (len(site_df[(site_df['train_test'] == 'train') & (site_df['sex'] == 'F')]),
