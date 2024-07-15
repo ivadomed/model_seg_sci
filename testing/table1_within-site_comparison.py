@@ -142,7 +142,6 @@ def compare_sex_ratios(df):
     For each site, compare the sex ratios between test and train subjects using the chi-squared test for independence.
     """
     alpha = 0.05
-    # Create a contingency table
     for site in ['sci-zurich', 'sci-colorado', 'both']:
 
         # if site is 'both', we combine subjects from both sites
