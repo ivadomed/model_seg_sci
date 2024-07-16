@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 import ptitprince as pt
 
 from functools import reduce
-from scipy.stats import wilcoxon, normaltest, kruskal
+from scipy.stats import wilcoxon, mannwhitneyu, normaltest, kruskal
 from statsmodels.stats.multitest import multipletests
 
 # Initialize logging
@@ -485,6 +485,38 @@ def compute_wilcoxon_test(df_concat, list_of_metrics):
                         f'formatted p{format_pvalue(p)}, unformatted p={p:0.6f}')
 
 
+def compute_mann_whitney_u_test(df_concat, list_of_metrics):
+    """
+    Compute Mann-Whitney U test (nonparametric, independent samples) between site 1 and site 2
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mannwhitneyu.html
+    :param df_concat: dataframe containing all the data
+    :param list_of_metrics: list of metrics to compute the Mann-Whitney U test for
+    :return:
+    """
+
+    logger.info('')
+
+    # Remove 'NbTestedLesions' and 'VolTestedLesions' from the list of metrics
+    list_of_metrics = [metric for metric in list_of_metrics if metric not in ['NbTestedLesions', 'VolTestedLesions']]
+
+    # Loop across nnunet_2d, nnunet_3d
+    for method in df_concat['method'].unique():
+        # Loop across metrics
+        for metric in list_of_metrics:
+            # Prepare the data
+            df_site1_metric = df_concat[(df_concat['site'] == 'zurich') & (df_concat['method'] == method)][metric]
+            df_site2_metric = df_concat[(df_concat['site'] == 'colorado') & (df_concat['method'] == method)][metric]
+
+            # Drop nan
+            df_site1_metric = df_site1_metric.dropna()
+            df_site2_metric = df_site2_metric.dropna()
+
+            # Compute Mann-Whitney U test
+            stat, p = mannwhitneyu(df_site1_metric, df_site2_metric, alternative='two-sided')
+            logger.info(f'{metric}, {method}: Mann-Whitney U test between Zurich and Colorado: '
+                        f'formatted p{format_pvalue(p)}, unformatted p={p:0.6f}')
+
+
 def compute_kruskal_wallis_test(df_concat, list_of_metrics):
     """
     Compute Kruskal-Wallis H-test (non-parametric version of ANOVA)
@@ -648,9 +680,13 @@ def main():
     # Print colorado subjects with Dice=0
     print_colorado_subjects_with_dice_0(df_concat)
 
-    # For lesions, compute Wilcoxon signed-rank test test between nnunet_3d and nnunet_2d
+    # For lesions:
+    # - compute Wilcoxon signed-rank test (nonparametric, paired) between nnunet_3d and nnunet_2d
+    # - compute Mann-Whitney U test (nonparametric, independent samples) between site 1 and site 2
     if pred_type == 'lesion':
         compute_wilcoxon_test(df_concat, list_of_metrics)
+        # site 1 vs site 2
+        compute_mann_whitney_u_test(df_concat, list_of_metrics)
     # For SC, compute Kruskal-Wallis H-test (we have 6 methods)
     else:
         compute_kruskal_wallis_test(df_concat, list_of_metrics)
