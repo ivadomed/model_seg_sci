@@ -666,6 +666,9 @@ def main():
     # Concatenate the list of dataframes into a single dataframe
     df_concat = pd.concat(list_of_df, ignore_index=True)
 
+    # Drop filename column (to avoid error for the following '.groupby' and '.mean()' commands)
+    df_concat = df_concat.drop(columns=['filename'])
+
     # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
     # metrics across seeds for the same subject.
     df_concat = df_concat.groupby(['participant_id', 'session_id', 'site', 'method']).mean().reset_index()
