@@ -440,7 +440,8 @@ def print_colorado_subjects_with_dice_0(df_concat):
 
 def compute_wilcoxon_test(df_concat, list_of_metrics):
     """
-    Compute Wilcoxon signed-rank test (two related paired samples -- a same subject for nnunet_3d vs nnunet_2d)
+    Compute Wilcoxon signed-rank test (nonparametric, paired -- two related paired samples -- a same subject for
+    nnunet_3d vs nnunet_2d)
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.wilcoxon.html
     :param df_concat: dataframe containing all the data
     :param list_of_metrics: list of metrics to compute the Wilcoxon test for
@@ -687,6 +688,7 @@ def main():
     # - compute Wilcoxon signed-rank test (nonparametric, paired) between nnunet_3d and nnunet_2d
     # - compute Mann-Whitney U test (nonparametric, independent samples) between site 1 and site 2
     if pred_type == 'lesion':
+        # nnunet_3d and nnunet_2d
         compute_wilcoxon_test(df_concat, list_of_metrics)
         # site 1 vs site 2
         compute_mann_whitney_u_test(df_concat, list_of_metrics)
