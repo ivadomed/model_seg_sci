@@ -1,6 +1,6 @@
 # SCISeg: Automatic Segmentation of T2-weighted Intramedullary Lesions in Spinal Cord Injury
 
-[![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf) [![arXiv](https://img.shields.io/badge/arXiv-2407.17265-b31b1b.svg)](https://doi.org/10.48550/arXiv.2407.17265)
+`SCIsegV1`: [![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf) `SCIsegV2`: [![arXiv](https://img.shields.io/badge/arXiv-2407.17265-b31b1b.svg)](https://doi.org/10.48550/arXiv.2407.17265)
 
 This repository contains the code for deep learning-based segmentation of the spinal cord and intramedually lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
 
