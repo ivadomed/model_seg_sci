@@ -19,6 +19,7 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 * We have released **SCIsegV2: A Universal Model for Intramedullary Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. SCIsegV2 is available as part of the SCT via the `sct_deepseg` function; see the installation instructions below.
 * The computation of midsagittal tissue bridges is now fully-automated and powered by SCIsegV2. The automatic computation of tissue bridges is available via the `sct_analyze_lesion` function as part of SCT v6.4 and higher.
 * We have moved away from ANIMA metrics and have started to use MetricsReloaded instead. This [wrapper script](https://github.com/ivadomed/MetricsReloaded/blob/main/compute_metrics_reloaded.py) is used to compute metrics and an internal fork of the package is maintained [here](https://github.com/ivadomed/MetricsReloaded).
+* The computation of midsagittal tissue bridges is now fully-automated and powered by SCIsegV2. The automatic computation of tissue bridges is available via the `sct_analyze_lesion` function as part of SCT v6.4 and higher.
 
 
 ## Using SCIsegV2
