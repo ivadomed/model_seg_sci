@@ -21,6 +21,7 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 * We have moved away from ANIMA metrics and have started to use MetricsReloaded instead. This [wrapper script](https://github.com/ivadomed/MetricsReloaded/blob/main/compute_metrics_reloaded.py) is used to compute metrics and an internal fork of the package is maintained [here](https://github.com/ivadomed/MetricsReloaded).
 * The computation of midsagittal tissue bridges is now fully-automated and powered by SCIsegV2. The automatic computation of tissue bridges is available via the `sct_analyze_lesion` function as part of SCT v6.4 and higher.
 
+<img width="1000" alt="SCIsegV2_Fig2_tissue_bridges" src="https://github.com/user-attachments/assets/dcfdf5aa-3956-4ae5-9461-9d70f6a73e5f">
 
 ## Using SCIsegV2
 
