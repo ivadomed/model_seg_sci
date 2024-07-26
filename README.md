@@ -85,7 +85,7 @@ If you find this work and/or code useful for your research, please cite our pape
 ```
 @article {karthik2024scisegv2universaltoolsegmentation,
       title={SCIsegV2: A Universal Tool for Segmentation of Intramedullary Lesions in Spinal Cord Injury}, 
-      author={Enamundram Naga Karthik* and Jan Valošek* and Lynn Farner and Dario Pfyffer and Simon Schading-Sassenhausen and Anna Lebret and Gergely David and Andrew C. Smith and Kenneth A. Weber II au2 and Maryam Seif and RHSCIR Network Imaging Group and Patrick Freund and Julien Cohen-Adad},
+      author={Enamundram Naga Karthik* and Jan Valošek* and Lynn Farner and Dario Pfyffer and Simon Schading-Sassenhausen and Anna Lebret and Gergely David and Andrew C. Smith and Kenneth A. Weber II and Maryam Seif and RHSCIR Network Imaging Group and Patrick Freund and Julien Cohen-Adad},
       year={2024},
       eprint={2407.17265},
       archivePrefix={arXiv},
