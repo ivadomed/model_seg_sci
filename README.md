@@ -4,7 +4,6 @@
 
 This repository contains the code for deep learning-based segmentation of the spinal cord and intramedually lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
 
-
 ## Model Overview
 
 The model was trained on raw T2-weighted images of SCI patients from seven sites comprising traumatic (acute preoperative, intermediate, chronic) and non-traumatic (ischemic SCI and degenerative cervical myelopathy, DCM) SCI lesions. The data included images with heterogenous resolutions (both axial and sagittal) and scanner strengths (1T/1.5T/3T). To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
