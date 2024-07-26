@@ -1,30 +1,31 @@
 # SCISeg: Automatic Segmentation of T2-weighted Intramedullary Lesions in Spinal Cord Injury
 
-[![medRxiv](https://img.shields.io/badge/medRxiv-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf)
+[![medRxiv](https://img.shields.io/badge/medRxiv:SCIsegV1-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf) [![arXiv](https://img.shields.io/badge/arXiv:SCIsegV2-2407.17265-b31b1b.svg)](https://doi.org/10.48550/arXiv.2407.17265)
 
 This repository contains the code for deep learning-based segmentation of the spinal cord and intramedually lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
-
 
 ## Model Overview
 
 The model was trained on raw T2-weighted images of SCI patients from seven sites comprising traumatic (acute preoperative, intermediate, chronic) and non-traumatic (ischemic SCI and degenerative cervical myelopathy, DCM) SCI lesions. The data included images with heterogenous resolutions (both axial and sagittal) and scanner strengths (1T/1.5T/3T). To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
 
-<img width="1000" alt="figure2_fixed" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e7492462-18aa-4f7d-a03e-22863efaff72">
+<img width="1000" alt="SCIsegV1_Fig2_Overview_of_segmentation_approach" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e7492462-18aa-4f7d-a03e-22863efaff72">
 
 ## Updates
 
-### 2024-XX-XX
+### 2024-07-24
 
-* We have released **SCIsegV2: A Universal Model for Intramedually Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. The new model is available for download using the same installation instructions as below.
-* The computation of midsagittal tissue bridges is now fully-automatied and powered by SCIsegV2. 
+* We have released **SCIsegV2: A Universal Model for Intramedullary Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. SCIsegV2 is available as part of the SCT via the `sct_deepseg` function; see the installation instructions below.
+* The computation of midsagittal tissue bridges is now fully-automated and powered by SCIsegV2. The automatic computation of tissue bridges is available via the `sct_analyze_lesion` function as part of SCT v6.4 and higher.
 * We have moved away from ANIMA metrics and have started to use MetricsReloaded instead. This [wrapper script](https://github.com/ivadomed/MetricsReloaded/blob/main/compute_metrics_reloaded.py) is used to compute metrics and an internal fork of the package is maintained [here](https://github.com/ivadomed/MetricsReloaded).
+* The computation of midsagittal tissue bridges is now fully-automated and powered by SCIsegV2. The automatic computation of tissue bridges is available via the `sct_analyze_lesion` function as part of SCT v6.4 and higher.
 
+<img width="1000" alt="SCIsegV2_Fig2_tissue_bridges" src="https://github.com/user-attachments/assets/dcfdf5aa-3956-4ae5-9461-9d70f6a73e5f">
 
 ## Using SCIsegV2
 
 ### Install dependencies
 
-- [Spinal Cord Toolbox (SCT) v6.2](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.2) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
+- [Spinal Cord Toolbox (SCT) v6.4](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.4) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
 - [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) 
 - Python (v3.9)
 
@@ -63,7 +64,7 @@ sct_analyze_lesion -m <SUBJECT>_lesion_seg.nii.gz -s <SUBJECT>_sc_seg.nii.gz
 
 ## Citation Info
 
-If you find this work and/or code useful for your research, please cite our paper:
+If you find this work and/or code useful for your research, please cite our papers:
 
 ```
 @article {Naga Karthik2024.01.03.24300794,
@@ -78,5 +79,17 @@ If you find this work and/or code useful for your research, please cite our pape
 	journal = {medRxiv},
 	note = {*Shared first authorship}
 }
+```
 
+```
+@article {karthik2024scisegv2universaltoolsegmentation,
+      title={SCIsegV2: A Universal Tool for Segmentation of Intramedullary Lesions in Spinal Cord Injury}, 
+      author={Enamundram Naga Karthik* and Jan Valošek* and Lynn Farner and Dario Pfyffer and Simon Schading-Sassenhausen and Anna Lebret and Gergely David and Andrew C. Smith and Kenneth A. Weber II and Maryam Seif and RHSCIR Network Imaging Group and Patrick Freund and Julien Cohen-Adad},
+      year={2024},
+      eprint={2407.17265},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2407.17265}, 
+      note = {*Shared first authorship}
+}
 ```
