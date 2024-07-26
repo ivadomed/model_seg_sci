@@ -24,7 +24,7 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 ### Install dependencies
 
-- [Spinal Cord Toolbox (SCT) v6.2](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.2) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
+- [Spinal Cord Toolbox (SCT) v6.4](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.4) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
 - [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) 
 - Python (v3.9)
 
