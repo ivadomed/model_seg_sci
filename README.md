@@ -6,7 +6,7 @@ This repository contains the code for deep learning-based segmentation of the sp
 
 ## Model Overview
 
-The model was trained on raw T2-weighted images of SCI patients from seven sites comprising traumatic (acute preoperative, intermediate, chronic) and non-traumatic (ischemic SCI and degenerative cervical myelopathy, DCM) SCI lesions. The data included images with heterogenous resolutions (both axial and sagittal) and scanner strengths (1T/1.5T/3T). To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
+The model was trained on raw T2-weighted images of SCI patients from seven sites comprising traumatic (acute preoperative, intermediate, chronic) and non-traumatic (ischemic SCI and degenerative cervical myelopathy, DCM) SCI lesions. The data included images with heterogenous resolutions (axial/sagittal/isotropic) and scanner strengths (1T/1.5T/3T). To ensure uniformity across sites, all images were initially re-oriented to RPI. Given an input image, the model is able to segment *both* the lesion and the spinal cord. 
 
 <img width="1000" alt="SCIsegV1_Fig2_Overview_of_segmentation_approach" src="https://github.com/ivadomed/model_seg_sci/assets/53445351/e7492462-18aa-4f7d-a03e-22863efaff72">
 
