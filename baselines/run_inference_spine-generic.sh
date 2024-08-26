@@ -75,9 +75,9 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
 else
     # Segment SC and lesion using SCIsegV2 (part of SCT v6.4)
     # Note: a single axial QC report contains both SC and lesion segmentations
-    # Note: we use CUDA_VISIBLE_DEVICES=0 to run the inference on GPU 0; details:
+    # Note: we use CUDA_VISIBLE_DEVICES=0 SCT_USE_GPU=1 to run the inference on GPU 0; details:
     # https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4421#issuecomment-2263344151
-    CUDA_VISIBLE_DEVICES=0 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -qc ${PATH_QC} -qc-subject ${SUBJECT}
+    CUDA_VISIBLE_DEVICES=0 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -qc ${PATH_QC} -qc-subject ${SUBJECT}
 fi
 
 # ------------------------------------------------------------------------------
