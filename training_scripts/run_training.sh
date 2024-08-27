@@ -4,15 +4,15 @@
 #
 # Example usage:
 #     bash run_training.sh <GPU> <dataset_id> <dataset_name> <config> <trainer>
-#     bash run_training.sh 1 601 Dataset601_SCIlesions_hemorrhage_RegionBasedSeed42 3d_fullres nnUNetTrainer
+#     bash run_training.sh 1 701 Dataset701_SCIlesions_hemorrhage_RegionBasedSeed42 3d_fullres nnUNetTrainer
 #
 # Authors: Naga Karthik, Jan Valosek
 #
 
 # !!! MODIFY THE FOLLOWING VARIABLES ACCORDING TO YOUR NEEDS !!!
 DEVICE=${1}
-dataset_id=${2}                        # e.g. 601
-dataset_name=${3}                      # e.g. Dataset601_SCIlesions_hemorrhage_RegionBasedSeed42
+dataset_id=${2}                        # e.g. 701
+dataset_name=${3}                      # e.g. Dataset701_SCIlesions_hemorrhage_RegionBasedSeed42
 config=${4}                            # e.g. 3d_fullres or 2d
 nnunet_trainer=${5}                    # default: nnUNetTrainer
                                        # other options: nnUNetTrainer_250epochs, nnUNetTrainer_2000epochs,
