@@ -31,6 +31,8 @@ if [[ ! " ${available_trainers[@]} " =~ " ${nnunet_trainer} " ]]; then
     exit 1
 fi
 
+test_sites=("site_007")   # e.g.: ("site_007" "site_009")
+
 # Select number of folds here
 # folds=(0 1 2 3 4)
 # folds=(0 1 2)
@@ -55,12 +57,40 @@ for fold in ${folds[@]}; do
     echo "Training completed, Testing on Fold $fold"
     echo "-------------------------------------------"
 
-#    # inference
-#    CUDA_VISIBLE_DEVICES=${DEVICE} nnUNetv2_predict -i ${nnUNet_raw}/${dataset_name}/imagesTs -tr ${nnunet_trainer} -o ${nnUNet_results}/${nnunet_trainer}__nnUNetPlans__${config}/fold_${fold}/test -d ${dataset_id} -f ${fold} -c ${config}
-#
-#    echo ""
-#    echo "-------------------------------------------"
-#    echo " Inference completed on Fold $fold"
-#    echo "-------------------------------------------"
+    for site in ${test_sites[@]}; do
+        echo "-------------------------------------------"
+        echo "Testing on site: $site"
+        echo "-------------------------------------------"
+        # run inference on test set
+        CUDA_VISIBLE_DEVICES=${DEVICE} nnUNetv2_predict -i ${nnUNet_raw}/${dataset_name}/imagesTs_${site} -tr ${nnunet_trainer} -o ${nnUNet_results}/${dataset_name}/${nnunet_trainer}__nnUNetPlans__${config}/fold_${fold}/test_${site} -d ${dataset_id} -f ${fold} -c ${config}
+    done
+
+    echo "-------------------------------------------"
+    echo "Activating MetricsReloaded Environment ..."
+    echo "-------------------------------------------"
+    conda activate metrics_reloaded
+
+    for site in ${test_sites[@]}; do
+
+        echo "-------------------------------------------"
+        echo "Running Metrics Reloaded on site $site ..."
+        echo "-------------------------------------------"
+
+        # compute metrics
+        python ${HOME}/code/MetricsReloaded/compute_metrics_reloaded.py \
+            -reference ${nnUNet_raw}/${dataset_name}/labelsTs_${site} \
+            -prediction ${nnUNet_results}/${dataset_name}/${nnunet_trainer}__nnUNetPlans__${config}/fold_${fold}/test_${site} \
+            -output ${nnUNet_results}/${dataset_name}/${nnunet_trainer}__nnUNetPlans__${config}/fold_${fold}/test_${site}/${site}_metrics.csv \
+            -metrics dsc rel_vol_error ref_count pred_count \
+            -jobs 8
+
+    done
+
+    conda deactivate
+
+    echo "-------------------------------------------"
+    echo "Metrics computation done!"
+    echo "-------------------------------------------"
+
 
 done
