@@ -2,14 +2,17 @@
 #
 # Run nnUNetv2_plan_and_preprocess, nnUNetv2_train, and nnUNetv2_predict on the dataset
 #
-# Example usage:
+# Dependencies - make sure that your environment has the following dependencies installed:
+#     - nnUNetv2
+#     - MetricsReloaded
+#
+# Example usage (venv needs to be activated):
 #     bash run_training.sh <GPU> <dataset_id> <dataset_name> <config> <trainer>
 #     bash run_training.sh 1 701 Dataset701_SCIlesions_hemorrhage_RegionBasedSeed42 3d_fullres nnUNetTrainer
 #
 # Authors: Naga Karthik, Jan Valosek
 #
 
-# !!! MODIFY THE FOLLOWING VARIABLES ACCORDING TO YOUR NEEDS !!!
 DEVICE=${1}
 dataset_id=${2}                        # e.g. 701
 dataset_name=${3}                      # e.g. Dataset701_SCIlesions_hemorrhage_RegionBasedSeed42
@@ -79,11 +82,6 @@ for fold in ${folds[@]}; do
         CUDA_VISIBLE_DEVICES=${DEVICE} nnUNetv2_predict -i ${nnUNet_raw}/${dataset_name}/imagesTs_${site} -tr ${nnunet_trainer} -o ${nnUNet_results}/${dataset_name}/${nnunet_trainer}__nnUNetPlans__${config}/fold_${fold}/test_${site} -d ${dataset_id} -f ${fold} -c ${config}
     done
 
-    echo "-------------------------------------------"
-    echo "Activating MetricsReloaded Environment ..."
-    echo "-------------------------------------------"
-    conda activate metrics_reloaded
-
     for site in ${test_sites[@]}; do
 
         echo "-------------------------------------------"
@@ -99,8 +97,6 @@ for fold in ${folds[@]}; do
             -jobs 8
 
     done
-
-    conda deactivate
 
     echo "-------------------------------------------"
     echo "Metrics computation done!"
