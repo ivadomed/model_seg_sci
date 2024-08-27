@@ -46,7 +46,7 @@ folds=(0)
 # ------------------------------------------------------------------------------
 
 # Check whether the dataset is already preprocessed, if so, skip preprocessing
-if [[ ! -d ${nnUNet_preprocessed}/${dataset_name}/nnUNetPlans__${config} ]]; then
+if [[ ! -d ${nnUNet_preprocessed}/${dataset_name}/nnUNetPlans_${config} ]]; then
 
     echo "-------------------------------------------------------"
     echo "Running preprocessing and verifying dataset integrity"
