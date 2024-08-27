@@ -38,11 +38,25 @@ test_sites=("site_007")   # e.g.: ("site_007" "site_009")
 # folds=(0 1 2)
 folds=(0)
 
-echo "-------------------------------------------------------"
-echo "Running preprocessing and verifying dataset integrity"
-echo "-------------------------------------------------------"
+# ------------------------------------------------------------------------------
+# SCRIPT STARTS HERE
+# ------------------------------------------------------------------------------
 
-nnUNetv2_plan_and_preprocess -d ${dataset_id} --verify_dataset_integrity -c ${config}
+# Check whether the dataset is already preprocessed, if so, skip preprocessing
+if [[ ! -d ${nnUNet_preprocessed}/${dataset_name}/nnUNetPlans__${config} ]]; then
+
+    echo "-------------------------------------------------------"
+    echo "Running preprocessing and verifying dataset integrity"
+    echo "-------------------------------------------------------"
+    nnUNetv2_plan_and_preprocess -d ${dataset_id} --verify_dataset_integrity -c ${config}
+
+else
+
+    echo "-------------------------------------------------------"
+    echo "Dataset already preprocessed. Skipping preprocessing ..."
+    echo "-------------------------------------------------------"
+
+fi
 
 for fold in ${folds[@]}; do
     echo "-------------------------------------------"
