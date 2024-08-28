@@ -2,7 +2,13 @@
 Convert BIDS-structured SCI datasets (site_007, site_012, etc.) to the nnUNetv2 structure.
 REGION-BASED (default) and MULTICHANNEL training format depending on the input arguments.
 
-Lesions are considered as multi-class labels: `1` for hyperintense edema, `2` for hypointense hemorrhage.
+REGION-BASED:
+    - 1 input channel: T2w image
+    - labels: lesions are considered as multi-class masks: `1` for hyperintense edema, `2` for hypointense hemorrhage.
+
+MULTICHANNEL:
+    - 2 input channels: T2w image and hyperintense edema segmentation (binary mask)
+    - labels: binary mask for the hypointense hemorrhage
 
 NOTE: the script performs RPI reorientation of the images and labels using SCT's Image class.
 
@@ -93,9 +99,12 @@ def get_parser():
     parser.add_argument('--seed', default=42, type=int,
                         help='Seed to be used for the random number generator split into training and test sets.')
     parser.add_argument('--region-based', action='store_true', default=False,
-                        help='If set, the script will create labels for region-based nnUNet training. Default: True')
+                        help='If set, the script will create labels for region-based nnUNet training. The script will '
+                             'automatically include "MultiChannel" to the dataset name. '
+                             'Default: True')
     parser.add_argument('--multichannel', action='store_true', default=False,
                         help='If set, the script will create multi-channel input (edema + hemorrhage) nnUNet training. '
+                             'The script will automatically include "MultiChannel" to the dataset name. '
                              'Default: False')
     # argument that accepts a list of floats as train val test splits
     parser.add_argument('--split', nargs='+', type=float, default=[0.8, 0.2],
@@ -261,6 +270,7 @@ def main():
     args = parser.parse_args()
 
     train_ratio, test_ratio = args.split
+    # Update dataset name with the type of training (region-based or multi-channel)
     if args.region_based:
         path_out = Path(os.path.join(os.path.abspath(args.path_out),
                                      f'Dataset{args.dataset_number}_{args.dataset_name}_RegionBasedSeed{args.seed}'))
@@ -395,7 +405,7 @@ def main():
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
 
-            # use region-based labels if required
+            # REGION-BASED
             elif args.region_based:
                 # overwritten the subject_label_file with the region-based label
                 subject_label_file = get_region_based_label(subject_label_file, subject_image_file,
@@ -445,6 +455,7 @@ def main():
                                                           f'labelsTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}.nii.gz')
 
+            # MULTI-CHANNEL
             if args.multichannel:
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
@@ -463,7 +474,7 @@ def main():
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
 
-            # use region-based labels if required
+            # REGION-BASED
             elif args.region_based:
                 # overwritten the subject_label_file with the region-based label
                 subject_label_file = get_region_based_label(subject_label_file, subject_image_file,
