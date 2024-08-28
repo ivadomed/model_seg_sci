@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Segment SC and lesions using our nnUNet SCIsegV2 model on spine-generic multi-subject T2w iso images and generate
-# QC report
+# Segment SC and lesions using our nnUNet SCIsegV2 model (part of SCT v6.4) on spine-generic multi-subject T2w iso images 
+# and generate QC report
 #
 # Usage:
 #     sct_run_batch -config config.json
