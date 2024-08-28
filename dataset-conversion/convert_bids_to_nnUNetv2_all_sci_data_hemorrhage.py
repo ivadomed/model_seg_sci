@@ -392,16 +392,18 @@ def main():
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
 
-                # channel 0: image, channel 1: lesion
-                subject_sc_file_nnunet = os.path.join(path_out_imagesTr,
+                # Create channel 1 file (with 0001 suffix)
+                # channel 0: image (0000)
+                # channel 1: edema (0001)
+                subject_edema_file_nnunet = os.path.join(path_out_imagesTr,
                                                       f"{args.dataset_name}_{site_name}_{sub_name}_{train_ctr:03d}_0001.nii.gz")
 
-                # overwritten the subject_sc_file_nnunet with the label for multi-channel training
+                # overwritten the subject_edema_file_nnunet with the label for multi-channel training
                 # (hemorrhage is part of edema)
-                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
-                                                                site_name, sub_name, thr=0.5)
+                subject_edema_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
+                                                                   site_name, sub_name, thr=0.5)
 
-                if subject_sc_file is None:
+                if subject_edema_file is None:
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
 
@@ -428,11 +430,11 @@ def main():
             label.save(subject_label_file_nnunet)
 
             if args.multichannel:
-                shutil.copyfile(subject_sc_file, subject_sc_file_nnunet)
-                # convert the SC seg to RPI using the Image class
-                sc_image = Image(subject_sc_file_nnunet)
-                sc_image.change_orientation("RPI")
-                sc_image.save(subject_sc_file_nnunet)
+                shutil.copyfile(subject_edema_file, subject_edema_file_nnunet)
+                # convert the edema seg to RPI using the Image class
+                edema_image = Image(subject_edema_file_nnunet)
+                edema_image.change_orientation("RPI")
+                edema_image.save(subject_edema_file_nnunet)
 
             # don't binarize the label if either of the region-based or multi-channel training is set
             if not args.region_based:
@@ -461,16 +463,16 @@ def main():
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
 
                 # channel 0: image, channel 1: SC seg
-                subject_sc_file_nnunet = os.path.join(Path(path_out,
+                subject_edema_file_nnunet = os.path.join(Path(path_out,
                                                           f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}_0001.nii.gz')
 
-                # overwritten the subject_sc_file_nnunet with the label for multi-channel training
+                # overwritten the subject_edema_file_nnunet with the label for multi-channel training
                 # (hemorrhage is part of edema)
-                subject_sc_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
-                                                                site_name, sub_name, thr=0.5)
+                subject_edema_file = get_multi_channel_label_input(subject_label_file, subject_image_file,
+                                                                   site_name, sub_name, thr=0.5)
 
-                if subject_sc_file is None:
+                if subject_edema_file is None:
                     print(f"Skipping since the multi-channel label could not be generated")
                     continue
 
@@ -496,11 +498,11 @@ def main():
             label.save(subject_label_file_nnunet)
 
             if args.multichannel:
-                shutil.copyfile(subject_sc_file, subject_sc_file_nnunet)
+                shutil.copyfile(subject_edema_file, subject_edema_file_nnunet)
                 # convert the SC seg to RPI using the Image class
-                sc_image = Image(subject_sc_file_nnunet)
-                sc_image.change_orientation("RPI")
-                sc_image.save(subject_sc_file_nnunet)
+                edema_image = Image(subject_edema_file_nnunet)
+                edema_image.change_orientation("RPI")
+                edema_image.save(subject_edema_file_nnunet)
 
             # don't binarize the label if either of the region-based or multi-channel training is set
             if not args.region_based:
