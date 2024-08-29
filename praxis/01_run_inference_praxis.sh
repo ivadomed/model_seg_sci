@@ -103,18 +103,22 @@ cd ${SUBJECT}/anat
 # T2w
 # ------------------------------------------------------------------------------
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
-# If subject is ott004, ott005, sub-hal002 or sub-hal004, add run-01 suffix to the file name
+# Now, we use T2w images from different runs for different subjects
+# This depends on a lot of factors (site, artifact, etc.); see an issue describing suitable images for each site at spineimage.ca/
+# The if-else block below is suboptimal and needs to be updated with each new site --> find a better solution
+# run-01
 if [[ $SUBJECT =~ "ott004" ]] || [[ $SUBJECT =~ "ott005" ]] || [[ $SUBJECT =~ "hal002" ]] || [[ $SUBJECT =~ "hal004" ]]  || [[ $SUBJECT =~ "ham" ]] || [[ $SUBJECT =~ "que002" ]] || [[ $SUBJECT =~ "que008" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-01_T2w
-# If subject is sub-hal006 or sub-hal026, add run-02 suffix to the file name
+# run-02
 elif [[ $SUBJECT =~ "sub-hal006" ]] || [[ $SUBJECT =~ "hal026" ]] || [[ $SUBJECT =~ "que012" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-02_T2w
-# If subject is ott011 or sub-hal011, add run-03 suffix to the file name
+# run-03
 elif [[ $SUBJECT =~ "ott011" ]] || [[ $SUBJECT =~ "hal011" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-03_T2w
-# If subject is sub-que004, add run-04 suffix to the file name
+# run-04
 elif [[ $SUBJECT =~ "que004" ]]; then
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-04_T2w
+# "no run"
 else
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 fi
