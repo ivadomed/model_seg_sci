@@ -127,7 +127,9 @@ if [[ $PATH_DATA =~ "site-007" ]]; then
         # Check if run_number is not empty string
         # (because there might be no run number in the GT lesion mask name, if such a case, use file_t2 as is)
         if [[ -n $run_number ]]; then
-            file_t2="${SUBJECT//[\/]/_}"_run-${run_number}
+            file_t2="${SUBJECT//[\/]/_}"_acq-sag_run-${run_number}_T2w
+        else
+            file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
         fi
     fi
 fi
