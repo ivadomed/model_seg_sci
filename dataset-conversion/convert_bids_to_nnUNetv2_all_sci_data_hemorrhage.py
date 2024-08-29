@@ -392,7 +392,7 @@ def main():
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
 
-                # Create channel 1 file (with 0001 suffix)
+                # Create channel 1 file (with 0001 suffix). Just a reminder:
                 # channel 0: image (0000)
                 # channel 1: edema (0001)
                 subject_edema_file_nnunet = os.path.join(path_out_imagesTr,
@@ -429,6 +429,7 @@ def main():
             label.change_orientation("RPI")
             label.save(subject_label_file_nnunet)
 
+            # Copy the edema file (channel 0001) for multi-channel training
             if args.multichannel:
                 shutil.copyfile(subject_edema_file, subject_edema_file_nnunet)
                 # convert the edema seg to RPI using the Image class
@@ -462,7 +463,7 @@ def main():
                 if args.region_based:
                     raise ValueError("Multi-channel input is not supported with region-based labels.")
 
-                # channel 0: image, channel 1: SC seg
+                # channel 0: image, channel 1: edema seg
                 subject_edema_file_nnunet = os.path.join(Path(path_out,
                                                           f'imagesTs_{find_site_in_path(test_images[subject_label_file])}'),
                                                      f'{args.dataset_name}_{site_name}_{sub_name}_{test_ctr:03d}_0001.nii.gz')
@@ -499,7 +500,7 @@ def main():
 
             if args.multichannel:
                 shutil.copyfile(subject_edema_file, subject_edema_file_nnunet)
-                # convert the SC seg to RPI using the Image class
+                # convert the edema seg to RPI using the Image class
                 edema_image = Image(subject_edema_file_nnunet)
                 edema_image.change_orientation("RPI")
                 edema_image.save(subject_edema_file_nnunet)
