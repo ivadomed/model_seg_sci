@@ -106,6 +106,10 @@ def get_parser():
                         help='If set, the script will create multi-channel input (edema + hemorrhage) nnUNet training. '
                              'The script will automatically include "MultiChannel" to the dataset name. '
                              'Default: False')
+    parser.add_argument('--crop', action='store_true', default=False,
+                        help='If set, the script will crop the image and labels based on the edema mask. '
+                             'The script will automatically include "MultiChannel" to the dataset name. '
+                             'Default: False')
     # argument that accepts a list of floats as train val test splits
     parser.add_argument('--split', nargs='+', type=float, default=[0.8, 0.2],
                         help='Ratios of training (includes validation) and test splits lying between 0-1. Example: '
@@ -278,6 +282,10 @@ def main():
         path_out = Path(os.path.join(os.path.abspath(args.path_out),
                                      f'Dataset{args.dataset_number}_{args.dataset_name}_MultiChannelSeed{args.seed}'))
 
+    # replace 'Seed' by 'CropSeed' if crop is set
+    if args.crop:
+        path_out = Path(str(path_out).replace('Seed', 'CropSeed'))
+
     # create individual directories for train and test images and labels
     path_out_imagesTr = Path(os.path.join(path_out, 'imagesTr'))
     path_out_labelsTr = Path(os.path.join(path_out, 'labelsTr'))
@@ -436,10 +444,21 @@ def main():
                 edema_image = Image(subject_edema_file_nnunet)
                 edema_image.change_orientation("RPI")
                 edema_image.save(subject_edema_file_nnunet)
+                if args.crop:
+                    # Not implemented yet, TODO
+                    pass
 
             # don't binarize the label if either of the region-based or multi-channel training is set
             if not args.region_based:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+            # Crop image and labels based on the edema mask
+            if args.crop:
+                # Use sct_crop_image
+                # Note: since the T2w images are sagittal with thick sagittal slices (usually ~3mm), we only crop by
+                # 5 pixels in R-L (x-axis)
+                os.system(f'sct_crop_image -i {subject_image_file_nnunet} -m {subject_label_file_nnunet} -dilate 5x10x10 -o {subject_image_file_nnunet}')
+                os.system(f'sct_crop_image -i {subject_label_file_nnunet} -m {subject_label_file_nnunet} -dilate 5x10x10 -o {subject_label_file_nnunet}')
 
         # Test images
         elif subject_label_file in test_images:
@@ -504,10 +523,21 @@ def main():
                 edema_image = Image(subject_edema_file_nnunet)
                 edema_image.change_orientation("RPI")
                 edema_image.save(subject_edema_file_nnunet)
+                if args.crop:
+                    # Not implemented yet, TODO
+                    pass
 
             # don't binarize the label if either of the region-based or multi-channel training is set
             if not args.region_based:
                 binarize_label(subject_image_file_nnunet, subject_label_file_nnunet)
+
+            # Crop image and labels based on the edema mask
+            if args.crop:
+                # Use sct_crop_image
+                # Note: since the T2w images are sagittal with thick sagittal slices (usually ~3mm), we only crop by
+                # 5 pixels in R-L (x-axis)
+                os.system(f'sct_crop_image -i {subject_image_file_nnunet} -m {subject_label_file_nnunet} -dilate 5x10x10 -o {subject_image_file_nnunet}')
+                os.system(f'sct_crop_image -i {subject_label_file_nnunet} -m {subject_label_file_nnunet} -dilate 5x10x10 -o {subject_label_file_nnunet}')
 
         else:
             print("Skipping file, could not be located in the Train or Test splits split.", subject_label_file)
