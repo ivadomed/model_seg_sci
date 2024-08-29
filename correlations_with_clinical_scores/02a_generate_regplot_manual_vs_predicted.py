@@ -354,7 +354,7 @@ def compute_wilcoxon_test(df):
             # Compute Wilcoxon signed-rank test between nnunet_3d_method1 and nnunet_3d_method2
             stat, pval = wilcoxon(df_site[metric + '_nnunet_3d_method1'], df_site[metric + '_nnunet_3d_method2'])
             logger.info(f'{site}: Wilcoxon test between {metric}_nnunet_3d_method1 and {metric}_nnunet_3d_method2: '
-                        f'p{format_pvalue(pval)}')
+                        f'p{format_pvalue(pval)}, unformatted p-value: {pval:.4f}')
 
 
 def main():
