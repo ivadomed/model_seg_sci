@@ -122,7 +122,8 @@ if [[ $PATH_DATA =~ "site-007" ]]; then
     FILELESIONMANUAL=$(find ${PATH_DATA}/derivatives/labels/${SUBJECT}/anat -name "*_lesion.nii.gz")
     if [[ -e $FILELESIONMANUAL ]]; then
         # Extract run number from the GT lesion mask name
-        run_number=$(echo $FILELESIONMANUAL | grep -oP 'run-\d{2}' | cut -d'-' -f2)
+        run_number=$(echo $FILELESIONMANUAL | grep -Eo 'run-[0-9]{2}' | sed 's/run-//')
+        echo "Run number: $run_number"
         # Check if run_number is not empty string
         # (because there might be no run number in the GT lesion mask name, if such a case, use file_t2 as is)
         if [[ -n $run_number ]]; then
