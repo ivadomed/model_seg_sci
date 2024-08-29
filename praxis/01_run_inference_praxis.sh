@@ -52,6 +52,7 @@ echo "SUBJECT: ${SUBJECT}"
 # ------------------------------------------------------------------------------
 
 # Copy ground truth (GT) spinal cord or lesion segmentation from derivatives/labels
+# Add 'manual' suffix to the file name to distinguish it from the model output
 copy_gt(){
   local file="$1"
   local type="$2"     # lesion or label-SC_mask
@@ -140,6 +141,8 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "File ${file_t2}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
     echo "ERROR: File ${file_t2}.nii.gz does not exist. Exiting."
     exit 1
+else
+    echo "File ${file_t2}.nii.gz exists"
 fi
 
 # ---------------
