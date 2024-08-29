@@ -1,20 +1,15 @@
 #!/bin/bash
 #
-# Run the SCIseg nnUNet model on T2w images the PRAXIS database (e.g., site_003 and site_012)
+# Run the SCIsegV2 model (part of SCT v6.4) on T2w images from the PRAXIS database (e.g., site_003, site_012, ...)
 # The script is compatible with all PRAXIS datasets but has to be run separately for each dataset.
 #
-# NOTE: since most of the subjects have multiple runs of T2w images, you need to hardcode the run number for each
-# subject into the "T2w" section of this script. I am aware that this is not the best solution...
+# NOTE: since most of the subjects have multiple runs of T2w images, we need to hardcode the run number for each
+# subject into the "T2w" section of this script. I am aware that this is not the best solution..., see the comment
+# above the if-else block below.
 #
 # The script:
-#   - segments SC using our SCIseg nnUNet model - this SC segs are QCed, corrected if needed and uploaded to git-annex
-#   - segments lesion using our SCIseg nnUNet model
-#   - copies ground truth (GT) lesion segmentation from derivatives/labels
-#   - computes ANIMA segmentation performance metrics between GT and predicted lesion segmentation
-#
-# Note: conda environment with nnUNetV2 is required to run this script.
-# For details how to install nnUNetV2, see:
-# https://github.com/ivadomed/utilities/blob/main/quick_start_guides/nnU-Net_quick_start_guide.md#installation
+#   - segments spinal cord and intramedullary lesions the SCIsegV2 nnUNet model and generates QC
+#     Note: a single axial QC report contains both SC and lesion segmentations
 #
 # Usage:
 #     sct_run_batch -config config.json
@@ -24,11 +19,11 @@
 #  "path_data"   : "<PATH_TO_DATASET>",
 #  "path_output" : "<PATH_TO_DATASET>_2024-XX-XX",
 #  "script"      : "<PATH_TO_REPO>/model_seg_sci/praxis/01_run_inference_praxis.sh",
-#  "jobs"        : 8,
-#  "script_args" : "<PATH_TO_REPO>/model_seg_sci/packaging/run_inference_single_subject.py <PATH_TO_MODEL>/sci-multisite-model"
+#  "jobs"        : 8
 # }
 #
-# Author: Jan Valosek, Naga Karthik
+#
+# Author: Jan Valosek
 #
 
 # Uncomment for full verbose
@@ -49,12 +44,8 @@ echo "PATH_LOG: ${PATH_LOG}"
 echo "PATH_QC: ${PATH_QC}"
 
 SUBJECT=$1
-PATH_NNUNET_SCRIPT=$2
-PATH_NNUNET_MODEL=$3
 
 echo "SUBJECT: ${SUBJECT}"
-echo "PATH_NNUNET_SCRIPT: ${PATH_NNUNET_SCRIPT}"
-echo "PATH_NNUNET_MODEL: ${PATH_NNUNET_MODEL}"
 
 # ------------------------------------------------------------------------------
 # CONVENIENCE FUNCTIONS
@@ -151,20 +142,28 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     exit 1
 fi
 
-# -----------
-# Copy GT
-# -----------
+# ---------------
+# run SCIsegV2
+# ---------------
+
+# Segment SC and lesion using SCIsegV2 (part of SCT v6.4)
+# Note: a single axial QC report contains both SC and lesion segmentations
+# Note: we use CUDA_VISIBLE_DEVICES=0 SCT_USE_GPU=1 to run the inference on GPU 0; details:
+# https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4421#issuecomment-2263344151
+CUDA_VISIBLE_DEVICES=0 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -qc ${PATH_QC} -qc-subject ${SUBJECT}
+# Note: outputs are ${file_t2}_sc_seg.nii.gz and ${file_t2}_lesion_seg.nii.gz
+# Generate sagittal lesion QC report
+sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_sc_seg.nii.gz -d ${file_t2}_lesion_seg.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+
+# ---------------
+# Copy GT manual lesion mask and generate QC report (to compare it with the model output)
+# ---------------
 
 # Copy binary GT lesion segmentations from derivatives/labels
 copy_gt "${file_t2}" "lesion"
-
-# -----------
-# run nnUNet 3D
-# -----------
-
-# Segment SC and lesion using our SCIseg nnUNet model
-segment_sc_nnUNet "${file_t2}" '3d'
-segment_lesion_nnUNet "${file_t2}" '3d' 'sagittal'
+# Generate sagittal lesion QC report
+# Note: we need to specify also SC segmentation (`-s`) to crop the image properly, so we're using the SC segmentation from the model output
+sct_qc -i ${file_t2}.nii.gz -s ${file_t2}_sc_seg.nii.gz -d ${file_t2}_lesion-manual.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # ------------------------------------------------------------------------------
 # End
