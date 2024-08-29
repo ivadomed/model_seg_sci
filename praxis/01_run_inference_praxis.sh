@@ -119,6 +119,22 @@ else
     file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 fi
 
+# For site-007, we have >100 subjects --> it is not feasible to specify the run for each subject. We thus check whether
+# GT lesion mask exists under derivatives/labels and if so, we determine the run number from the GT lesion mask name
+if [[ $PATH_DATA =~ "site-007" ]]; then
+    # Check if GT lesion mask exists
+    FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file_t2}_lesion.nii.gz"
+    if [[ -e $FILELESIONMANUAL ]]; then
+        # Extract run number from the GT lesion mask name
+        run_number=$(echo $FILELESIONMANUAL | grep -oP 'run-\d{2}' | cut -d'-' -f2)
+        # Check if run_number is not empty string
+        # (because there might be no run number in the GT lesion mask name, if such a case, use file_t2 as is)
+        if [[ -n $run_number ]]; then
+            file_t2="${SUBJECT//[\/]/_}"_run-${run_number}
+        fi
+    fi
+fi
+
 # Moreover, for que, use acq-sagittal instead of acq-sag
 if [[ $SUBJECT =~ "que" ]]; then
     file_t2="${file_t2//acq-sag/acq-sagittal}"
