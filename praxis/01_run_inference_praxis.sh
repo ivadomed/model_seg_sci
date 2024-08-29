@@ -119,7 +119,8 @@ fi
 # GT lesion mask exists under derivatives/labels and if so, we determine the run number from the GT lesion mask name
 if [[ $PATH_DATA =~ "site-007" ]]; then
     # Check if GT lesion mask exists
-    FILELESIONMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file_t2}_lesion.nii.gz"
+    (find sub-007480/anat -name "*_lesion.nii.gz")
+    FILELESIONMANUAL=$(find ${PATH_DATA}/derivatives/labels/${SUBJECT}/anat -name "*_lesion.nii.gz")
     if [[ -e $FILELESIONMANUAL ]]; then
         # Extract run number from the GT lesion mask name
         run_number=$(echo $FILELESIONMANUAL | grep -oP 'run-\d{2}' | cut -d'-' -f2)
