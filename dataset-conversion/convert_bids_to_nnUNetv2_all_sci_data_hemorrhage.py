@@ -195,8 +195,15 @@ def find_site_in_path(path):
     return match.group(0) if match else None
 
 
-def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits):
-    # create a yaml file containing the list of training and test niftis
+def create_yaml(train_niftis, test_nifitis, path_out, args):
+    """
+    Create a yaml file containing the list of training and test images.
+    :param train_niftis:
+    :param test_nifitis:
+    :param path_out:
+    :param args:
+    :return:
+    """
     niftis_dict = {
         f"train": sorted(train_niftis),
         f"test": sorted(test_nifitis)
@@ -206,13 +213,17 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
     with open(os.path.join(path_out, f"train_test_split_seed{args.seed}.yaml"), "w") as outfile:
         yaml.dump(niftis_dict, outfile, default_flow_style=False)
 
-    # c.f. dataset json generation
-    # In nnUNet V2, dataset.json file has become much shorter. The description of the fields and changes
-    # can be found here: https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/dataset_format.md#datasetjson
-    # this file can be automatically generated using the following code here:
-    # https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunetv2/dataset_conversion/generate_dataset_json.py
-    # example: https://github.com/MIC-DKFZ/nnUNet/blob/master/nnunet/dataset_conversion/Task055_SegTHOR.py
 
+def create_dataset_json(args, train_ctr, test_ctr, dataset_commits, path_out):
+    """
+    Create the dataset.json file for the nnUNet dataset.
+    :param args:
+    :param train_ctr:
+    :param test_ctr:
+    :param dataset_commits:
+    :param path_out:
+    :return:
+    """
     json_dict = OrderedDict()
     json_dict['name'] = args.dataset_name
     json_dict['description'] = args.dataset_name
@@ -569,8 +580,10 @@ def main():
     for site, num_images in test_images_per_site.items():
         logger.info(f"Number of test images in {site}: {num_images}")
 
-    # create the yaml file containing the train and test niftis
-    create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits)
+    # create the yaml file containing the train and test images
+    create_yaml(train_niftis, test_nifitis, path_out, args)
+    # create the dataset.json file
+    create_dataset_json(args, train_ctr, test_ctr, dataset_commits, path_out)
 
 
 if __name__ == "__main__":
