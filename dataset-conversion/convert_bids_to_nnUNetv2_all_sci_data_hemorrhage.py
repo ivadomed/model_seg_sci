@@ -4,7 +4,9 @@ REGION-BASED (default) and MULTICHANNEL training format depending on the input a
 
 REGION-BASED:
     - 1 input channel: T2w image
-    - labels: lesions are considered as multi-class masks: `1` for hyperintense edema, `2` for hypointense hemorrhage.
+    - multi-class labels:
+        - `1` - hyperintense edema
+        - `2` - hypointense hemorrhage
 
 MULTICHANNEL:
     - 2 input channels: T2w image and hyperintense edema segmentation (binary mask)
@@ -16,7 +18,7 @@ dataset.json:
 
 ```json
     "channel_names": {
-        "0": "acq-sag_T2w"
+        "0": "T2w"
     },
     "labels": {
         "background": 0,
