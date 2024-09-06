@@ -28,7 +28,7 @@ if [[ ${config} != "2d" && ${config} != "3d_fullres" ]]; then
 fi
 
 # Check whether nnunet_trainer is valid, if not, exit
-available_trainers=("nnUNetTrainer" "nnUNetTrainer_250epochs" "nnUNetTrainer_2000epochs" "nnUNetTrainerDA5" "nnUNetTrainerDA5_DiceCELoss_noSmooth")
+available_trainers=("nnUNetTrainer" "nnUNetTrainer_250epochs" "nnUNetTrainer_2000epochs" "nnUNetTrainerDA5" "nnUNetTrainerDiceCELoss_noSmooth")
 if [[ ! " ${available_trainers[@]} " =~ " ${nnunet_trainer} " ]]; then
     echo "Invalid nnUNet trainer. Please use one of the following: ${available_trainers[@]}"
     exit 1
