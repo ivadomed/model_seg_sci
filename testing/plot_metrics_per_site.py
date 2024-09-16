@@ -82,7 +82,8 @@ def find_model_in_path(path):
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
             model = 'SCIsegV2_single\ndefaultDA'
         elif 'nnUNetTrainerDA5__nnUNetPlans__3d_fullres' in path:
-            model = 'SCIsegV2_single\naggressiveDA'
+            # model = 'SCIsegV2_single\naggressiveDA'
+            model = 'SCIsegV2'  # shorter name for figure in poster
     
     elif 'Dataset502_allSCIsegV2MultichannelSeed710' in path:
         if 'nnUNetTrainer__nnUNetPlans__3d_fullres' in path:
@@ -97,7 +98,8 @@ def find_model_in_path(path):
         model = 'AcuteSCI'
     
     else:
-        model = 'SCIsegV1'
+        # model = 'SCIsegV1'
+        model = 'SCIseg'    # name to match acronym in the paper
 
     return model
 
@@ -165,9 +167,9 @@ def main():
     # define the order for models
     order_models = [
         'AcuteSCI', 
-        'DCM', 'SCIsegV1',
-        'SCIsegV2_single\ndefaultDA', 'SCIsegV2_single\naggressiveDA',
-        'SCIsegV2_multi\ndefaultDA', 'SCIsegV2_multi\naggressiveDA']
+        'DCM', 'SCIseg', 'SCIsegV2']
+        # 'SCIsegV2_single\ndefaultDA', 'SCIsegV2_single\naggressiveDA',
+        # 'SCIsegV2_multi\ndefaultDA', 'SCIsegV2_multi\naggressiveDA']
     
     print("Generating plots for Lesions")
     for metric in ['dsc', 'lesion_ppv', 'lesion_sensitivity', 'lesion_f1_score']:
@@ -191,7 +193,7 @@ def main():
             hue='model', kind='bar', aspect=2, alpha=0.6, height=6,
             hue_order=order_models,
         )
-        g.ax.figure.set_size_inches(14, 6.5)
+        g.ax.figure.set_size_inches(13, 6.5)
         # y-axis limits
         g.set(ylim=(0, 1))
         g.ax.set_yticks(np.arange(0, 1.1, 0.1))
