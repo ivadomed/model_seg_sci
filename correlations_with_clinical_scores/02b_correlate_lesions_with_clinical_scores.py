@@ -318,8 +318,8 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             # Create single custom legend for whole figure with several subplots
             markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['orange', 'green']]
             legend = ax.legend(markers,
-                               [f'Manual Ground Truth: r = {corr_manual:.2f}, '
                                 '$\it{P}$' + f'{format_pvalue(pval_manual)}',
+                               [f'Reference Standard: r = {corr_manual:.2f}, '
                                 f'SCIseg 3D Prediction: r = {corr_nnunet:.2f}, '
                                 '$\it{P}$' + f'{format_pvalue(pval_nnunet)}'],
                                numpoints=1,

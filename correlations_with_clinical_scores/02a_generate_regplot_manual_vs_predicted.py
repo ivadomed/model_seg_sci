@@ -268,7 +268,7 @@ def generate_regplot_manual_vs_predicted(df, output_dir):
         # Set the title
         ax.set_title(f'{metric_to_title[metric]}', fontsize=FONT_SIZE)
         # Set the x-axis label
-        ax.set_xlabel(f'Manual Ground Truth {metric_to_axis[metric]}', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Manual Reference Standard {metric_to_axis[metric]}', fontsize=FONT_SIZE)
         # Set the y-axis label
         ax.set_ylabel(f'SCIseg 3D Prediction {metric_to_axis[metric]}', fontsize=FONT_SIZE)
 
