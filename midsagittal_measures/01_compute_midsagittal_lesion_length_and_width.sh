@@ -91,7 +91,7 @@ fi
 # SCIsegV2
 # ----------------------------
 # Segment the spinal cord and lesions using SCIsegV2
-CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -qc ${PATH_QC} -qc-subject ${SUBJECT}
+CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs are:
 #   - ${file_t2}_sc_seg.nii.gz:  3D binary mask of the segmented spinal cord
 #   - ${file_t2}_lesion_seg.nii.gz: 3D binary mask of the segmented lesion
@@ -118,7 +118,7 @@ cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
 # contrast-agnostic model v2.4
 # ----------------------------
 # Segment the spinal cord using the contrast-agnostic model v2.4
-sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_contrast_agnostic -qc ${PATH_QC} -qc-subject ${SUBJECT}
+sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_contrast_agnostic -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs is:
 #   - ${file_t2}_seg.nii.gz:  3D binary mask of the segmented spinal cord
 # Rename the SC seg to make clear it comes from the contrast-agnostic model v2.4
