@@ -2,8 +2,7 @@
 #
 # Compute tissue bridges using sct_analyze_lesion from lesion and spinal cord segmentations obtained using SCIsegV2
 #
-# NOTE: This script requires the following SCT branch:
-# https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4489
+# NOTE: This script requires the following SCT v6.4
 #
 # Usage:
 #     ./<PATH_TO_REPO>/model_seg_sci/tissue_bridges/01a_compute_tissue_bridges_from_GT.sh <PATH_in>

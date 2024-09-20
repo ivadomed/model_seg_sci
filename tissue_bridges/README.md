@@ -1,9 +1,5 @@
 # Tissue bridges
 
-> Note
-> Currently the tissue bridges measurement method assumes that there's only 1 lesion. Handling multiple lesions is in 
-> progres within https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4489.
-
 This folder contains scripts to compare tissue bridges obtained using different methods:
 
 1. **_manual_**: manual measurement of tissue bridges on manually segmented (GT) intramedullary lesions -- values provided by collaborators
