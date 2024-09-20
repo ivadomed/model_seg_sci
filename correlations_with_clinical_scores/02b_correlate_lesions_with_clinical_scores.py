@@ -519,6 +519,8 @@ def main():
     match = re.search(r'2sites|3sites_beforeAL|3sites_afterAL', output_dir)
     if match:
         figure_title = match.group()
+    else:
+        figure_title = '3sites_afterAL'
 
     # Dump log file there
     fname_log = f'log_{figure_title}.txt'
