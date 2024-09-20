@@ -87,14 +87,6 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     exit 1
 fi
 
-# Create two folders under ${PATH_RESULTS} to store sct_analyze_lesion outputs
-if [ ! -d ${PATH_RESULTS}/SCIsegV2 ]; then
-    mkdir -p ${PATH_RESULTS}/SCIsegV2
-fi
-if [ ! -d ${PATH_RESULTS}/contrast-agnostic ]; then
-    mkdir -p ${PATH_RESULTS}/contrast-agnostic
-fi
-
 # ----------------------------
 # SCIsegV2
 # ----------------------------
@@ -107,7 +99,20 @@ CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_
 mv ${file_t2}_sc_seg.nii.gz ${file_t2}_sc_seg_SCIsegV2.nii.gz
 
 # Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
-sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} -ofolder ${PATH_RESULTS}/SCIsegV2
+sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
+# The outputs are:
+#   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+#   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
+#   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
+
+# Remove pickle file -- we only need the XLS file
+rm ${file_t2}_lesion_seg_analysis.pkl
+
+# Rename the files to make clear they come from the SCIsegV2 model
+mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
+mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
+# Copy the XLS file to the results folder
+cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
 
 # ----------------------------
 # contrast-agnostic model v2.4
@@ -121,6 +126,19 @@ mv ${file_t2}_seg.nii.gz ${file_t2}_sc_seg_contrast-agnostic.nii.gz
 
 # Compute the midsagittal lesion length and width based on the spinal cord obtained using the contrast-agnostic model v2.4 and lesion segmentation obtained using SCIsegV2
 sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_contrast-agnostic.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} -ofolder ${PATH_RESULTS}/contrast-agnostic
+# The outputs are:
+#   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+#   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
+#   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
+
+# Remove pickle file -- we only need the XLS file
+rm ${file_t2}_lesion_seg_analysis.pkl
+
+# Rename the files to make clear they come from the contrast-agnostic model v2.4
+mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_contrast-agnostic.nii.gz
+mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_contrast-agnostic.xls
+# Copy the XLS file to the results folder
+cp ${file_t2}_lesion_seg_analysis_contrast-agnostic.xls ${PATH_RESULTS}
 
 # ------------------------------------------------------------------------------
 # End
