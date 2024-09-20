@@ -544,7 +544,7 @@ def compute_kruskal_wallis_test(df_concat, list_of_metrics):
             df_nnunet_2d = df_concat[(df_concat['method'] == 'nnunet_2d') & (df_concat['site'] == site)]
             df_nnunet_3d = df_concat[(df_concat['method'] == 'nnunet_3d') & (df_concat['site'] == site)]
 
-            # Combine all dataframes based on participant_id and seed. Keep only metric column. Use reduce and lambda
+            # Combine all dataframes based on participant_id. Keep only metric column.
             df = reduce(lambda left, right: pd.merge(left, right, on=['participant_id', 'session_id']),
                         [df_propseg[['participant_id', 'session_id', metric]],
                          df_deepseg_2d[['participant_id', 'session_id', metric]],
@@ -673,6 +673,9 @@ def main():
     # If a participant_id is duplicated (because the test image is presented across multiple seeds), average the
     # metrics across seeds for the same subject.
     df_concat = df_concat.groupby(['participant_id', 'session_id', 'site', 'method']).mean().reset_index()
+
+    # Drop 'seed' column as it does not make sense after .groupby().mean()
+    df_concat = df_concat.drop(columns=['seed'])
 
     # Remove 'sub-5740' (https://github.com/ivadomed/model_seg_sci/issues/59)
     logger.info(f'Removing subject sub-5740 from the dataframe.')
