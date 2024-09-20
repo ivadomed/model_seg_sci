@@ -12,6 +12,10 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 ## Updates
 
+### 2024-09-19
+
+* We have added a new tutorial on how to use the SCIsegV2 model for lesion segmentation and tissue bridges computation. The tutorial is available [here](https://spinalcordtoolbox.com/user_section/tutorials/lesion-analysis.html).
+
 ### 2024-07-24
 
 * We have released **SCIsegV2: A Universal Model for Intramedullary Lesion Segmentation in SCI**. The new model is trained on a larger cohort covering both traumatic and non-traumatic SCI lesions. SCIsegV2 is available as part of the SCT via the `sct_deepseg` function; see the installation instructions below.
