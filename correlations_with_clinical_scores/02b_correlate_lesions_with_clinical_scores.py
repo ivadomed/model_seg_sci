@@ -132,7 +132,7 @@ def fetch_subject_and_session(filename_path):
     return subject_session
 
 
-def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, include_equal=True):
+def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, include_equal=True, include_zero=True):
     """
     Format p-value.
     If the p-value is lower than alpha, format it to "<0.001", otherwise, round it to three decimals
@@ -142,6 +142,8 @@ def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, inc
     :param decimal_places: number of decimal places the p-value will be rounded
     :param include_space: include space or not (e.g., ' = 0.06')
     :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
+    :param include_zero: include zero before the decimal point (e.g., '0.06') or not (e.g., '.06')
+
     :return: p_value: the formatted p-value (e.g., '<0.05') as a str
     """
     if include_space:
@@ -158,6 +160,9 @@ def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, inc
             p_value = space + '=' + space + str(round(p_value, decimal_places))
         else:
             p_value = space + str(round(p_value, decimal_places))
+
+    if not include_zero:
+        p_value = p_value.replace('0.', '.')
 
     return p_value
 
@@ -318,10 +323,10 @@ def plot_everything(df_colorado, clinical_scores_list, clinical_scores_list_fina
             # Create single custom legend for whole figure with several subplots
             markers = [plt.Line2D([0, 0], [0, 0], color=color, marker='o', linestyle='') for color in ['orange', 'green']]
             legend = ax.legend(markers,
-                                '$\it{P}$' + f'{format_pvalue(pval_manual)}',
                                [f'Reference Standard: r = {corr_manual:.2f}, '
+                                '$\it{P}$' + f'{format_pvalue(pval_manual, include_zero=False)}',
                                 f'SCIseg 3D Prediction: r = {corr_nnunet:.2f}, '
-                                '$\it{P}$' + f'{format_pvalue(pval_nnunet)}'],
+                                '$\it{P}$' + f'{format_pvalue(pval_nnunet, include_zero=False)}'],
                                numpoints=1,
                                loc='upper right', fontsize=FONT_SIZE-4)
 
