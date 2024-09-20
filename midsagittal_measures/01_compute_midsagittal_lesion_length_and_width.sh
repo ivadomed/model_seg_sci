@@ -125,7 +125,7 @@ CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_
 mv ${file_t2}_seg.nii.gz ${file_t2}_sc_seg_contrast-agnostic.nii.gz
 
 # Compute the midsagittal lesion length and width based on the spinal cord obtained using the contrast-agnostic model v2.4 and lesion segmentation obtained using SCIsegV2
-sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_contrast-agnostic.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} -ofolder ${PATH_RESULTS}/contrast-agnostic
+sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_contrast-agnostic.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs are:
 #   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
 #   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
