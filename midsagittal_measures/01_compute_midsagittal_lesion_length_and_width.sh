@@ -51,6 +51,28 @@ echo "PATH_QC: ${PATH_QC}"
 SUBJECT=$1
 
 # ------------------------------------------------------------------------------
+# CONVENIENCE FUNCTIONS
+# ------------------------------------------------------------------------------
+
+# Copy GT SC or lesion segmentation
+copy_gt(){
+  local file="$1"
+  local type="$2"     # seg or lesion
+  # Construct file name to GT SC or lesion segmentation located under derivatives/labels
+  FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_${type}-manual.nii.gz"
+  echo ""
+  echo "Looking for manual segmentation: $FILESEGMANUAL"
+  if [[ -e $FILESEGMANUAL ]]; then
+      echo "Found! Copying ..."
+      rsync -avzh $FILESEGMANUAL ${file}_${type}-manual.nii.gz
+  else
+      echo "File ${FILESEGMANUAL}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
+      echo "ERROR: Manual GT segmentation ${FILESEGMANUAL}.nii.gz does not exist. Exiting."
+      exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 # ------------------------------------------------------------------------------
 # get starting time:
@@ -115,6 +137,28 @@ mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.g
 mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
 # Copy the XLS file to the results folder
 cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
+
+# ------------------------------------
+# GT
+# ------------------------------------
+# Copy GT SC and lesion segmentations from derivatives/labels
+copy_gt "${file_t2}" "seg"
+copy_gt "${file_t2}" "lesion"
+
+# Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask until https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4120 is fixed)
+sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_bin.nii.gz
+# Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained manually
+sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
+# The outputs are:
+#   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+#   - ${file_t2}_lesion-manual_bin_analysis.xls: XLS file containing the morphometric measures
+#   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
+
+# Remove pickle file -- we only need the XLS file
+rm ${file_t2}_lesion-manual_bin_analysis.pkl
+
+# Copy the XLS file to the results folder
+cp ${file_t2}_lesion-manual_bin_analysis.xls ${PATH_RESULTS}
 
 
 # ------------------------------------------------------------------------------
