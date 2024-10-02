@@ -4,9 +4,7 @@
 #
 # The script does the following:
 #   1. Segment the spinal cord and lesions using SCIsegV2
-#   2. Segment the spinal cord using the contrast-agnostic model v2.4
-#   3. Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
-#   4. Compute the midsagittal lesion length and width based on the spinal cord obtained using the contrast-agnostic model v2.4 and lesion segmentation obtained using SCIsegV2
+#   2. Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
 #
 # NOTE: This script requires SCT v6.4 or higher.
 
@@ -118,31 +116,6 @@ mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xl
 # Copy the XLS file to the results folder
 cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
 
-# ----------------------------
-# contrast-agnostic model v2.4
-# ----------------------------
-# Segment the spinal cord using the contrast-agnostic model v2.4
-sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_contrast_agnostic -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
-# The outputs is:
-#   - ${file_t2}_seg.nii.gz:  3D binary mask of the segmented spinal cord
-# Rename the SC seg to make clear it comes from the contrast-agnostic model v2.4
-mv ${file_t2}_seg.nii.gz ${file_t2}_sc_seg_contrast-agnostic.nii.gz
-
-# Compute the midsagittal lesion length and width based on the spinal cord obtained using the contrast-agnostic model v2.4 and lesion segmentation obtained using SCIsegV2
-sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_contrast-agnostic.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
-# The outputs are:
-#   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-#   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
-#   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
-
-# Remove pickle file -- we only need the XLS file
-rm ${file_t2}_lesion_seg_analysis.pkl
-
-# Rename the files to make clear they come from the contrast-agnostic model v2.4
-mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_contrast-agnostic.nii.gz
-mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_contrast-agnostic.xls
-# Copy the XLS file to the results folder
-cp ${file_t2}_lesion_seg_analysis_contrast-agnostic.xls ${PATH_RESULTS}
 
 # ------------------------------------------------------------------------------
 # End
