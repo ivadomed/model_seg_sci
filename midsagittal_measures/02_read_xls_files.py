@@ -97,8 +97,8 @@ def get_fnames(dir_path, column_name):
     """
     Get list of XLS files with lesion metrics
     :param dir_path: list of paths to XLS files with lesion metrics
-    :param column_name: type of the XLS file (e.g., manual or nnunet)
-    :return: pandas dataframe with the paths to the XLS files for manual and predicted lesions
+    :param column_name: branch name (e.g., master or PR4631)
+    :return: pandas dataframe with the paths to the XLS files
     """
 
     # Get XLS files with lesion metrics
