@@ -132,6 +132,7 @@ rm ${file_t2}_lesion-manual_bin_analysis.pkl
 
 # Copy the XLS file to the results folder
 cp ${file_t2}_lesion-manual_bin_analysis.xls ${PATH_RESULTS}
+echo "${file_t2}_lesion-manual_bin_analysis.xls created" >> ${PATH_LOG}/manual_GT_analysis.log
 
 # ----------------------------
 # SCIsegV2
@@ -163,6 +164,7 @@ mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.g
 mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
 # Copy the XLS file to the results folder
 cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
+echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xls created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
 
 # ------------------------------------------------------------------------------
 # End
