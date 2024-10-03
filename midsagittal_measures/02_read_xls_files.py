@@ -141,14 +141,19 @@ def fetch_lesion_metrics(index, row, branch, df):
 
     # Read the XLS file with lesion metrics for lesion predicted by our 3D SCIseg nnUNet model
     df_lesion = pd.read_excel(row[branch], sheet_name='measures')
+    if len(df_lesion) > 1:
+        print(f'Subject: {row["participant_id"]} has more than one lesion. Aggregating the metrics across lesions.')
     # Get the metrics
     midsagittal_slice = str(df_lesion['midsagittal_spinal_cord_slice'].values[0])
-    midsagittal_length = df_lesion['length_midsagittal_slice [mm]'].values[0]
-    midsagittal_width = df_lesion['width_midsagittal_slice [mm]'].values[0]
+    # Sum length
+    midsagittal_length = df_lesion['length_midsagittal_slice [mm]'].sum()
+    # Take max width
+    midsagittal_width = df_lesion['width_midsagittal_slice [mm]'].max()
     # Check if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' is in the columns
     if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' in df_lesion.columns:
-        dorsal_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]'].values[0]
-        ventral_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_ventral_bridge_width [mm]'].values[0]
+        # Take min for dorsal and ventral bridges
+        dorsal_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]'].min()
+        ventral_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_ventral_bridge_width [mm]'].min()
     else:
         dorsal_tissue_bridge = np.nan
         ventral_tissue_bridge = np.nan
