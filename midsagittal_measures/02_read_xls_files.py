@@ -158,7 +158,6 @@ def fetch_lesion_metrics(index, row, branch, df):
         dorsal_tissue_bridge = np.nan
         ventral_tissue_bridge = np.nan
 
-    # One lesion -- # TODO: consider also multiple lesions
     # Save the values in the currently processed df row
     df.at[index, 'midsagittal_slice'] = midsagittal_slice
     df.at[index, 'midsagittal_length'] = midsagittal_length
