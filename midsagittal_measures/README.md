@@ -40,3 +40,19 @@ python 02_read_xls_files.py -dir <DIR_NAME>/results -branch master -pred-type SC
 python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
 python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
 ```
+
+## 3. Generate plots
+
+Finally, we generate plots to compare the midsagittal lesion length and width obtained using different methods (GT vs SCIsegV2; master vs PR4656).
+
+The `03_generate_plots.py` script generates the following plots:
+    - scatter plots with linear regression lines for each metric
+    - Bland-Altman plots for each metric
+
+For example, manual vs SCIsegV2_PR4631:
+
+```bash
+python 03_generate_figures_two_methods.py
+    -file1 lesion_metrics_manual.xlsx -method1 manual
+    -file2 lesion_metrics_SCIsegV2_PR4631.csv -method2 SCIsegV2_PR4631
+```   
