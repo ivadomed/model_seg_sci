@@ -157,26 +157,38 @@ def fetch_lesion_metrics(index, row, branch, df):
     if len(df_lesion) > 1:
         print(f'Subject: {row["participant_id"]} has more than one lesion. Aggregating the metrics across lesions.')
     # Get the metrics
-    midsagittal_slice = str(df_lesion['midsagittal_spinal_cord_slice'].values[0])
-    # Sum length
+    # Sum midsagittal length and "3D" length
     midsagittal_length = df_lesion['length_midsagittal_slice [mm]'].sum()
+    length = df_lesion['length [mm]'].sum()
     # Take max width
     midsagittal_width = df_lesion['width_midsagittal_slice [mm]'].max()
-    # Check if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' is in the columns
-    if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' in df_lesion.columns:
-        # Take min for dorsal and ventral bridges
-        dorsal_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]'].min()
-        ventral_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_ventral_bridge_width [mm]'].min()
-    else:
-        dorsal_tissue_bridge = np.nan
-        ventral_tissue_bridge = np.nan
+    width = df_lesion['width [mm]'].max()
 
     # Save the values in the currently processed df row
-    df.at[index, 'midsagittal_slice'] = midsagittal_slice
+    df.at[index, 'length'] = length
+    df.at[index, 'width'] = width
     df.at[index, 'midsagittal_length'] = midsagittal_length
     df.at[index, 'midsagittal_width'] = midsagittal_width
-    df.at[index, 'dorsal_tissue_bridge'] = dorsal_tissue_bridge
-    df.at[index, 'ventral_tissue_bridge'] = ventral_tissue_bridge
+
+    if 'midsagittal_slice' in df_lesion.columns:
+        # midsagittal_slice = str(df_lesion['midsagittal_spinal_cord_slice'].values[0])
+        midsagittal_slice = str(df_lesion['midsagittal_slice'].values[0])
+        # Check if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' is in the columns
+        if 'slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]' in df_lesion.columns:
+            # Take min for dorsal and ventral bridges
+            dorsal_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_dorsal_bridge_width [mm]'].min()
+            ventral_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_ventral_bridge_width [mm]'].min()
+        else:
+            dorsal_tissue_bridge = np.nan
+            ventral_tissue_bridge = np.nan
+        # Save the values in the currently processed df row
+        df.at[index, 'midsagittal_slice'] = midsagittal_slice
+        df.at[index, 'dorsal_tissue_bridge'] = dorsal_tissue_bridge
+        df.at[index, 'ventral_tissue_bridge'] = ventral_tissue_bridge
+
+    if 'interpolated_midsagittal_slice' in df_lesion.columns:
+        df.at[index, 'dorsal_tissue_bridge'] = df_lesion['interpolated_dorsal_bridge_width [mm]'].values[0]
+        df.at[index, 'ventral_tissue_bridge'] = df_lesion['interpolated_ventral_bridge_width [mm]'].values[0]
 
     return df
 
