@@ -61,6 +61,14 @@ def get_parser():
              'SCT\'s sct_analyze_lesion'
     )
     parser.add_argument(
+        '-pred-type',
+        required=True,
+        type=str,
+        choices=['GT', 'SCIsegV2'],
+        help='Type of the predicted lesion. GT: ground truth lesion,  SCIsegV2: lesion predicted by our 3D SCIseg '
+             'nnUNet model. This information will be included in the output CSV filename.'
+    )
+    parser.add_argument(
         '-o',
         required=False,
         default='stats',
@@ -93,16 +101,21 @@ def fetch_subject(filename_path):
     return subjectID, sessionID
 
 
-def get_fnames(dir_path, column_name):
+def get_fnames(dir_path, pred_type, column_name):
     """
     Get list of XLS files with lesion metrics
     :param dir_path: list of paths to XLS files with lesion metrics
+    :param pred_type: GT or SCIsegV2
     :param column_name: branch name (e.g., master or PR4631)
     :return: pandas dataframe with the paths to the XLS files
     """
 
     # Get XLS files with lesion metrics
-    fname_files = glob.glob(os.path.join(dir_path, '*lesion_seg_analysis_SCIsegV2.xls'))
+    if pred_type == 'GT':
+        fname_files = glob.glob(os.path.join(dir_path, '*lesion-manual_bin_analysis.xls'))
+    elif pred_type == 'SCIsegV2':
+        fname_files = glob.glob(os.path.join(dir_path, '*lesion_seg_analysis_SCIsegV2.xls'))
+
     # remove hidden files starting with '~'
     fname_files = [f for f in fname_files if not os.path.basename(f).startswith('~')]
     # if fname_files is empty, exit
@@ -174,6 +187,7 @@ def main():
     args = parser.parse_args()
 
     branch_name = args.branch
+    pred_type = args.pred_type
 
     # Output directory
     output_dir = os.path.join(os.getcwd(), args.o)
@@ -193,7 +207,7 @@ def main():
         raise ValueError(f'ERROR: {args.dir} does not exist.')
 
     # For each participant_id, get XLS files with lesion metrics
-    df = get_fnames(args.dir, column_name=branch_name)
+    df = get_fnames(args.dir, pred_type, column_name=branch_name)
 
     # Remove sub-zh111 from the list of participants (it has multiple lesions)
     df = df[df['participant_id'] != 'sub-zh111']
@@ -209,8 +223,8 @@ def main():
     # remove the branch column containing the paths to the XLS files
     df.drop(columns=[branch_name], inplace=True)
     # Save the dataframe with lesion metrics to a CSV file
-    df.to_csv(os.path.join(output_dir, f'lesion_metrics_{branch_name}.csv'), index=False)
-    logger.info(f'Saved lesion metrics to {output_dir}/lesion_metrics_{branch_name}.csv')
+    df.to_csv(os.path.join(output_dir, f'lesion_metrics_{pred_type}_{branch_name}.csv'), index=False)
+    logger.info(f'Saved lesion metrics to {output_dir}/lesion_metrics_{pred_type}_{branch_name}.csv')
 
 
 if __name__ == '__main__':
