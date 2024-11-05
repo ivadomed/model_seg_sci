@@ -5,7 +5,7 @@ This folder contains scripts to compare the midsagittal lesion length and width 
 1. **_manual_**: manual measurement provided by collaborators
 2. **_automatic_SCIsegV2_**: the midsagittal lesion length and width are computed from the spinal cord and lesion segmentations obtained using SCIsegV2
 
-## 1. Download the dataset
+## 0. Download the dataset
 
 ```console
 git clone git@data.neuro.polymtl.ca:datasets/sci-zurich
@@ -15,7 +15,7 @@ git annex dead here
 git annex get $(find . -name "*sag*T2*")
 ```
 
-## 2. Compute midsagittal lesion length and width
+## 1. Compute midsagittal lesion length and width
 
 Compute the midsagittal lesion length and width using the SCT's `sct_analyze_lesion` function using the 
 `01_compute_midsagittal_lesion_length_and_width.sh` script.
@@ -28,7 +28,7 @@ sct_run_batch -config config-01_compute_midsagittal_lesion_length_and_width.json
 
 NOTE: the script is run several times for different SCT branches to compare different versions of the `sct_analyze_lesion` function.
 
-## 3. Aggregate lesion metrics across subjects
+## 2. Aggregate lesion metrics across subjects
 
 As the `01_compute_midsagittal_lesion_length_and_width.sh` script calls `sct_analyze_lesion` function, it outputs one XLS file per subject.
 The XLS files are saved in the `/results` directory.
