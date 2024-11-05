@@ -26,7 +26,7 @@ Note that the script requires SCT v6.4 or higher and is designed to be run on GP
 sct_run_batch -config config-01_compute_midsagittal_lesion_length_and_width.json
 ```
 
-NOTE: the script is run twice: once for the master branch and once for the [PR4631 branch](https://github.com/spinalcordtoolbox/spinalcordtoolbox/pull/4631). 
+NOTE: the script is run several times for different SCT branches to compare different versions of the `sct_analyze_lesion` function.
 
 ## 3. Aggregate lesion metrics across subjects
 
@@ -35,6 +35,8 @@ The XLS files are saved in the `/results` directory.
 To make it easier to work, I read the XLS files and save the data in a CSV file using the `02_read_xls_files.py` script.
 
 ```bash
-python 02_read_xls_files.py -dir sci-zurich_midsagittal_measures_2024-09-20_master/results -branch master
-python 02_read_xls_files.py -dir sci-zurich_midsagittal_measures_2024-09-20_PR4631/results -branch PR4631
+python 02_read_xls_files.py -dir <DIR_NAME>/results -branch master -pred-type GT
+python 02_read_xls_files.py -dir <DIR_NAME>/results -branch master -pred-type SCIsegV2
+python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
+python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
 ```
