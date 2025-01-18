@@ -1,4 +1,7 @@
 """
+Combine XLS files (one per subject) with lesion metrics computed using SCT's sct_analyze_lesion into a single CSV file
+for easier manipulation and visualization.
+
 The script:
  - read XLS files (located under /results) with lesion metrics (computed using sct_analyze_lesion for GT or predicted
  using our 3D nnUNet model)
@@ -60,7 +63,7 @@ def get_parser():
 
 def fetch_subject(filename_path):
     """
-    Get subject ID and filename from the input BIDS-compatible filename or file path
+    Get subject ID from the input BIDS-compatible filename or file path
     The function works both on absolute file path as well as filename
     :param filename_path: input nifti filename (e.g., sub-001_ses-01_T1w.nii.gz) or file path
     (e.g., /home/user/MRI/bids/derivatives/labels/sub-001/ses-01/anat/sub-001_ses-01_T1w.nii.gz
@@ -130,7 +133,7 @@ def fetch_lesion_metrics(index, row, pred_type, df):
     ventral_tissue_bridge = df_lesion['slice_' + midsagittal_slice + '_ventral_bridge_width [mm]'].values[0]
 
     # One lesion -- # TODO: consider also multiple lesions
-    # Get volume, length, and max_axial_damage_ratio and save the values in the currently processed df row
+    # Save the values in the currently processed df row
     df.at[index, 'ventral_tissue_bridge_'+pred_type] = ventral_tissue_bridge
     df.at[index, 'dorsal_tissue_bridge_'+pred_type] = dorsal_tissue_bridge
 
@@ -159,7 +162,7 @@ def main():
     if not os.path.exists(args.dir):
         raise ValueError(f'ERROR: {args.dir} does not exist.')
 
-    # For each participant_id, get the lesion and spinal cord file names
+    # For each participant_id, get XLS files with lesion metrics
     df = get_fnames(args.dir, column_name='nnunet')
 
     # Remove sub-zh111 from the list of participants (it has multiple lesions)
