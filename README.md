@@ -2,7 +2,7 @@
 
 [![medRxiv](https://img.shields.io/badge/medRxiv:SCIsegV1-10.1101/2024.01.03.24300794v2-blue.svg)](https://www.medrxiv.org/content/10.1101/2024.01.03.24300794v2.full.pdf) [![arXiv](https://img.shields.io/badge/arXiv:SCIsegV2-2407.17265-b31b1b.svg)](https://doi.org/10.48550/arXiv.2407.17265)
 
-This repository contains the code for deep learning-based segmentation of the spinal cord and intramedullary lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet).
+This repository contains the code for deep learning-based segmentation of the spinal cord and intramedullary lesions in spinal cord injury (SCI). The code is based on the [nnUNetv2 framework](https://github.com/MIC-DKFZ/nnUNet). The segmentation model is available as part of [Spinal Cord Toolbox (SCT)](https://spinalcordtoolbox.com) via the `sct_deepseg` function; see [Using SCIsegV2](#using-scisegv2) section for details.
 
 ## Model Overview
 
