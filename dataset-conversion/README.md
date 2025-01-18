@@ -18,7 +18,7 @@ The data used for training the model are hosted on a private repository accordin
       - SC segmentations generated with `sct_deepseg_sc` and manually corrected
     - Single session
     - Number of subjects: 57 
-      - 14 (`dcm-zurich-lesions`)
+      - 14 (`dcm-zurich-lesions`) (training only)
       - 43 (`dcm-zurich-lesions-20231115`)
 - University of Colorado Anschutz Medical Campus (`sci-colorado`) 🇺🇸
   - Contrasts available: Axial T1w, Axial T2w
@@ -31,11 +31,11 @@ The data used for training the model are hosted on a private repository accordin
   - Contrasts used for training: Sagittal T2w
   - Manual segmentations for both SC and lesion only available for Sagittal T2w
   - Single session
-  - Number of subjects: 14
+  - Number of subjects: 14 (training only)
   - Lesion etiology: traumatic lesions
   - Surgery: Mix of operated and non-operated subjects
 - PRAXIS Spinal Cord Institue 🇨🇦
-  - Sites: `site-003`, `site-012` (training only), `site-013`, `site-014`
+  - Sites: `site-003` (testing only), `site-012` (training only), `site-013` (training only), `site-014` (testing only)
   - Contrasts used for training: Sagittal T2w
   - Manual segmentations for both spinal cord (SC) and lesion available for Sagittal T2w
   - Single session
