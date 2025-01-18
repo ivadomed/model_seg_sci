@@ -37,8 +37,6 @@ logger.setLevel(logging.INFO)  # default: logging.DEBUG, logging.INFO
 hdlr = logging.StreamHandler(sys.stdout)
 logging.root.addHandler(hdlr)
 
-FONT_SIZE = 15
-
 
 def get_parser():
     """
