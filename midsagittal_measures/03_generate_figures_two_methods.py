@@ -38,9 +38,9 @@ METRIC_TO_TITLE = {
     'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]'
 }
 METHOD_TO_AXIS = {
-    'manual': 'Manual measurements',
+    'manual': 'Manual',
     'GT': 'Automatic measurements (Ground Truth)',
-    'SCIsegV2': 'Automatic measurements (SCIsegV2)',
+    'SCIsegV2': 'Automatic',
 }
 
 def get_method_key(method):
