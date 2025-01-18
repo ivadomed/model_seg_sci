@@ -161,10 +161,10 @@ def fetch_lesion_metrics(index, row, branch, df):
         print(f'Subject: {row["participant_id"]} has more than one lesion. Aggregating the metrics across lesions.')
     # Get the metrics
     # Sum midsagittal length and "3D" length
-    midsagittal_length = df_lesion['length_midsagittal_slice [mm]'].sum()
+    midsagittal_length = df_lesion['length_interpolated_midsagittal_slice [mm]'].sum()
     length = df_lesion['length [mm]'].sum()
     # Take max width
-    midsagittal_width = df_lesion['width_midsagittal_slice [mm]'].max()
+    midsagittal_width = df_lesion['width_interpolated_midsagittal_slice [mm]'].max()
     width = df_lesion['width [mm]'].max()
 
     # Save the values in the currently processed df row
