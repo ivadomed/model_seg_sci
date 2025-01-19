@@ -310,7 +310,7 @@ def main():
         dataset_commits[dataset_name] = f"git-{branch}-{commit}"
         site_name = find_site_in_path(dataset)
 
-        # get recursively all GT '_label-lesion' files
+        # Get all 'lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
         # add to the list of all subjects
@@ -378,7 +378,7 @@ def main():
     for subject_label_file in tqdm(all_lesion_files, desc="Iterating over all images"):
 
         site_name = find_site_in_path(subject_label_file)
-        # Construct path to the background image
+        # Construct path to the background image, i.e., remove the 'derivatives/labels' part and the '_lesion' suffix
         subject_image_file = subject_label_file.replace('/derivatives/labels', '').replace(f'_{LABEL_SUFFIXES[site_name][1]}', '')
 
         # Train images
