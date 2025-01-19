@@ -78,14 +78,15 @@ LABEL_SUFFIXES = {
     "sci-colorado": ["seg-manual", "lesion-manual"],
     "sci-paris": ["seg-manual", "lesion-manual"],
     "sci-zurich": ["seg-manual", "lesion-manual"],
-    "site-003": ["seg", "lesion"],
-    "site-012": ["seg", "lesion"],
-    "site-013": ["seg", "lesion"],
-    "site-014": ["seg", "lesion"],
+    "all_datasets_2025-01-17_QC_lesion_sag_SCIsegV2": ["label-SC_seg", "lesion_SCIsegV2"],
+    "site_03": ["seg", "lesion"],
+    "site_012": ["seg", "lesion"],
+    "site_013": ["seg", "lesion"],
+    "site_014": ["seg", "lesion"],
 }
 # NOTE: these datasets only contain a few subjects (n<20), hence using them all for training
-TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site-012', 'site-013']
-TEST_ONLY_SITES = ['site-003', 'site-014']
+TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site_012', 'site_013', 'all_datasets_2025-01-17_QC_lesion_sag_SCIsegV2']
+TEST_ONLY_SITES = ['site_03', 'site_014']
 
 
 def get_parser():
@@ -184,8 +185,10 @@ def find_site_in_path(path):
     elif 'sci' in path:
         match = re.search(r'sci-zurich|sci-colorado|sci-paris', path)
     elif 'site' in path:
-        # NOTE: PRAXIS data has 'site-xxx' in the path (and doesn't have the site names themselves in the path)
-        match = re.search(r'site-\d{3}', path)
+        # NOTE: PRAXIS data has 'site_xx' or 'site_xxx' in the path (and doesn't have the site names themselves in the path)
+        match = re.search(r'site_\d{2,3}', path)
+    elif 'all_datasets' in path:
+        match = re.search(r'all_datasets_2025-01-17_QC_lesion_sag_SCIsegV2', path)
 
     return match.group(0) if match else None
 
@@ -312,13 +315,30 @@ def main():
         # Get all 'lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
+
+        # Check if `qc_pass.yml` file exist for the current dataset, if so, read it. The file contains the list of
+        # images suitable for training and testing.
+        qc_pass_file = os.path.join(root, 'qc_pass.yml')
+        if os.path.exists(qc_pass_file):
+            logger.info(f"{site_name}: Using qc_pass.yml file {qc_pass_file}")
+            with open(qc_pass_file, 'r') as f:
+                # Keep only the filenames that are in the qc_pass.yml file
+                include_dict = yaml.safe_load(f)
+                filenames = sorted(include_dict['T2w_sag'])  # skipping T2w_ax as these images have not been QCed yet
+                lesion_files = [file for file in lesion_files if
+                                file.split('/')[-1].split('_')[0] in {f.split('_')[0] for f in filenames}]
+                # remove everything after the first underscore to keep only "sub-xxx"
+                subs = [sub.split('_')[0] for sub in filenames]
+        # If there is no qc_pass.yml file, get all the lesion files from derivatives/labels
+        else:
+            # Get the training and test splits
+            # NOTE: we need a patient-wise split (not image-wise split) to ensure that the same patient is not present in both
+            # training and test sets
+            subs = sorted([sub for sub in os.listdir(os.path.join(root, 'derivatives', 'labels'))])
+
         # add to the list of all subjects
         all_lesion_files.extend(lesion_files)
 
-        # Get the training and test splits
-        # NOTE: we need a patient-wise split (not image-wise split) to ensure that the same patient is not present in both
-        # training and test sets
-        subs = sorted([sub for sub in os.listdir(os.path.join(root, 'derivatives', 'labels'))])
         tr_subs, te_subs = train_test_split(subs, test_size=test_ratio, random_state=args.seed)
 
         if site_name in TRAIN_ONLY_SITES:
