@@ -323,12 +323,13 @@ def main():
         tr_subs, te_subs = train_test_split(subs, test_size=test_ratio, random_state=args.seed)
 
         if site_name in TRAIN_ONLY_SITES:
-            print(f"{site_name}: Using all subjects from this site for training ...")
+            logger.info(f"{site_name} found in TRAIN_ONLY_SITES: Using all subjects from this site for training ...")
             # use all subjects for training
             tr_subs += te_subs
             te_subs = []
 
         elif site_name in TEST_ONLY_SITES:
+            logger.info(f"{site_name} found in TEST_ONLY_SITES: Using all subjects from this site for testing ...")
             # use all subjects for testing (treated as external testing set)
             te_subs += tr_subs
             tr_subs = []
@@ -540,6 +541,8 @@ def main():
     # Print number of test images per site
     for site, num_images in test_images_per_site.items():
         logger.info(f"Number of test images in {site}: {num_images}")
+
+    logger.info(f"Output directory: {path_out}")
 
     # create the yaml file containing the train and test niftis
     create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits)
