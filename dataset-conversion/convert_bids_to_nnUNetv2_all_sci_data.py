@@ -305,10 +305,9 @@ def main():
         root = Path(dataset)
 
         # get the git branch and commit ID of the dataset
-        dataset_name = os.path.basename(os.path.normpath(dataset))
-        branch, commit = get_git_branch_and_commit(dataset)
-        dataset_commits[dataset_name] = f"git-{branch}-{commit}"
         site_name = find_site_in_path(dataset)
+        branch, commit = get_git_branch_and_commit(dataset)
+        dataset_commits[site_name] = f"git-{branch}-{commit}"
 
         # Get all 'lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
