@@ -77,14 +77,11 @@ The data used for training the model are hosted on a private repository accordin
 
 ### Downloading the Data
 
-The downloading procedure is same for all the three datasets, just replace the "<dataset-name>" by the name of the dataset you want to download from the server.
+To download the MRI data from `data.neuro.polymtl.ca` and `spineimage.ca`, use:
 
-~~~
-git clone git@data.neuro.polymtl.ca:datasets/<dataset-name>
-cd <dataset-name>
-git annex get .
-cd ..
-~~~
+```bash
+python download_data.py -ofolder <PATH_TO_FOLDER_WHERE_DATA_WILL_BE_DOWNLOADED>
+```
 
 ### Preparing the Data
 
