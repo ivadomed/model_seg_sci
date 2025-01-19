@@ -211,9 +211,6 @@ def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr,
     json_dict = OrderedDict()
     json_dict['name'] = args.dataset_name
     json_dict['description'] = args.dataset_name
-    json_dict['reference'] = "TBD"
-    json_dict['licence'] = "TBD"
-    json_dict['release'] = "0.0"
     json_dict['numTraining'] = train_ctr
     json_dict['numTest'] = test_ctr
     json_dict['seed_used'] = args.seed
