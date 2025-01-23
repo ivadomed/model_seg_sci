@@ -90,7 +90,8 @@ if __name__ == "__main__":
                         help="Path to the folder where data will be downloaded")
     parser.add_argument("--no-download",
                         action="store_true",
-                        help="Skip the 'git annex get' step and only clone the repositories.")
+                        help="Skip the 'git annex get' step and only clone the repositories and checkout to the "
+                             "specified commit or branch")
     args = parser.parse_args()
 
     PATH_DATA = os.path.abspath(os.path.expanduser(args.ofolder))
