@@ -21,16 +21,16 @@ from datetime import datetime
 from utils import get_git_branch_and_commit
 
 SITES_CONFIG = {
-    "neuropoly": {
-        "base_url": "git@data.neuro.polymtl.ca:datasets",
-        "datasets": [
-            ("sci-zurich", "3ba898e0"),
-            ("dcm-zurich-lesions", "d214e06"),
-            ("dcm-zurich-lesions-20231115", "28a70d9"),
-            ("sci-colorado", "558303f"),
-            ("sci-paris", "0a0d252")
-        ]
-    },
+    # "neuropoly": {
+    #     "base_url": "git@data.neuro.polymtl.ca:datasets",
+    #     "datasets": [
+    #         ("sci-zurich", "3ba898e0"),
+    #         ("dcm-zurich-lesions", "d214e06"),
+    #         ("dcm-zurich-lesions-20231115", "28a70d9"),
+    #         ("sci-colorado", "558303f"),
+    #         ("sci-paris", "0a0d252")
+    #     ]
+    # },
     "spineimage": {
         "base_url": "gitea@spineimage.ca",
         "datasets": {
