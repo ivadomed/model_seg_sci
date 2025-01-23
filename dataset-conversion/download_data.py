@@ -31,18 +31,18 @@ SITES_CONFIG = {
             ("sci-paris", "0a0d252")
         ]
     },
-    # "spineimage": {
-    #     "base_url": "gitea@spineimage.ca",
-    #     "datasets": {
-    #         "TOH": "site_03",
-    #         "MON": "site_006",
-    #         "VGH": "site_007",
-    #         "SAI": "site_009",
-    #         "NSHA": "site_012",
-    #         "HGH": "site_013",
-    #         "HEJ": "site_014"
-    #     }
-    # }
+    "spineimage": {
+        "base_url": "gitea@spineimage.ca",
+        "datasets": {
+            "TOH": ("site_03", "master"),
+            "MON": ("site_006", "main"),
+            "VGH": ("site_007", "main"),
+            "SAI": ("site_009", "main"),
+            "NSHA": ("site_012", "master"),
+            "HGH": ("site_013", "master"),
+            "HEJ": ("site_014", "master"),
+        }
+    }
 }
 
 def download_dataset(site_url, dataset, skip_download=False):
