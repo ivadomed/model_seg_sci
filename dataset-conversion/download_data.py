@@ -100,12 +100,14 @@ if __name__ == "__main__":
     LOG_FILENAME = f"{PATH_DATA}/git_branch_commit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
     # data.neuro.polymtl.ca
-    for dataset in SITES_CONFIG["neuropoly"]["datasets"]:
-        download_dataset(SITES_CONFIG["neuropoly"]["base_url"], dataset, args.no_download)
+    if "neuropoly" in SITES_CONFIG:
+        for dataset in SITES_CONFIG["neuropoly"]["datasets"]:
+            download_dataset(SITES_CONFIG["neuropoly"]["base_url"], dataset, args.no_download)
 
     # spineimage.ca
-    # for site, dataset in SITES_CONFIG["spineimage"]["datasets"].items():
-    #     site_url = f"{SITES_CONFIG['spineimage']['base_url']}:{site}"
-    #     download_dataset(site_url, dataset, args.no_download)
+    if "spineimage" in SITES_CONFIG:
+        for site, dataset in SITES_CONFIG["spineimage"]["datasets"].items():
+            site_url = f"{SITES_CONFIG['spineimage']['base_url']}:{site}"
+            download_dataset(site_url, dataset, args.no_download)
 
     print(f"Log file with git branch and commit IDs saved to {LOG_FILENAME}")
