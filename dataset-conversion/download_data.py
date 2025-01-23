@@ -56,10 +56,12 @@ def download_dataset(site_url, dataset, skip_download=False):
         subprocess.run(["git", "clone", clone_url], check=True)
         os.chdir(dataset_name)
         subprocess.run(["git", "annex", "dead", "here"])
-        subprocess.run(["git", "checkout", dataset_commit])
     else:
         print(f"Dataset {dataset_name} already exists, skipping 'git clone'")
         os.chdir(dataset_name)
+
+    # Checkout the commit or branch
+    subprocess.run(["git", "checkout", dataset_commit])
 
     # Get the git commit ID of the dataset
     dataset_path = os.getcwd()
