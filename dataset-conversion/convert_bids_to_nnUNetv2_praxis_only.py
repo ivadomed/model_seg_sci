@@ -298,9 +298,10 @@ def main():
         branch, commit = get_git_branch_and_commit(dataset)
         dataset_commits[site_name] = f"git-{branch}-{commit}"
 
-        # Get all 'lesion' files
+        # Get all existing 'lesion' files
         lesion_label_suffix = LABEL_SUFFIXES[1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
+        lesion_files = sorted(lesion_files)
 
         # Check if `include.yml` file exist for the current dataset, if so, read it. The file contains the list of
         # images suitable for training and testing.
@@ -313,8 +314,9 @@ def main():
                 filenames = sorted(include_dict['T2w_sag'])  # skipping T2w_ax as these images have not been QCed yet
                 # Drop images listed in IMAGES_TO_EXCLUDE
                 filenames = [file for file in filenames if file not in IMAGES_TO_EXCLUDE]
-                lesion_files = [file for file in lesion_files if
-                                file.split('/')[-1].split('_')[0] in {f.split('_')[0] for f in filenames}]
+                # Keep only lesion files that are in the include.yml file
+                lesion_files = [file for file in lesion_files if file.split('/')[-1].replace('_lesion', '')
+                                in {f for f in filenames}]
                 # remove everything after the first underscore to keep only "sub-xxx"
                 subs = [sub.split('_')[0] for sub in filenames]
         # If there is no qc_pass.yml file, get all the lesion files from derivatives/labels
