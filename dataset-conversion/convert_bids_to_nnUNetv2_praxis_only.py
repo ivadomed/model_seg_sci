@@ -374,10 +374,10 @@ def main():
 
     logger.info(f"Found subjects in the training set (combining all datasets): {len(train_images)}")
     logger.info(f"Found subjects in the test set (combining all datasets): {len(test_images)}")
-    # Print test images for each site
+    # Print train and test images for each site
     for site in sites:
-        if site in TRAIN_ONLY_SITES:
-            continue
+        logger.info(f"Train subjects in {site}: {len([sub for sub in train_images if site in find_site_in_path(sub)])}")
+    for site in sites:
         logger.info(f"Test subjects in {site}: {len([sub for sub in test_images if site in find_site_in_path(sub)])}")
 
     # print version of each dataset in a separate line
