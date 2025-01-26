@@ -72,6 +72,7 @@ IMAGES_TO_EXCLUDE = [
     'sub-007081_acq-sag_T2w.nii.gz',
     'sub-007185_acq-sag_run-01_T2w.nii.gz',
     'sub-mon117_acq-sag_T2w.nii.gz',
+    'sub-mon375_acq-sag_T2w.nii.gz',
     'sub-mon393_acq-sag_T2w.nii.gz'
 ]
 
