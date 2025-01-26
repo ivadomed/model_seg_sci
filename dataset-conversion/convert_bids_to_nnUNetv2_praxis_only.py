@@ -64,8 +64,10 @@ import nibabel as nib
 # Same across all PRAXIS datasets
 LABEL_SUFFIXES = ['label-SC_seg', 'lesion']
 
+# Both training and testing: T2w sag: site_006 (N=60), site_007 (N=129), site_012 (N=24)
 TRAIN_ONLY_SITES = ['']
-TEST_ONLY_SITES = ['']
+# Training only: T2w sag: site_03 (N=9), site_009 (N=10), site_013 (N=3), site_014 (N=5)
+TEST_ONLY_SITES = ['site_03', 'site_009', 'site_013', 'site_014']
 
 # context: https://spineimage.ca/praxis/clinical-data/pulls/4#issuecomment-754
 IMAGES_TO_EXCLUDE = [
