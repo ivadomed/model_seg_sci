@@ -29,6 +29,14 @@ def create_region_based_label(lesion_label_file, seg_label_file, image_file, sub
     lesion_label_npy = nib.load(lesion_label_file).get_fdata()
     seg_label_npy = nib.load(seg_label_file).get_fdata()
 
+    # check if the hemorrhage mask exists; if so, add it to the lesion mask
+    # (because we do not want to have "hemorrhage holes" in the lesion mask; at least for now)
+    hemorrhage_file = lesion_label_file.replace('_lesion', '_lesion_hemorrhage')
+    if os.path.exists(hemorrhage_file):
+        print(f'{sub_ses_name}: hemorrhage mask found. Adding it to the lesion mask.')
+        hemorrhage_label_npy = nib.load(hemorrhage_file).get_fdata()
+        lesion_label_npy = np.where(hemorrhage_label_npy > thr, 1, lesion_label_npy)
+
     # binarize the labels
     lesion_label_npy = np.where(lesion_label_npy > thr, 1, 0)
     # add the lesion seg to the spinal cord seg
