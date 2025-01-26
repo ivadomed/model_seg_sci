@@ -527,6 +527,10 @@ def main():
         else:
             print("Skipping file, could not be located in the Train or Test splits split.", subject_label_file)
 
+        # remove 'sc-lesion' temporary file
+        if subject_label_file.endswith('_sc-lesion.nii.gz'):
+            os.remove(subject_label_file)
+
     logger.info(f"----- Dataset conversion finished! -----")
     logger.info(f"Number of training and validation images (across all sites): {train_ctr}")
     # Get number of train and val images per site
