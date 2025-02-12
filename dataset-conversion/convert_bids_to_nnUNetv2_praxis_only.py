@@ -69,13 +69,11 @@ TRAIN_ONLY_SITES = ['']
 # Training only: T2w sag: site_03 (N=9), site_009 (N=10), site_013 (N=3), site_014 (N=5)
 TEST_ONLY_SITES = ['site_03', 'site_009', 'site_013', 'site_014']
 
-# context: https://spineimage.ca/praxis/clinical-data/pulls/4#issuecomment-754
+# context: https://spineimage.ca/praxis/clinical-data/pulls/4#issuecomment-863
 IMAGES_TO_EXCLUDE = [
-    'sub-007081_acq-sag_T2w.nii.gz',
-    'sub-007185_acq-sag_run-01_T2w.nii.gz',
-    'sub-mon117_acq-sag_T2w.nii.gz',
-    'sub-mon375_acq-sag_T2w.nii.gz',
-    'sub-mon393_acq-sag_T2w.nii.gz'
+    'sub-007297_acq-sag_T2w.nii.gz',
+    'sub-hal004_acq-sag_run-01_T2w.nii.gz',
+    'sub-mon097_acq-sag_run-02_T2w.nii.gz'
 ]
 
 def get_parser():
