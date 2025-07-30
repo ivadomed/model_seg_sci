@@ -134,37 +134,37 @@ rm ${file_t2}_lesion-manual_bin_analysis.pkl
 cp ${file_t2}_lesion-manual_bin_analysis.xls ${PATH_RESULTS}
 echo "${file_t2}_lesion-manual_bin_analysis.xls created" >> ${PATH_LOG}/manual_GT_analysis.log
 
-# ----------------------------
-# SCIsegV2
-# ----------------------------
-# Segment the spinal cord and lesions using SCIsegV2
-CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
-# The outputs are:
-#   - ${file_t2}_sc_seg.nii.gz:  3D binary mask of the segmented spinal cord
-#   - ${file_t2}_lesion_seg.nii.gz: 3D binary mask of the segmented lesion
-# Rename the SC seg to make clear it comes from the SCIsegV2 model
-mv ${file_t2}_sc_seg.nii.gz ${file_t2}_sc_seg_SCIsegV2.nii.gz
-
-# Generate sagittal lesion QC report (because sct_deepseg produces only axial QC report showing both SC and lesion).
-# But we want to show only the lesion segmentation in the QC report on sagittal slices.
-sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
-
-# Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
-sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
-# The outputs are:
-#   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-#   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
-#   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
-
-# Remove pickle file -- we only need the XLS file
-rm ${file_t2}_lesion_seg_analysis.pkl
-
-# Rename the files to make clear they come from the SCIsegV2 model
-mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
-mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
-# Copy the XLS file to the results folder
-cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
-echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xls created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+## ----------------------------
+## SCIsegV2
+## ----------------------------
+## Segment the spinal cord and lesions using SCIsegV2
+#CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
+## The outputs are:
+##   - ${file_t2}_sc_seg.nii.gz:  3D binary mask of the segmented spinal cord
+##   - ${file_t2}_lesion_seg.nii.gz: 3D binary mask of the segmented lesion
+## Rename the SC seg to make clear it comes from the SCIsegV2 model
+#mv ${file_t2}_sc_seg.nii.gz ${file_t2}_sc_seg_SCIsegV2.nii.gz
+#
+## Generate sagittal lesion QC report (because sct_deepseg produces only axial QC report showing both SC and lesion).
+## But we want to show only the lesion segmentation in the QC report on sagittal slices.
+#sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
+#
+## Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
+#sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
+## The outputs are:
+##   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+##   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
+##   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
+#
+## Remove pickle file -- we only need the XLS file
+#rm ${file_t2}_lesion_seg_analysis.pkl
+#
+## Rename the files to make clear they come from the SCIsegV2 model
+#mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
+#mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
+## Copy the XLS file to the results folder
+#cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
+#echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xls created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
 
 # ------------------------------------------------------------------------------
 # End
