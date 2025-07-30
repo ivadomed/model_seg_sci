@@ -20,7 +20,7 @@ git annex get $(find . -name "*sag*T2*")
 Compute the midsagittal lesion length and width using the SCT's `sct_analyze_lesion` function using the 
 `01_compute_midsagittal_lesion_length_and_width.sh` script.
 The script is run using the `sct_run_batch` wrapper script to process subjects in parallel.
-Note that the script requires SCT v6.4 or higher and is designed to be run on GPU.
+Note that the script requires SCT v7.0 or higher and is designed to be run on GPU.
 
 ```bash
 sct_run_batch -config config-01_compute_midsagittal_lesion_length_and_width.json
