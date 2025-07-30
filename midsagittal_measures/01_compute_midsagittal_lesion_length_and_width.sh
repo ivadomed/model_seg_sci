@@ -6,7 +6,7 @@
 #   1. Segment the spinal cord and lesions using SCIsegV2
 #   2. Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
 #
-# NOTE: This script requires SCT v6.4 or higher.
+# NOTE: This script requires SCT v7.0 or higher (due to the new sct_deepseg syntax).
 
 # NOTE: The script is meant to be run on GPU (see `CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg ...` below).
 #
@@ -138,7 +138,7 @@ echo "${file_t2}_lesion-manual_bin_analysis.xls created" >> ${PATH_LOG}/manual_G
 # SCIsegV2
 # ----------------------------
 # Segment the spinal cord and lesions using SCIsegV2
-CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg -i ${file_t2}.nii.gz -task seg_sc_lesion_t2w_sci -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
+CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs are:
 #   - ${file_t2}_sc_seg.nii.gz:  3D binary mask of the segmented spinal cord
 #   - ${file_t2}_lesion_seg.nii.gz: 3D binary mask of the segmented lesion
