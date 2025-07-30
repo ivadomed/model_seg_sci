@@ -35,10 +35,10 @@ The XLS files are saved in the `/results` directory.
 To make it easier to work, I read the XLS files and save the data in a CSV file using the `02_read_xls_files.py` script.
 
 ```bash
-python 02_read_xls_files.py -dir <DIR_NAME>/results -branch master -pred-type GT
-python 02_read_xls_files.py -dir <DIR_NAME>/results -branch master -pred-type SCIsegV2
-python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
-python 02_read_xls_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
+python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type GT
+python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type SCIsegV2
+python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
+python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
 ```
 
 ## 3. Generate plots
