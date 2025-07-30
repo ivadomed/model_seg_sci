@@ -9,10 +9,10 @@ Namely, the script:
  - aggregates the metrics across subjects into a single dataframe and save the dataframe to a CSV file
 
 Example usage:
-    python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type GT
-    python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type SCIsegV2
-    python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
-    python 02_read_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
+    python 02_combine_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type GT
+    python 02_combine_xlsx_files.py -dir <DIR_NAME>/results -branch master -pred-type SCIsegV2
+    python 02_combine_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type GT
+    python 02_combine_xlsx_files.py -dir <DIR_NAME>/results -branch PR4656 -pred-type SCIsegV2
 
 Note: to read XLSX files, you might need to install the following packages:
     pip install openpyxl
