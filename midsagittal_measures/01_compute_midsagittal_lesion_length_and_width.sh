@@ -108,7 +108,7 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
 fi
 
 # ------------------------------------
-# GT
+# Manual GT
 # ------------------------------------
 # Copy GT SC and lesion segmentations from derivatives/labels
 copy_gt "${file_t2}" "seg"
