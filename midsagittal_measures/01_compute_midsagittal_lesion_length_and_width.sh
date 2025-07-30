@@ -124,15 +124,15 @@ sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}
 sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs are:
 #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-#   - ${file_t2}_lesion-manual_bin_analysis.xls: XLS file containing the morphometric measures
+#   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
 #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
 
-# Remove pickle file -- we only need the XLS file
+# Remove pickle file -- we only need the XLSX file
 rm ${file_t2}_lesion-manual_bin_analysis.pkl
 
-# Copy the XLS file to the results folder
-cp ${file_t2}_lesion-manual_bin_analysis.xls ${PATH_RESULTS}
-echo "${file_t2}_lesion-manual_bin_analysis.xls created" >> ${PATH_LOG}/manual_GT_analysis.log
+# Copy the XLSX file to the results folder
+cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}
+echo "${file_t2}_lesion-manual_bin_analysis.xlsx created" >> ${PATH_LOG}/manual_GT_analysis.log
 
 ## ----------------------------
 ## SCIsegV2
@@ -153,18 +153,18 @@ echo "${file_t2}_lesion-manual_bin_analysis.xls created" >> ${PATH_LOG}/manual_G
 #sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
 ## The outputs are:
 ##   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-##   - ${file_t2}_lesion_seg_analysis.xls: XLS file containing the morphometric measures
+##   - ${file_t2}_lesion_seg_analysis.xlsx: XLSX file containing the morphometric measures
 ##   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
 #
-## Remove pickle file -- we only need the XLS file
+## Remove pickle file -- we only need the XLSX file
 #rm ${file_t2}_lesion_seg_analysis.pkl
 #
 ## Rename the files to make clear they come from the SCIsegV2 model
 #mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
-#mv ${file_t2}_lesion_seg_analysis.xls ${file_t2}_lesion_seg_analysis_SCIsegV2.xls
-## Copy the XLS file to the results folder
-#cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xls ${PATH_RESULTS}
-#echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xls created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+#mv ${file_t2}_lesion_seg_analysis.xlsx ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx
+## Copy the XLSX file to the results folder
+#cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx ${PATH_RESULTS}
+#echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
 
 # ------------------------------------------------------------------------------
 # End
