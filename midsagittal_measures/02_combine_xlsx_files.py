@@ -153,6 +153,7 @@ def fetch_lesion_metrics(index, row, df):
     # Take minimum tissue bridge across all lesions
     df.at[index, 'interpolated_dorsal_bridge_width'] = df_lesion['interpolated_dorsal_bridge_width [mm]'].min()
     df.at[index, 'interpolated_ventral_bridge_width'] = df_lesion['interpolated_ventral_bridge_width [mm]'].min()
+    df.at[index, 'interpolated_total_bridge_width'] = df_lesion['interpolated_total_bridge_width [mm]'].max()
 
     # Tissue bridge ratios -- compute it from the minimum tissue bridge widths
     total_bridge_width = (df.at[index, 'interpolated_dorsal_bridge_width'] +
