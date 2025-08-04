@@ -195,6 +195,10 @@ def main():
     df.drop(columns=[f'fname'], inplace=True)
 
     # Save the dataframe with lesion metrics to a CSV file
+    output_folder = os.path.dirname(fname_out)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+        print(f'Created output folder: {output_folder}')
     df.to_csv(fname_out, index=False)
     print(f'Saved lesion metrics to {fname_out}')
 
