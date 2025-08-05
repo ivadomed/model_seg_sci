@@ -363,7 +363,7 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             # Create a figure for all participants
             fig, ax = plt.subplots(figsize=(10, 6))
 
-            metric_name = f'{metric}_sct'
+            metric_name = f'{metric}_sct'   # automatic lesion metric from SCT
 
             # To stratify patients, determine median of the metric
             median_value = df_ses_01[metric_name].median()
