@@ -428,10 +428,13 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                 # Normalize metric value for colormap (0-1 range)
                 norm_value = (metric_value - min_value) / (max_value - min_value) if max_value > min_value else 0.5
 
-                # Plot individual participant trajectory with color based on metric value
+                # Calculate marker size based on metric value (scale between 2-12)
+                marker_size = 2 + 10 * norm_value  # Scale normalized value to range between 2-12
+
+                # Plot individual participant trajectory with marker size based on metric value
                 ax.plot(time_values, score_values, 'o-', alpha=0.5,
-                        color=plt.cm.viridis(norm_value),
-                        linewidth=1, markersize=2)
+                        color=plt.cm.cool(norm_value),
+                        linewidth=1, markersize=marker_size)
 
             # Calculate and plot mean ± standard error (SE) trajectories for each group
             for tp_idx, tp in enumerate(time_points):
