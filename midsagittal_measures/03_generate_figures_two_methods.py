@@ -496,10 +496,10 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             # Set labels and title
             ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by '
                          f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
-            ax.set_xlabel('Time since injury (months)', fontsize=FONT_SIZE)
+            ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
             ax.set_xticks(range(len(time_points)))
-            ax.set_xticklabels(['0', '1', '3', '6', '12'], fontsize=FONT_SIZE)
+            ax.set_xticklabels(['Baseline', 'M1', 'M3', 'M6', 'M12'], fontsize=FONT_SIZE)
 
             # Add color bar for lesion metric
             sm = plt.cm.ScalarMappable(cmap=plt.cm.cool,
