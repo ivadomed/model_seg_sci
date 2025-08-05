@@ -59,7 +59,7 @@ def get_parser():
         metavar='FILE_NAME',
         required=True,
         type=str,
-        help='Output CSV file name. Example: lesion_metrics_all_subjects.csv '
+        help='Output CSV file name. Example: \'<YOUR_PATH>/results/lesion_metrics_all_subjects.csv\' '
     )
 
     return parser
