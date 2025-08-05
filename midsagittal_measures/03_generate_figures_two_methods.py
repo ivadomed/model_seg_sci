@@ -507,9 +507,8 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
 
-            plt.tight_layout()
-
             # Save the plot
+            plt.tight_layout()
             figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot.png')
             plt.savefig(figure_fname, dpi=300)
             print(f'Spaghetti plot for {score} by {metric} saved as {figure_fname}')
