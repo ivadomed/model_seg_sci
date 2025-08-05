@@ -501,8 +501,8 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             ax.set_xticks(range(len(time_points)))
             ax.set_xticklabels(['0', '1', '3', '6', '12'], fontsize=FONT_SIZE)
 
-            # Add color bar for lesion length
-            sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis,
+            # Add color bar for lesion metric
+            sm = plt.cm.ScalarMappable(cmap=plt.cm.cool,
                                        norm=plt.Normalize(vmin=min_value, vmax=max_value))
             sm.set_array([])
             cbar = fig.colorbar(sm, ax=ax)
