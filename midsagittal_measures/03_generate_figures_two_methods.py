@@ -328,8 +328,8 @@ def create_diff_plot(df, output_dir):
 
 def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
     """
-    Create plots showing clinical scores across time points along with baseline metrics
-    for each participant in df_ses_01.
+    Create an individual trajectory plot showing clinical scores across time points for each participant,
+    with lines colored by baseline lesion metrics.
 
     :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only)
     :param df_clinical: pandas dataframe with clinical scores across multiple time points
@@ -338,109 +338,182 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    # Get the list of clinical score columns (assuming they follow the pattern score_timepoint)
-    # E.g., uems_bl, uems_1m, uems_3m, uems_6m, uems_12m
-    clinical_scores = set()
-    time_points = set()
-
+    # Convert any string clinical score columns to numeric
     for col in df_clinical.columns:
-        if '_' in col and col.split('_')[0] not in ['participant', 'session']:
-            score = col.split('_')[0]
-            time_point = col.split('_')[1]
-            clinical_scores.add(score)
-            time_points.add(time_point)
+        if col not in ['participant_id', 'session_id']:
+            df_clinical[col] = pd.to_numeric(df_clinical[col], errors='coerce')
 
-    clinical_scores = sorted(list(clinical_scores))
+    clinical_scores = ('uems', 'lems', 'ms', 'pp', 'lt')
     # Sort time points in a logical order: bl, 1m, 3m, 6m, 12m
     time_point_order = {'bl': 0, '1m': 1, '3m': 2, '6m': 3, '12m': 4}
-    time_points = sorted(list(time_points), key=lambda x: time_point_order.get(x, 99))
+    time_points = sorted(list(time_point_order.keys()), key=lambda x: time_point_order.get(x, 99))
 
-    # Create plots for each participant
-    for participant_id in df_ses_01['participant_id'].unique():
-        # Get participant data
-        participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+    # Loop over each clinical score
+    for score in clinical_scores:
+        # Loop over each lesion metric
+        for metric in METRICS:
+            # Create a figure for all participants
+            fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Check if participant has clinical data
-        if participant_id not in df_clinical['participant_id'].values:
-            print(f"No clinical data found for {participant_id}, skipping...")
-            continue
+            metric_name = f'{metric}_sct'
 
-        participant_clinical = df_clinical[df_clinical['participant_id'] == participant_id]
+            # To stratify patients, determine median of the metric
+            median_value = df_ses_01[metric_name].median()
+            short_group_ids = []
+            long_group_ids = []
+            # Collect data for mean trajectories per group
+            short_group_data = {tp: [] for tp in time_points}
+            long_group_data = {tp: [] for tp in time_points}
 
-        # For each clinical score, create a plot showing the score over time
-        # along with the baseline metrics
-        for score in clinical_scores:
-            # Create a figure with two subplots side by side
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+            # For colormap
+            min_value = df_ses_01[metric_name].min()
+            max_value = df_ses_01[metric_name].max()
 
-            # Plot 1: Clinical score over time
-            time_points_present = [tp for tp in time_points if f'{score}_{tp}' in participant_clinical.columns]
-            if not time_points_present:
-                continue
+            # Process each participant
+            for participant_id in df_ses_01['participant_id'].unique():
+                # Get participant data
+                participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+                # Check if participant has clinical data and the metric
+                if (participant_id not in df_clinical['participant_id'].values or
+                    metric_name not in participant_data.columns or
+                    pd.isna(participant_data[metric_name].values[0])):
+                    continue
 
-            # Get values for this score across time points
-            score_values = [participant_clinical[f'{score}_{tp}'].values[0] if not pd.isna(participant_clinical[f'{score}_{tp}'].values[0]) else None
-                           for tp in time_points_present]
+                participant_clinical = df_clinical[df_clinical['participant_id'] == participant_id]
 
-            # Filter out None values
-            valid_indices = [i for i, val in enumerate(score_values) if val is not None]
-            valid_time_points = [time_points_present[i] for i in valid_indices]
-            valid_scores = [score_values[i] for i in valid_indices]
+                # Get metric value for this participant (for coloring)
+                metric_value = participant_data[metric_name].values[0]
+                # Determine if this participant belongs to short or long group
+                if metric_value <= median_value:
+                    group = 'short'
+                    short_group_ids.append(participant_id)
+                else:
+                    group = 'long'
+                    long_group_ids.append(participant_id)
 
-            if not valid_scores:
-                continue
+                # Get clinical score values across time points
+                time_points_present = [tp for tp in time_points if f'{score}_{tp}' in participant_clinical.columns]
 
-            # Plot clinical score over time
-            ax1.plot(valid_time_points, valid_scores, 'o-', color='blue', linewidth=2, markersize=8)
-            ax1.set_title(f'{score.upper()} Score Over Time', fontsize=FONT_SIZE)
-            ax1.set_xlabel('Time Point', fontsize=FONT_SIZE)
-            ax1.set_ylabel(f'{score.upper()} Score', fontsize=FONT_SIZE)
+                if not time_points_present:
+                    continue
+
+                # Get values for this score across time points
+                time_values = []
+                score_values = []
+
+                for tp_idx, tp in enumerate(time_points_present):
+                    col_name = f'{score}_{tp}'
+                    if col_name in participant_clinical.columns and not pd.isna(participant_clinical[col_name].values[0]):
+                        val = float(participant_clinical[col_name].values[0])  # Ensure value is float
+                        time_values.append(tp_idx)  # Use index for x-axis to make equal spacing
+                        score_values.append(val)
+
+                        # Add to group data for mean trajectory
+                        if group == 'short':
+                            short_group_data[tp].append(val)
+                        else:
+                            long_group_data[tp].append(val)
+
+                if len(time_values) < 2:  # Need at least 2 points to draw a line
+                    continue
+
+                # Normalize metric value for colormap (0-1 range)
+                norm_value = (metric_value - min_value) / (max_value - min_value) if max_value > min_value else 0.5
+
+                # Plot individual participant trajectory with color based on metric value
+                ax.plot(time_values, score_values, 'o-', alpha=0.5,
+                        color=plt.cm.viridis(norm_value),
+                        linewidth=1, markersize=2)
+
+            # Calculate and plot mean ± standard error (SE) trajectories for each group
+            for tp_idx, tp in enumerate(time_points):
+                # Short group
+                short_values = short_group_data[tp]
+                if short_values:
+                    # Ensure all values are numeric
+                    short_values = [float(val) for val in short_values]
+                    short_mean = np.mean(short_values)
+                    short_se = np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
+                    ax.errorbar(tp_idx, short_mean, yerr=short_se,
+                                fmt='o', color='blue', ecolor='blue',
+                                markersize=5, capsize=5,
+                                label='Short lesions')
+
+                # Long group
+                long_values = long_group_data[tp]
+                if long_values:
+                    # Ensure all values are numeric
+                    long_values = [float(val) for val in long_values]
+                    long_mean = np.mean(long_values)
+                    long_se = np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
+                    ax.errorbar(tp_idx, long_mean, yerr=long_se,
+                                fmt='o', color='red', ecolor='red',
+                                markersize=5, capsize=5,
+                                label='Long lesions')
+
+            # Connect mean points with lines
+            mean_short_x = []
+            mean_short_y = []
+            mean_long_x = []
+            mean_long_y = []
+
+            for tp_idx, tp in enumerate(time_points):
+                short_values = short_group_data[tp]
+                if short_values:
+                    # Ensure all values are numeric
+                    short_values = [float(val) for val in short_values]
+                    mean_short_x.append(tp_idx)
+                    mean_short_y.append(np.mean(short_values))
+
+                long_values = long_group_data[tp]
+                if long_values:
+                    # Ensure all values are numeric
+                    long_values = [float(val) for val in long_values]
+                    mean_long_x.append(tp_idx)
+                    mean_long_y.append(np.mean(long_values))
+
+            if len(mean_short_x) > 1:
+                ax.plot(mean_short_x, mean_short_y, '-', color='blue', linewidth=2.5)
+
+            if len(mean_long_x) > 1:
+                ax.plot(mean_long_x, mean_long_y, '-', color='red', linewidth=2.5)
+
+            # Set labels and title
+            ax.set_title(f'{score.upper()} over time by {METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
+            ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
+            ax.set_ylabel(f'{score.upper()} Score', fontsize=FONT_SIZE)
+            ax.set_xticks(range(len(time_points)))
+            ax.set_xticklabels(time_points, fontsize=FONT_SIZE)
+
+            # Add color bar for lesion length
+            sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis,
+                                       norm=plt.Normalize(vmin=min_value, vmax=max_value))
+            sm.set_array([])
+            cbar = fig.colorbar(sm, ax=ax)
+            cbar.set_label(METRIC_TO_TITLE[metric], fontsize=FONT_SIZE)
+
+            # Add legend
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys(), loc='best', fontsize=FONT_SIZE-2)
 
             # Remove the top and right spines
-            ax1.spines['top'].set_visible(False)
-            ax1.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
 
-            # Plot 2: Baseline metrics for this participant
-            # Each metric will be plotted as a bar
-            metrics_values = []
-            metrics_labels = []
-
-            for metric in METRICS:
-                # Check if we have both manual and automatic measurements
-                manual_val = participant_data[f'{metric}_manual'].values[0] if not pd.isna(participant_data[f'{metric}_manual'].values[0]) else None
-                sct_val = participant_data[f'{metric}_sct'].values[0] if not pd.isna(participant_data[f'{metric}_sct'].values[0]) else None
-
-                if manual_val is not None:
-                    metrics_values.append(manual_val)
-                    metrics_labels.append(f"{METRIC_TO_TITLE[metric].split('[')[0]}(Manual)")
-
-                if sct_val is not None:
-                    metrics_values.append(sct_val)
-                    metrics_labels.append(f"{METRIC_TO_TITLE[metric].split('[')[0]}(Auto)")
-
-            # Create a bar plot for the metrics
-            bars = ax2.bar(range(len(metrics_values)), metrics_values, color='lightgray')
-            ax2.set_xticks(range(len(metrics_values)))
-            ax2.set_xticklabels(metrics_labels, rotation=45, ha='right', fontsize=FONT_SIZE-2)
-            ax2.set_ylabel('Value [mm]', fontsize=FONT_SIZE)
-            ax2.set_title(f'Baseline Metrics for {participant_id}', fontsize=FONT_SIZE)
-
-            # Remove the top and right spines
-            ax2.spines['top'].set_visible(False)
-            ax2.spines['right'].set_visible(False)
-
-            # Add value labels on top of each bar
-            for bar in bars:
-                height = bar.get_height()
-                ax2.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                        f'{height:.1f}', ha='center', va='bottom', fontsize=FONT_SIZE-2)
+            # Add text with sample size information
+            ax.text(0.01, 0.01,
+                    f'Short lesions (≤{median_value:.1f} mm): n={len(short_group_ids)}\n'
+                    f'Long lesions (>{median_value:.1f} mm): n={len(long_group_ids)}',
+                    transform=ax.transAxes, fontsize=FONT_SIZE-2,
+                    bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray', boxstyle='round,pad=0.5'))
 
             plt.tight_layout()
 
             # Save the plot
-            figure_fname = os.path.join(output_dir, f'{participant_id}_{score}_clinical_metrics.png')
+            figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot.png')
             plt.savefig(figure_fname, dpi=300)
-            print(f'Clinical-metrics plot for {participant_id} ({score}) saved as {figure_fname}')
+            print(f'Spaghetti plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
 
 
