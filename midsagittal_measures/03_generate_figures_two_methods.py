@@ -3,10 +3,11 @@ Plot the lesion metrics obtained using different methods (manual vs automatic).
 
 The script:
 - reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
-- reads XLSX file with manually measured lesion metrics
+- reads XLSX file with manually measured lesion metrics (including clinical scores)
 - merges the dataframes
 - creates scatter plots with linear regression lines for each metric
 - creates Bland-Altman Mean Difference plot for each metric
+- creates plots of clinical scores over time for each participant with baseline metrics
 
 Example usage:
     python 03_generate_figures_two_methods.py
@@ -65,7 +66,7 @@ def get_parser():
         '-file-manual',
         required=True,
         type=str,
-        help='Absolute path to an XLSX file with manually measured lesion metrics. '
+        help='Absolute path to an XLSX file with manually measured lesion metrics and clinical scores. '
     )
     parser.add_argument(
         '-o',
@@ -325,6 +326,123 @@ def create_diff_plot(df, output_dir):
         plt.close()
 
 
+def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
+    """
+    Create plots showing clinical scores across time points along with baseline metrics
+    for each participant in df_ses_01.
+
+    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only)
+    :param df_clinical: pandas dataframe with clinical scores across multiple time points
+    :param output_dir: output directory
+    """
+    # Set font to Arial
+    plt.rcParams['font.sans-serif'] = 'Arial'
+
+    # Get the list of clinical score columns (assuming they follow the pattern score_timepoint)
+    # E.g., uems_bl, uems_1m, uems_3m, uems_6m, uems_12m
+    clinical_scores = set()
+    time_points = set()
+
+    for col in df_clinical.columns:
+        if '_' in col and col.split('_')[0] not in ['participant', 'session']:
+            score = col.split('_')[0]
+            time_point = col.split('_')[1]
+            clinical_scores.add(score)
+            time_points.add(time_point)
+
+    clinical_scores = sorted(list(clinical_scores))
+    # Sort time points in a logical order: bl, 1m, 3m, 6m, 12m
+    time_point_order = {'bl': 0, '1m': 1, '3m': 2, '6m': 3, '12m': 4}
+    time_points = sorted(list(time_points), key=lambda x: time_point_order.get(x, 99))
+
+    # Create plots for each participant
+    for participant_id in df_ses_01['participant_id'].unique():
+        # Get participant data
+        participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+
+        # Check if participant has clinical data
+        if participant_id not in df_clinical['participant_id'].values:
+            print(f"No clinical data found for {participant_id}, skipping...")
+            continue
+
+        participant_clinical = df_clinical[df_clinical['participant_id'] == participant_id]
+
+        # For each clinical score, create a plot showing the score over time
+        # along with the baseline metrics
+        for score in clinical_scores:
+            # Create a figure with two subplots side by side
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+            # Plot 1: Clinical score over time
+            time_points_present = [tp for tp in time_points if f'{score}_{tp}' in participant_clinical.columns]
+            if not time_points_present:
+                continue
+
+            # Get values for this score across time points
+            score_values = [participant_clinical[f'{score}_{tp}'].values[0] if not pd.isna(participant_clinical[f'{score}_{tp}'].values[0]) else None
+                           for tp in time_points_present]
+
+            # Filter out None values
+            valid_indices = [i for i, val in enumerate(score_values) if val is not None]
+            valid_time_points = [time_points_present[i] for i in valid_indices]
+            valid_scores = [score_values[i] for i in valid_indices]
+
+            if not valid_scores:
+                continue
+
+            # Plot clinical score over time
+            ax1.plot(valid_time_points, valid_scores, 'o-', color='blue', linewidth=2, markersize=8)
+            ax1.set_title(f'{score.upper()} Score Over Time', fontsize=FONT_SIZE)
+            ax1.set_xlabel('Time Point', fontsize=FONT_SIZE)
+            ax1.set_ylabel(f'{score.upper()} Score', fontsize=FONT_SIZE)
+
+            # Remove the top and right spines
+            ax1.spines['top'].set_visible(False)
+            ax1.spines['right'].set_visible(False)
+
+            # Plot 2: Baseline metrics for this participant
+            # Each metric will be plotted as a bar
+            metrics_values = []
+            metrics_labels = []
+
+            for metric in METRICS:
+                # Check if we have both manual and automatic measurements
+                manual_val = participant_data[f'{metric}_manual'].values[0] if not pd.isna(participant_data[f'{metric}_manual'].values[0]) else None
+                sct_val = participant_data[f'{metric}_sct'].values[0] if not pd.isna(participant_data[f'{metric}_sct'].values[0]) else None
+
+                if manual_val is not None:
+                    metrics_values.append(manual_val)
+                    metrics_labels.append(f"{METRIC_TO_TITLE[metric].split('[')[0]}(Manual)")
+
+                if sct_val is not None:
+                    metrics_values.append(sct_val)
+                    metrics_labels.append(f"{METRIC_TO_TITLE[metric].split('[')[0]}(Auto)")
+
+            # Create a bar plot for the metrics
+            bars = ax2.bar(range(len(metrics_values)), metrics_values, color='lightgray')
+            ax2.set_xticks(range(len(metrics_values)))
+            ax2.set_xticklabels(metrics_labels, rotation=45, ha='right', fontsize=FONT_SIZE-2)
+            ax2.set_ylabel('Value [mm]', fontsize=FONT_SIZE)
+            ax2.set_title(f'Baseline Metrics for {participant_id}', fontsize=FONT_SIZE)
+
+            # Remove the top and right spines
+            ax2.spines['top'].set_visible(False)
+            ax2.spines['right'].set_visible(False)
+
+            # Add value labels on top of each bar
+            for bar in bars:
+                height = bar.get_height()
+                ax2.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                        f'{height:.1f}', ha='center', va='bottom', fontsize=FONT_SIZE-2)
+
+            plt.tight_layout()
+
+            # Save the plot
+            figure_fname = os.path.join(output_dir, f'{participant_id}_{score}_clinical_metrics.png')
+            plt.savefig(figure_fname, dpi=300)
+            print(f'Clinical-metrics plot for {participant_id} ({score}) saved as {figure_fname}')
+            plt.close()
+
 
 def main():
 
@@ -353,9 +471,23 @@ def main():
     df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
 
     #----------------
-    # XLSX file with manually measured lesion metrics
+    # XLSX file with manually measured lesion metrics and clinical scores
     #----------------
     df_manual = read_xlsx(file_manual)
+
+    # Extract clinical scores from the manual file
+    # Identify clinical score columns (they follow the pattern score_timepoint, e.g., uems_bl, uems_1m)
+    clinical_cols = [col for col in df_manual.columns if '_' in col and
+                    col.split('_')[0] not in ['participant', 'session'] and
+                    col.split('_')[1] in ['bl', '1m', '3m', '6m', '12m']]
+
+    # Create a clinical scores dataframe
+    df_clinical = df_manual[['participant_id', 'session_id'] + clinical_cols].copy()
+
+    # Keep only baseline metrics and tissue bridge measurements in df_manual
+    lesion_cols = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge']
+    df_manual = df_manual[['participant_id', 'session_id'] + lesion_cols]
+
     # Sum up ventral and dorsal tissue bridges to get total tissue bridge
     df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
     # Rename columns to match
@@ -408,6 +540,8 @@ def main():
     create_scatterplot_3D_length_width(df, output_dir)
     # Bland-Altman Mean Difference Plot
     create_diff_plot(df_ses_01, output_dir)
+    # Clinical scores and baseline metrics over time
+    create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir)
 
 
 if __name__ == '__main__':
