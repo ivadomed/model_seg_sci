@@ -434,7 +434,6 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     short_values = [float(val) for val in short_values]
                     short_mean = np.mean(short_values)
                     short_se = np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
-
                     # Include sample size in the legend label
                     label = f'Short lesions (≤{median_value:.1f} mm, n={len(short_group_ids)})'
                     ax.errorbar(tp_idx, short_mean, yerr=short_se,
@@ -449,7 +448,6 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     long_values = [float(val) for val in long_values]
                     long_mean = np.mean(long_values)
                     long_se = np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
-
                     # Include sample size in the legend label
                     label = f'Long lesions (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
                     ax.errorbar(tp_idx, long_mean, yerr=long_se,
