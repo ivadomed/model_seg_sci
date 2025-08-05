@@ -1,16 +1,18 @@
 """
-Compare the lesion metrics obtained using different methods.
+Plot the lesion metrics obtained using different methods (manual vs automatic).
 
 The script:
-- reads XLS (manually measured lesion metrics) or CSV files (metrics computed using sct_analyze_lesion) for two methods
+- reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
+- reads XLSX file with manually measured lesion metrics
+- merges the dataframes
 - creates scatter plots with linear regression lines for each metric
 - creates Bland-Altman Mean Difference plot for each metric
 
 Example usage:
     python 03_generate_figures_two_methods.py
-        -file1 lesion_metrics_manual.xlsx -method1 manual
-        -file2 lesion_metrics_SCIsegV2_PR4631.csv -method2 SCIsegV2_PR4631
-
+        -file-sct <PATH_TO_CSV_FILE>
+        -file-manual <PATH_TO_XLSX_FILE>
+        -o <OUTPUT_DIR>
 
 Note: to read XLS files, you might need to install the following packages:
     pip install openpyxl
@@ -28,19 +30,13 @@ from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 
 
-METRICS = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge']
+METRICS = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge', 'total_tissue_bridge']
 METRIC_TO_TITLE = {
-    'length': '3D Lesion Length [mm]',
-    'width': '3D Lesion Width [mm]',
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
     'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
-    'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]'
-}
-METHOD_TO_AXIS = {
-    'manual': 'Manual',
-    'GT': 'Automatic measurements (Ground Truth)',
-    'SCIsegV2': 'Automatic',
+    'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
+    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]'
 }
 
 def get_method_key(method):
@@ -59,38 +55,28 @@ def get_parser():
 
     parser = argparse.ArgumentParser(
         description='Read CSV files with lesion metrics computed using sct_analyze_lesion and XLSX file with manually'
-                    'measured metrics.',
+                    'measured metrics and create figures.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
-        '-file1',
+        '-file-sct',
         required=True,
         type=str,
-        help='Absolute path to a CSV/XLSX file with lesion metrics for method 1.'
+        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion. '
+             'The file should contain metrics aggregated across subjects. You can generate this file using the '
+             '02_combine_xlsx_files.py script. '
     )
     parser.add_argument(
-        '-file2',
+        '-file-manual',
         required=True,
         type=str,
-        help='Absolute path to a CSV/XLSX file with lesion metrics for method 2.'
-    )
-    parser.add_argument(
-        '-method1',
-        required=True,
-        type=str,
-        help='Name of method 1 (e.g., manual).'
-    )
-    parser.add_argument(
-        '-method2',
-        required=True,
-        type=str,
-        help='Name of method 2 (e.g., GT_master, GT_PR4631, SCIsegV2_PR4631).'
+        help='Absolute path to an XLSX file with manually measured lesion metrics. '
     )
     parser.add_argument(
         '-o',
-        required=False,
-        default='stats/figures',
-        help='Path to the output folder where XLS table will be saved. Default: ./stats'
+        required=True,
+        type=str,
+        help='Path to the output folder where figures will be saved. '
     )
 
     return parser
@@ -154,12 +140,10 @@ def compute_regression(x, y):
     return intercept, slope, reg_predictor, r2_sc, x_vals, y_vals
 
 
-def create_scatterplot(df, method1, method2, output_dir):
+def create_scatterplot(df, output_dir):
     """
     Create scatter plots with linear regression lines for each metric
-    :param df: pandas dataframe with metrics data
-    :param method1: name of the first method
-    :param method2: name of the second method
+    :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
     """
 
@@ -167,7 +151,9 @@ def create_scatterplot(df, method1, method2, output_dir):
     plt.rcParams['font.sans-serif'] = 'Arial'
 
     for metric in METRICS:
-        df_plot = df[[f'{metric}_{method1}', f'{metric}_{method2}']]
+        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
+        # Drop rows with NaN values
+        df_plot = df_plot.dropna()
 
         fig, axes = plt.subplots(figsize=(5, 5))
 
@@ -175,8 +161,8 @@ def create_scatterplot(df, method1, method2, output_dir):
         min_val = df_plot.min().min()
 
         ax = axes
-        x = df_plot[f'{metric}_{method1}']
-        y = df_plot[f'{metric}_{method2}']
+        x = df_plot[f'{metric}_manual']
+        y = df_plot[f'{metric}_sct']
 
         ax.scatter(x, y, s=90, alpha=0.5)
         ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
@@ -194,35 +180,33 @@ def create_scatterplot(df, method1, method2, output_dir):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_xlabel(f'{METHOD_TO_AXIS[get_method_key(method1)]}', fontsize=15)
-        ax.set_ylabel(f'{METHOD_TO_AXIS[get_method_key(method2)]}', fontsize=15)
+        ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
+        ax.set_xlabel(f'Manual', fontsize=12)
+        ax.set_ylabel(f'Automatic (from manual GTs)', fontsize=12)
 
         if metric == 'midsagittal_length':
             # Change axes ticks to 0, 50, 100, 150, 200
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
 
-        plt.tight_layout()
-
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
+        plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_{method1}_{method2}_scatterplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_scatterplot.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Pairplot for {metric} saved as {figure_fname}')
         plt.close()
 
 
-def create_scatterplot_3D_length_width(df, method1, method2, output_dir):
+def create_scatterplot_3D_length_width(df, output_dir):
     """
     Create scatter plots with linear regression lines for each metric
         - between 3D length and manual midsagittal length
         - between 3D width and manual midsagittal width
-    :param df: pandas dataframe with metrics data
-    :param method1: name of the first method
-    :param method2: name of the second method
+    :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
     """
 
@@ -230,7 +214,7 @@ def create_scatterplot_3D_length_width(df, method1, method2, output_dir):
     plt.rcParams['font.sans-serif'] = 'Arial'
 
     for metric in ['length', 'width']:
-        df_plot = df[[f'midsagittal_{metric}_{method1}', f'{metric}_{method2}']]
+        df_plot = df[[f'midsagittal_{metric}_manual', f'{metric}_sct']]
 
         fig, axes = plt.subplots(figsize=(5, 5))
 
@@ -238,10 +222,10 @@ def create_scatterplot_3D_length_width(df, method1, method2, output_dir):
         min_val = df_plot.min().min()
 
         ax = axes
-        x = df_plot[f'midsagittal_{metric}_{method1}']
-        y = df_plot[f'{metric}_{method2}']
+        x = df_plot[f'midsagittal_{metric}_manual']
+        y = df_plot[f'{metric}_sct']
 
-        ax.scatter(x, y)
+        ax.scatter(x, y, s=90, alpha=0.5)
         ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
         ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
 
@@ -257,30 +241,31 @@ def create_scatterplot_3D_length_width(df, method1, method2, output_dir):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_xlabel(f'{METHOD_TO_AXIS[get_method_key(method1)]}', fontsize=15)
-        ax.set_ylabel(f'{METHOD_TO_AXIS[get_method_key(method2)]}', fontsize=15)
+        ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=12)
+        ax.set_ylabel(f'Automatic (from manual GTs) 3D {metric} [mm]', fontsize=12)
 
         if metric == 'length':
             # Change axes ticks to 0, 50, 100, 150, 200
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
 
+        # Remove the top and right spines
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_{method1}_{method2}_scatterplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_sct3D_scatterplot.png')
         plt.savefig(figure_fname, dpi=200)
         print(f'Pairplot for 3D {metric} saved as {figure_fname}')
         plt.close()
 
 
-def create_diff_plot(df, method1, method2, output_dir):
+def create_diff_plot(df, output_dir):
     """
     Create a Bland-Altman Mean Difference Plot for each metric
     https://www.statsmodels.org/devel/generated/statsmodels.graphics.agreement.mean_diff_plot.html
-    :param df: pandas dataframe with metrics data
-    :param method1: name of the first method
-    :param method2: name of the second method
+    :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
     """
 
@@ -288,13 +273,13 @@ def create_diff_plot(df, method1, method2, output_dir):
     plt.rcParams['font.sans-serif'] = 'Arial'
 
     for metric in METRICS:
-        df_plot = df[[f'{metric}_{method1}', f'{metric}_{method2}']]
+        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
 
         fig, axes = plt.subplots(figsize=(5, 5))
 
         ax = axes
-        x = df_plot[f'{metric}_{method1}']
-        y = df_plot[f'{metric}_{method2}']
+        x = df_plot[f'{metric}_manual']
+        y = df_plot[f'{metric}_sct']
 
         sm.graphics.mean_diff_plot(
             x, y,
@@ -319,9 +304,9 @@ def create_diff_plot(df, method1, method2, output_dir):
         )
 
         # Set plot title and labels
-        #ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=15)
-        ax.set_xlabel(f'Mean of Manual and Automatic', fontsize=15)
-        ax.set_ylabel(f'Difference of Manual and Automatic', fontsize=15)
+        ax.set_title(f'{METRIC_TO_TITLE[metric]}\nManual vs Automatic (from manual GTs)', fontsize=12)
+        ax.set_xlabel(f'Mean', fontsize=12)
+        ax.set_ylabel(f'Difference', fontsize=12)
 
         # Get the limits and means for custom styling
         diff = x - y            # Difference between x and y
@@ -332,16 +317,14 @@ def create_diff_plot(df, method1, method2, output_dir):
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-
         # Draw dashed gray horizontal line at y=0
         ax.axhline(y=0, color='gray', linestyle=':', alpha=0.5)
-
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_{method1}_{method2}_diffplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_diffplot.png')
         plt.savefig(figure_fname, dpi=300)
-        print(f'Diffplot for {metric} bridges saved as {figure_fname}')
+        print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
 
 
@@ -351,51 +334,52 @@ def main():
     # Parse the command line arguments
     parser = get_parser()
     args = parser.parse_args()
-    output_dir = args.o
-    # create output directory if it does not exist
-    os.makedirs(output_dir, exist_ok=True)
 
     # Read the data
-    file1 = args.file1
-    file2 = args.file2
-    method1 = args.method1
-    method2 = args.method2
+    file_sct = args.file_sct
+    file_manual = args.file_manual
 
     #----------------
-    # Method 1
+    # CSV file with lesion metrics computed using sct_analyze_lesion
     #----------------
     # XLSX is available only for manual measurements
-    if file1.endswith('.xlsx'):
-        df_method1 = read_xlsx(file1)
-    elif file1.endswith('.csv'):
-        df_method1 = pd.read_csv(file1)
-
+    df_sct = pd.read_csv(file_sct)
+    # Rename columns to match the manual metrics
+    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
+                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
+                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
+                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
+                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
+                  inplace=True)
     # Add suffix to all columns except participant_id and session_id
-    df_method1 = df_method1.add_suffix(f'_{method1}')
-    df_method1.rename(columns={'participant_id_' + method1: 'participant_id',
-                               'session_id_' + method1: 'session_id'}, inplace=True)
+    df_sct = df_sct.add_suffix('_sct')
+    df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
 
     #----------------
-    # Method 2
+    # XLSX file with manually measured lesion metrics
     #----------------
-    if file2.endswith('.xlsx'):
-        df_method2 = read_xlsx(file2)
-    elif file2.endswith('.csv'):
-        df_method2 = pd.read_csv(file2)
-
+    df_manual = read_xlsx(file_manual)
+    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
+    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
+    # Rename columns to match
     # Add suffix to all columns except participant_id and session_id
-    df_method2 = df_method2.add_suffix(f'_{method2}')
-    df_method2.rename(columns={'participant_id_' + method2: 'participant_id',
-                               'session_id_' + method2: 'session_id'}, inplace=True)
+    df_manual = df_manual.add_suffix('_manual')
+    df_manual.rename(columns={'participant_id_manual': 'participant_id', 'session_id_manual': 'session_id'}, inplace=True)
 
+    #----------------
     # Merge the dataframes
-    df = pd.merge(df_method1, df_method2, on=['participant_id', 'session_id'])
+    #----------------
+    df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
 
-    # Replace nan values with zeros (if there is no lesion, we assume the metrics are zero)
-    df = df.fillna(0)
+    # Keep only ses-01 sessions
+    df_ses_01 = df[df['session_id'] == 'ses-01']
 
-    # Print number of subjects (rows)
-    print(f'Number of subjects: {df.shape[0]}')
+    # Keep only subjects with more than 1 session
+    df_multiple_ses = df.groupby('participant_id').filter(lambda x: len(x) > 1 and x['session_id'].nunique() > 1)
+
+    # Print number of subjects
+    print(f'ses-01: Number of subjects: {df_ses_01.shape[0]}')
+    print(f'Multiple sessions: Number of subjects: {df_multiple_ses.shape[0]}')
 
     # # Keep only test subjects (i.e., those who were not used for SCIsegV2 training)
     # # https://github.com/ivadomed/model_seg_sci/blob/main/dataset-conversion/dataset_split_seed710.yaml
@@ -410,24 +394,23 @@ def main():
     # # If you want to remove the 'combined_id' column after filtering:
     # df = df_filtered.drop('combined_id', axis=1)
 
-    # Exclude sub-zh15, sub-zh81
-    df = df[~df['participant_id'].isin(['sub-zh15', 'sub-zh81'])]
-    print(len(df))
+    # # Exclude sub-zh15, sub-zh81
+    # df = df[~df['participant_id'].isin(['sub-zh15', 'sub-zh81'])]
+    # print(len(df))
 
-    # Print participant_ids for subjects with high midsagittal_length > 100 mm
-    print(f'Subjects with midsagittal_length_{args.method2} > 100 mm')
-    print(df[df[f'midsagittal_length_{args.method2}'] > 100][['participant_id', 'session_id']])
+    #----------------
+    # Plotting
+    #----------------
+    output_dir = args.o
+    # create output directory if it does not exist
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Create scatter plots with linear regression lines
-    #create_scatterplot(df, method1, method2, output_dir)
-    # Create scatter plots for 3D lesion length and width
-    #create_scatterplot_3D_length_width(df, method1, method2, output_dir)
-    create_diff_plot(df, method1, method2, output_dir)
-
-    # Keep only participant_id, session_id and midsagittal_slice columns
-    df_to_save = df[['participant_id', 'session_id', 'midsagittal_slice_' + method2]]
-    # Save the dataframe with the midsagittal slice to a CSV file
-    df_to_save.to_csv(os.path.join(output_dir, f'midsagittal_slice_{method2}.csv'), index=False)
+    # Scatter plot with linear regression lines
+    create_scatterplot(df_ses_01, output_dir)
+    # Scatter plot for 3D lesion length and width
+    create_scatterplot_3D_length_width(df, output_dir)
+    # Bland-Altman Mean Difference Plot
+    create_diff_plot(df_ses_01, output_dir)
 
 
 if __name__ == '__main__':
