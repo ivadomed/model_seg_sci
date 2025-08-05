@@ -434,10 +434,13 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     short_values = [float(val) for val in short_values]
                     short_mean = np.mean(short_values)
                     short_se = np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
+
+                    # Include sample size in the legend label
+                    label = f'Short lesions (≤{median_value:.1f} mm, n={len(short_group_ids)})'
                     ax.errorbar(tp_idx, short_mean, yerr=short_se,
                                 fmt='o', color='blue', ecolor='blue',
                                 markersize=5, capsize=5,
-                                label='Short lesions')
+                                label=label)
 
                 # Long group
                 long_values = long_group_data[tp]
@@ -446,10 +449,13 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     long_values = [float(val) for val in long_values]
                     long_mean = np.mean(long_values)
                     long_se = np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
+
+                    # Include sample size in the legend label
+                    label = f'Long lesions (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
                     ax.errorbar(tp_idx, long_mean, yerr=long_se,
                                 fmt='o', color='red', ecolor='red',
                                 markersize=5, capsize=5,
-                                label='Long lesions')
+                                label=label)
 
             # Connect mean points with lines
             mean_short_x = []
@@ -495,18 +501,11 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             # Add legend
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), loc='best', fontsize=FONT_SIZE-2)
+            ax.legend(by_label.values(), by_label.keys(), loc='lower left', fontsize=FONT_SIZE-2)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
-
-            # Add text with sample size information
-            ax.text(0.01, 0.01,
-                    f'Short lesions (≤{median_value:.1f} mm): n={len(short_group_ids)}\n'
-                    f'Long lesions (>{median_value:.1f} mm): n={len(long_group_ids)}',
-                    transform=ax.transAxes, fontsize=FONT_SIZE-2,
-                    bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray', boxstyle='round,pad=0.5'))
 
             plt.tight_layout()
 
