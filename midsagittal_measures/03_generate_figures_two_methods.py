@@ -41,6 +41,14 @@ METRIC_TO_TITLE = {
     'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]'
 }
 
+CLINICAL_SCORES_TO_AXES = {
+    'uems': 'UEMS',
+    'lems': 'LEMS',
+    'ms': 'Motor Score',
+    'pp': 'Pinprick Score',
+    'lt': 'Light-Touch Score'
+}
+
 FONT_SIZE = 12
 
 
@@ -435,7 +443,7 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     short_mean = np.mean(short_values)
                     short_se = np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
                     # Include sample size in the legend label
-                    label = f'Short lesions (≤{median_value:.1f} mm, n={len(short_group_ids)})'
+                    label = f'Short {METRIC_TO_TITLE[metric].split("[")[0]} (≤{median_value:.1f} mm, n={len(short_group_ids)})'
                     ax.errorbar(tp_idx, short_mean, yerr=short_se,
                                 fmt='o', color='blue', ecolor='blue',
                                 markersize=5, capsize=5,
@@ -449,7 +457,7 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                     long_mean = np.mean(long_values)
                     long_se = np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
                     # Include sample size in the legend label
-                    label = f'Long lesions (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
+                    label = f'Long {METRIC_TO_TITLE[metric].split("[")[0]} (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
                     ax.errorbar(tp_idx, long_mean, yerr=long_se,
                                 fmt='o', color='red', ecolor='red',
                                 markersize=5, capsize=5,
@@ -483,11 +491,12 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                 ax.plot(mean_long_x, mean_long_y, '-', color='red', linewidth=2.5)
 
             # Set labels and title
-            ax.set_title(f'{score.upper()} over time stratified by {METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
-            ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
-            ax.set_ylabel(f'{score.upper()} Score', fontsize=FONT_SIZE)
+            ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by '
+                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
+            ax.set_xlabel('Time since injury (months)', fontsize=FONT_SIZE)
+            ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
             ax.set_xticks(range(len(time_points)))
-            ax.set_xticklabels(['Baseline', '1M', '3M', '6M', '12M'], fontsize=FONT_SIZE)
+            ax.set_xticklabels(['0', '1', '3', '6', '12'], fontsize=FONT_SIZE)
 
             # Add color bar for lesion length
             sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis,
