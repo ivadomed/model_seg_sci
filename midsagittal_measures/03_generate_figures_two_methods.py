@@ -40,13 +40,7 @@ METRIC_TO_TITLE = {
     'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]'
 }
 
-def get_method_key(method):
-    if method.startswith('GT_'):
-        return 'GT'
-    elif method.startswith('SCIsegV2_'):
-        return 'SCIsegV2'
-    elif method.startswith('manual'):
-        return 'manual'
+FONT_SIZE = 12
 
 
 def get_parser():
@@ -182,9 +176,9 @@ def create_scatterplot(df, output_dir):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
-        ax.set_xlabel(f'Manual', fontsize=12)
-        ax.set_ylabel(f'Automatic (from manual GTs)', fontsize=12)
+        ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Automatic (from manual GTs)', fontsize=FONT_SIZE)
 
         if metric == 'midsagittal_length':
             # Change axes ticks to 0, 50, 100, 150, 200
@@ -244,8 +238,8 @@ def create_scatterplot_3D_length_width(df, output_dir):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=12)
-        ax.set_ylabel(f'Automatic (from manual GTs) 3D {metric} [mm]', fontsize=12)
+        ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Automatic (from manual GTs) 3D {metric} [mm]', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Change axes ticks to 0, 50, 100, 150, 200
@@ -307,9 +301,9 @@ def create_diff_plot(df, output_dir):
         )
 
         # Set plot title and labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric]}\nManual vs Automatic (from manual GTs)', fontsize=12)
-        ax.set_xlabel(f'Mean', fontsize=12)
-        ax.set_ylabel(f'Difference', fontsize=12)
+        ax.set_title(f'{METRIC_TO_TITLE[metric]}\nManual vs Automatic (from manual GTs)', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Mean', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Difference', fontsize=FONT_SIZE)
 
         # Get the limits and means for custom styling
         diff = x - y            # Difference between x and y
