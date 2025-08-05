@@ -515,7 +515,7 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             # Add legend
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE-2, framealpha=0.8)
+            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE-2, framealpha=0.9)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
