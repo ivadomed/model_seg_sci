@@ -431,10 +431,14 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                 # Calculate marker size based on metric value (scale between 2-12)
                 marker_size = 2 + 10 * norm_value  # Scale normalized value to range between 2-12
 
-                # Plot individual participant trajectory with marker size based on metric value
+                # Baseline markers modulated by metric the baseline lesion metric value
+                ax.plot(time_values[0], score_values[0], 'o-', alpha=0.5,
+                        color=plt.cm.cool(norm_value),
+                        markersize=marker_size)
+                # Trajectory lines
                 ax.plot(time_values, score_values, 'o-', alpha=0.5,
                         color=plt.cm.cool(norm_value),
-                        linewidth=1, markersize=marker_size)
+                        linewidth=1, markersize=1)
 
             # Calculate and plot mean ± standard error (SE) trajectories for each group
             for tp_idx, tp in enumerate(time_points):
