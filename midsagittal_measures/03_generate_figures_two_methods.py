@@ -26,6 +26,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 
+from scipy import stats
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 
@@ -172,9 +173,10 @@ def create_scatterplot(df, output_dir):
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
         ax.plot(x_vals, y_vals, '--', color='red')
 
-        # Add R² value to the plot
-        ax.text(0.05, 0.95, f'R² = {r2_sc:.2f}', transform=ax.transAxes,
-                verticalalignment='top', fontsize=15, color='red')
+        # Compute Spearman correlation
+        spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
+        ax.text(0.05, 0.95, f'Spearman ρ = {spearman_corr:.2f}\np = {p_value:.3g}',
+                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='red')
 
         # Add diagonal line
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
@@ -233,9 +235,10 @@ def create_scatterplot_3D_length_width(df, output_dir):
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
         ax.plot(x_vals, y_vals, '--', color='red')
 
-        # Add R² value to the plot
-        ax.text(0.05, 0.95, f'R² = {r2_sc:.2f}', transform=ax.transAxes,
-                verticalalignment='top', fontsize=15, color='red')
+        # Compute Spearman correlation
+        spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
+        ax.text(0.05, 0.95, f'Spearman ρ = {spearman_corr:.2f}\np = {p_value:.3g}',
+                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='red')
 
         # Add diagonal line
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
