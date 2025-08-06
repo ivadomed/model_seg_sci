@@ -487,7 +487,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                         color=plt.cm.cool(norm_value),
                         linewidth=1, markersize=1)
 
-            # Calculate and plot mean ± standard error (SE) trajectories for each group
+            # Calculate and plot mean ± confidence interval (CI) trajectories for each group
             for tp_idx, tp in enumerate(time_points):
                 # Short group
                 short_values = short_group_data[tp]
@@ -495,10 +495,11 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                     # Ensure all values are numeric
                     short_values = [float(val) for val in short_values]
                     short_mean = np.mean(short_values)
-                    short_se = np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
+                    # Calculate 95% confidence interval instead of standard error
+                    short_ci = 1.96 * np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
                     # Include sample size in the legend label
                     label = f'Short {METRIC_TO_TITLE[metric].split("[")[0]} (≤{median_value:.1f} mm, n={len(short_group_ids)})'
-                    ax.errorbar(tp_idx, short_mean, yerr=short_se,
+                    ax.errorbar(tp_idx, short_mean, yerr=short_ci,
                                 fmt='o', color='blue', ecolor='blue',
                                 markersize=5, capsize=5,
                                 label=label)
@@ -509,10 +510,11 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                     # Ensure all values are numeric
                     long_values = [float(val) for val in long_values]
                     long_mean = np.mean(long_values)
-                    long_se = np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
+                    # Calculate 95% confidence interval instead of standard error
+                    long_ci = 1.96 * np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
                     # Include sample size in the legend label
                     label = f'Long {METRIC_TO_TITLE[metric].split("[")[0]} (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
-                    ax.errorbar(tp_idx, long_mean, yerr=long_se,
+                    ax.errorbar(tp_idx, long_mean, yerr=long_ci,
                                 fmt='o', color='red', ecolor='red',
                                 markersize=5, capsize=5,
                                 label=label)
