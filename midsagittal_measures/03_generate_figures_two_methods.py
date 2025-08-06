@@ -401,6 +401,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
             #   0: tetraplegic
             #   1: paraplegic -- max UEMS at baseline (no impairment)
             df_ses_01_plot = df_ses_01[df_ses_01['tetrapara_bl'] == 0]
+        # Keeping all subjects for LEMS and other scores
         else:
             df_ses_01_plot = df_ses_01
 
