@@ -384,9 +384,18 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
     plt.rcParams['font.sans-serif'] = 'Arial'
 
     clinical_scores = ('uems', 'lems', 'ms', 'pp', 'lt')
-    # Sort time points in a logical order: bl, 1m, 3m, 6m, 12m
-    time_point_order = {'bl': 0, '1m': 1, '3m': 2, '6m': 3, '12m': 4}
-    time_points = sorted(list(time_point_order.keys()), key=lambda x: time_point_order.get(x, 99))
+    # Define time points with their actual time values in months from baseline
+    time_point_mapping = {
+        'bl': {'order': 0, 'months': 0},     # baseline = 0 months
+        '1m': {'order': 1, 'months': 1},     # 1 month
+        '3m': {'order': 2, 'months': 3},     # 3 months
+        '6m': {'order': 3, 'months': 6},     # 6 months
+        '12m': {'order': 4, 'months': 12}    # 12 months
+    }
+    # Sort time points in a logical order
+    time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order', 99))
+    # Get the actual month values for x-axis positioning
+    time_points_months = [time_point_mapping[tp]['months'] for tp in time_points]
 
     # Convert any string clinical score columns to numeric
     for col in df_ses_01.columns:
@@ -456,11 +465,12 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                 time_values = []
                 score_values = []
 
-                for tp_idx, tp in enumerate(time_points_present):
+                for tp in time_points_present:
                     col_name = f'{score}_{tp}'
                     if col_name in participant_clinical.columns and not pd.isna(participant_clinical[col_name].values[0]):
                         val = float(participant_clinical[col_name].values[0])  # Ensure value is float
-                        time_values.append(tp_idx)  # Use index for x-axis to make equal spacing
+                        # Use actual month values for x-axis
+                        time_values.append(time_point_mapping[tp]['months'])
                         score_values.append(val)
 
                         # Add to group data for mean trajectory
@@ -488,7 +498,10 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                         linewidth=1, markersize=1)
 
             # Calculate and plot mean ± confidence interval (CI) trajectories for each group
-            for tp_idx, tp in enumerate(time_points):
+            for tp in time_points:
+                # Get x position in months
+                tp_month = time_point_mapping[tp]['months']
+
                 # Short group
                 short_values = short_group_data[tp]
                 if short_values:
@@ -499,10 +512,10 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                     short_ci = 1.96 * np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
                     # Include sample size in the legend label
                     label = f'Short {METRIC_TO_TITLE[metric].split("[")[0]} (≤{median_value:.1f} mm, n={len(short_group_ids)})'
-                    ax.errorbar(tp_idx, short_mean, yerr=short_ci,
+                    ax.errorbar(tp_month, short_mean, yerr=short_ci,
                                 fmt='o', color='blue', ecolor='blue',
                                 markersize=5, capsize=5,
-                                label=label)
+                                label=label if tp == '1m' else "")  # Only add label once
 
                 # Long group
                 long_values = long_group_data[tp]
@@ -513,31 +526,33 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                     # Calculate 95% confidence interval instead of standard error
                     long_ci = 1.96 * np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
                     # Include sample size in the legend label
-                    label = f'Long {METRIC_TO_TITLE[metric].split("[")[0]} (>{median_value:.1f} mm, n={len(long_group_ids)})' if tp_idx == 1 else ""
-                    ax.errorbar(tp_idx, long_mean, yerr=long_ci,
+                    label = f'Long {METRIC_TO_TITLE[metric].split("[")[0]} (>{median_value:.1f} mm, n={len(long_group_ids)})'
+                    ax.errorbar(tp_month, long_mean, yerr=long_ci,
                                 fmt='o', color='red', ecolor='red',
                                 markersize=5, capsize=5,
-                                label=label)
+                                label=label if tp == '1m' else "")  # Only add label once
 
-            # Connect mean points with lines
+            # Connect mean points with lines - using actual month values
             mean_short_x = []
             mean_short_y = []
             mean_long_x = []
             mean_long_y = []
 
-            for tp_idx, tp in enumerate(time_points):
+            for tp in time_points:
+                tp_month = time_point_mapping[tp]['months']
+
                 short_values = short_group_data[tp]
                 if short_values:
                     # Ensure all values are numeric
                     short_values = [float(val) for val in short_values]
-                    mean_short_x.append(tp_idx)
+                    mean_short_x.append(tp_month)
                     mean_short_y.append(np.mean(short_values))
 
                 long_values = long_group_data[tp]
                 if long_values:
                     # Ensure all values are numeric
                     long_values = [float(val) for val in long_values]
-                    mean_long_x.append(tp_idx)
+                    mean_long_x.append(tp_month)
                     mean_long_y.append(np.mean(long_values))
 
             if len(mean_short_x) > 1:
@@ -551,8 +566,15 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                          f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
             ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
-            ax.set_xticks(range(len(time_points)))
+
+            # Set x-ticks at the actual month points (0, 1, 3, 6, 12)
+            ax.set_xticks(time_points_months)
             ax.set_xticklabels(['Baseline', 'M1', 'M3', 'M6', 'M12'], fontsize=FONT_SIZE)
+
+            # Add minor ticks only at the labeled tick positions for better visualization
+            ax.tick_params(axis='x', which='minor', bottom=True, length=4)
+            # Place minor ticks at the same positions as the major ticks
+            ax.set_xticks(time_points_months, minor=True)
 
             # Add color bar for lesion metric
             sm = plt.cm.ScalarMappable(cmap=plt.cm.cool,
