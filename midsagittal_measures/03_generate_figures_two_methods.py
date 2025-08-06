@@ -114,6 +114,7 @@ def read_file_manual(file):
     unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
     df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
 
+    print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
     return df_manual
 
 
@@ -129,6 +130,8 @@ def read_file_sct(file_sct):
     # Add suffix to all columns except participant_id and session_id
     df_sct = df_sct.add_suffix('_sct')
     df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
+
+    print(f'Read {len(df_sct)} rows from the SCT metrics file: {file_sct}')
     return df_sct
 
 
