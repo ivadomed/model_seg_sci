@@ -98,6 +98,21 @@ def read_file_manual(file):
     return df
 
 
+def read_file_sct(file_sct):
+    df_sct = pd.read_csv(file_sct)
+    # Rename columns to match the manual metrics
+    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
+                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
+                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
+                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
+                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
+                  inplace=True)
+    # Add suffix to all columns except participant_id and session_id
+    df_sct = df_sct.add_suffix('_sct')
+    df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
+    return df_sct
+
+
 def compute_regression(x, y):
     """
     Compute a linear regression between x and y:
@@ -542,18 +557,7 @@ def main():
     #----------------
     # CSV file with lesion metrics computed using sct_analyze_lesion
     #----------------
-    # XLSX is available only for manual measurements
-    df_sct = pd.read_csv(file_sct)
-    # Rename columns to match the manual metrics
-    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
-                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
-                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
-                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
-                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
-                  inplace=True)
-    # Add suffix to all columns except participant_id and session_id
-    df_sct = df_sct.add_suffix('_sct')
-    df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
+    df_sct = read_file_sct(file_sct)
 
     #----------------
     # XLSX file with manually measured lesion metrics and clinical scores
