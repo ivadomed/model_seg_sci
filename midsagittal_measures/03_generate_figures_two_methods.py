@@ -86,7 +86,7 @@ def get_parser():
     return parser
 
 
-def read_xlsx(file):
+def read_file_manual(file):
     """
     Read XLSX file with manually measured metrics
     :param file: str: path to the XLSX file
@@ -558,7 +558,7 @@ def main():
     #----------------
     # XLSX file with manually measured lesion metrics and clinical scores
     #----------------
-    df_manual = read_xlsx(file_manual)
+    df_manual = read_file_manual(file_manual)
 
     # Extract clinical scores from the manual file
     # Identify clinical score columns (they follow the pattern score_timepoint, e.g., uems_bl, uems_1m)
