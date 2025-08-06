@@ -578,11 +578,21 @@ def main():
     clinical_cols = [col for col in df_manual.columns if '_' in col and
                     col.split('_')[0] not in ['participant', 'session'] and
                     col.split('_')[1] in ['bl', '1m', '3m', '6m', '12m']]
+    # Add 'mri_time_since_injury' to clinical_cols
+    clinical_cols.append('mri_time_since_injury')
 
     # Create a clinical scores dataframe
     df_clinical = df_manual[['participant_id', 'session_id'] + clinical_cols].copy()
     # Keep only ses-01
     df_clinical_ses_01 = df_clinical[df_clinical['session_id'] == 'ses-01']
+    # Convert mri_time_since_injury to numeric (in days)
+    df_clinical_ses_01['mri_time_since_injury'] = pd.to_numeric(df_clinical_ses_01['mri_time_since_injury'], errors='coerce')
+    desc = df_clinical_ses_01['mri_time_since_injury'].describe()
+    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
+    # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
+    df_clinical_ses_01 = df_clinical_ses_01[(df_clinical_ses_01['mri_time_since_injury'] >= 12) & (df_clinical_ses_01['mri_time_since_injury'] <= 60)]
+    desc = df_clinical_ses_01['mri_time_since_injury'].describe()
+    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
 
     # Keep only baseline metrics and tissue bridge measurements in df_manual
     lesion_cols = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge']
@@ -640,8 +650,11 @@ def main():
     create_scatterplot_3D_length_width(df, output_dir)
     # Bland-Altman Mean Difference Plot
     create_diff_plot(df_ses_01, output_dir)
+
+    #----------------
     # Clinical scores and baseline metrics over time
-    create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir)
+    #----------------
+    create_clinical_metrics_plots(df_ses_01, df_clinical_ses_01, output_dir)
 
 
 if __name__ == '__main__':
