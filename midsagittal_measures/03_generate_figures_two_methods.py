@@ -581,6 +581,8 @@ def main():
 
     # Create a clinical scores dataframe
     df_clinical = df_manual[['participant_id', 'session_id'] + clinical_cols].copy()
+    # Keep only ses-01
+    df_clinical_ses_01 = df_clinical[df_clinical['session_id'] == 'ses-01']
 
     # Keep only baseline metrics and tissue bridge measurements in df_manual
     lesion_cols = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge']
