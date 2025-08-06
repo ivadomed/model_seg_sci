@@ -88,14 +88,33 @@ def get_parser():
 
 def read_file_manual(file):
     """
-    Read XLSX file with manually measured metrics
+    Read the XLSX file with manually measured metrics and clinical scores.
     :param file: str: path to the XLSX file
-    :return: pd.DataFrame: dataframe with the metrics
+    :return df_manual: pandas DataFrame: dataframe with manually measured lesion metrics and clinical scores
     """
-    df = pd.read_excel(file)
+    df_manual = pd.read_excel(file)
+    # Drop rows where 'participant_id' is NaN or 'exclude' -- rows with comments
+    df_manual = df_manual.dropna(subset=['participant_id'])
+    df_manual = df_manual[df_manual['participant_id'] != 'exclude']
     # If session_id is nan in the manual file, set it to 'ses-01'
-    df['session_id'] = df['session_id'].fillna('ses-01')
-    return df
+    df_manual['session_id'] = df_manual['session_id'].fillna('ses-01')
+
+    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
+    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
+    # Rename columns to distinguish manual metrics from SCT metrics
+    df_manual.rename(columns={'midsagittal_length': 'midsagittal_length_manual',
+                              'midsagittal_width': 'midsagittal_width_manual',
+                              'ventral_tissue_bridge': 'ventral_tissue_bridge_manual',
+                              'dorsal_tissue_bridge': 'dorsal_tissue_bridge_manual',
+                              'total_tissue_bridge': 'total_tissue_bridge_manual'},
+                     inplace=True)
+
+    # Drop 'comment' column and unnamed columns
+    df_manual = df_manual.drop(columns=['comment'], errors='ignore')
+    unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
+    df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
+
+    return df_manual
 
 
 def read_file_sct(file_sct):
@@ -349,38 +368,38 @@ def create_diff_plot(df, output_dir):
         plt.close()
 
 
-def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
+def create_clinical_metrics_plots(df_ses_01, output_dir):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
 
-    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only)
-    :param df_clinical: pandas dataframe with clinical scores across multiple time points
+    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    multiple time points
     :param output_dir: output directory
     """
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
-
-    # Convert any string clinical score columns to numeric
-    for col in df_clinical.columns:
-        if col not in ['participant_id', 'session_id']:
-            df_clinical[col] = pd.to_numeric(df_clinical[col], errors='coerce')
 
     clinical_scores = ('uems', 'lems', 'ms', 'pp', 'lt')
     # Sort time points in a logical order: bl, 1m, 3m, 6m, 12m
     time_point_order = {'bl': 0, '1m': 1, '3m': 2, '6m': 3, '12m': 4}
     time_points = sorted(list(time_point_order.keys()), key=lambda x: time_point_order.get(x, 99))
 
+    # Convert any string clinical score columns to numeric
+    for col in df_ses_01.columns:
+        if col.startswith(clinical_scores):
+            df_ses_01[col] = pd.to_numeric(df_ses_01[col], errors='coerce')
+
     # Loop over each clinical score
     for score in clinical_scores:
-
+        # Filtering for UEMS
         if score == 'uems':
             # For UEMS, keep only subjects with 'tetrapara_bl' == 0
             #   0: tetraplegic
             #   1: paraplegic -- max UEMS at baseline (no impairment)
-            df_clinical_plot = df_clinical[df_clinical['tetrapara_bl'] == 0]
+            df_ses_01_plot = df_ses_01[df_ses_01['tetrapara_bl'] == 0]
         else:
-            df_clinical_plot = df_clinical
+            df_ses_01_plot = df_ses_01
 
         # Loop over each lesion metric
         for metric in METRICS:
@@ -406,12 +425,12 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                 # Get participant data
                 participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
-                if (participant_id not in df_clinical_plot['participant_id'].values or
+                if (participant_id not in df_ses_01_plot['participant_id'].values or
                     metric_name not in participant_data.columns or
                     pd.isna(participant_data[metric_name].values[0])):
                     continue
 
-                participant_clinical = df_clinical_plot[df_clinical_plot['participant_id'] == participant_id]
+                participant_clinical = df_ses_01_plot[df_ses_01_plot['participant_id'] == participant_id]
 
                 # Get metric value for this participant (for coloring)
                 metric_value = participant_data[metric_name].values[0]
@@ -549,7 +568,7 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
             plt.tight_layout()
             figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot.png')
             plt.savefig(figure_fname, dpi=300)
-            print(f'Spaghetti plot for {score} by {metric} saved as {figure_fname}')
+            print(f'Trajectory plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
 
 
@@ -573,52 +592,33 @@ def main():
     #----------------
     df_manual = read_file_manual(file_manual)
 
-    # Extract clinical scores from the manual file
-    # Identify clinical score columns (they follow the pattern score_timepoint, e.g., uems_bl, uems_1m)
-    clinical_cols = [col for col in df_manual.columns if '_' in col and
-                    col.split('_')[0] not in ['participant', 'session'] and
-                    col.split('_')[1] in ['bl', '1m', '3m', '6m', '12m']]
-    # Add 'mri_time_since_injury' to clinical_cols
-    clinical_cols.append('mri_time_since_injury')
-
-    # Create a clinical scores dataframe
-    df_clinical = df_manual[['participant_id', 'session_id'] + clinical_cols].copy()
-    # Keep only ses-01
-    df_clinical_ses_01 = df_clinical[df_clinical['session_id'] == 'ses-01']
-    # Convert mri_time_since_injury to numeric (in days)
-    df_clinical_ses_01['mri_time_since_injury'] = pd.to_numeric(df_clinical_ses_01['mri_time_since_injury'], errors='coerce')
-    desc = df_clinical_ses_01['mri_time_since_injury'].describe()
-    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
-    # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
-    df_clinical_ses_01 = df_clinical_ses_01[(df_clinical_ses_01['mri_time_since_injury'] >= 12) & (df_clinical_ses_01['mri_time_since_injury'] <= 60)]
-    desc = df_clinical_ses_01['mri_time_since_injury'].describe()
-    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
-
-    # Keep only baseline metrics and tissue bridge measurements in df_manual
-    lesion_cols = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge']
-    df_manual = df_manual[['participant_id', 'session_id'] + lesion_cols]
-
-    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
-    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
-    # Rename columns to match
-    # Add suffix to all columns except participant_id and session_id
-    df_manual = df_manual.add_suffix('_manual')
-    df_manual.rename(columns={'participant_id_manual': 'participant_id', 'session_id_manual': 'session_id'}, inplace=True)
-
     #----------------
     # Merge the dataframes
     #----------------
     df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
 
-    # Keep only ses-01 sessions
-    df_ses_01 = df[df['session_id'] == 'ses-01']
-
+    #----------------
+    # Create new dataframes for ses-01 and multiple sessions
+    #----------------
     # Keep only subjects with more than 1 session
     df_multiple_ses = df.groupby('participant_id').filter(lambda x: len(x) > 1 and x['session_id'].nunique() > 1)
-
+    # Keep only 'ses-01' sessions
+    df_ses_01 = df[df['session_id'] == 'ses-01']
     # Print number of subjects
     print(f'ses-01: Number of subjects: {df_ses_01.shape[0]}')
     print(f'Multiple sessions: Number of subjects: {df_multiple_ses.shape[0]}')
+
+    #----------------
+    # Filter subjects based on MRI time since injury
+    #----------------
+    # Convert mri_time_since_injury to numeric (in days)
+    df_ses_01['mri_time_since_injury'] = pd.to_numeric(df_ses_01['mri_time_since_injury'], errors='coerce')
+    desc = df_ses_01['mri_time_since_injury'].describe()
+    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
+    # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
+    df_ses_01 = df_ses_01[(df_ses_01['mri_time_since_injury'] >= 12) & (df_ses_01['mri_time_since_injury'] <= 60)]
+    desc = df_ses_01['mri_time_since_injury'].describe()
+    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
 
     # # Keep only test subjects (i.e., those who were not used for SCIsegV2 training)
     # # https://github.com/ivadomed/model_seg_sci/blob/main/dataset-conversion/dataset_split_seed710.yaml
@@ -654,7 +654,7 @@ def main():
     #----------------
     # Clinical scores and baseline metrics over time
     #----------------
-    create_clinical_metrics_plots(df_ses_01, df_clinical_ses_01, output_dir)
+    create_clinical_metrics_plots(df_ses_01, output_dir)
 
 
 if __name__ == '__main__':
