@@ -373,6 +373,15 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
 
     # Loop over each clinical score
     for score in clinical_scores:
+
+        if score == 'uems':
+            # For UEMS, keep only subjects with 'tetrapara_bl' == 0
+            #   0: tetraplegic
+            #   1: paraplegic -- max UEMS at baseline (no impairment)
+            df_clinical_plot = df_clinical[df_clinical['tetrapara_bl'] == 0]
+        else:
+            df_clinical_plot = df_clinical
+
         # Loop over each lesion metric
         for metric in METRICS:
             # Create a figure for all participants
@@ -397,12 +406,12 @@ def create_clinical_metrics_plots(df_ses_01, df_clinical, output_dir):
                 # Get participant data
                 participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
-                if (participant_id not in df_clinical['participant_id'].values or
+                if (participant_id not in df_clinical_plot['participant_id'].values or
                     metric_name not in participant_data.columns or
                     pd.isna(participant_data[metric_name].values[0])):
                     continue
 
-                participant_clinical = df_clinical[df_clinical['participant_id'] == participant_id]
+                participant_clinical = df_clinical_plot[df_clinical_plot['participant_id'] == participant_id]
 
                 # Get metric value for this participant (for coloring)
                 metric_value = participant_data[metric_name].values[0]
