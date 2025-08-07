@@ -648,6 +648,10 @@ def main():
     desc = df_ses_01['mri_time_since_injury'].describe()
     print(f'Description of MRI Time Since Injury (in days):\n{desc}')
 
+    # Drop rows with NaN values in the lesion metrics
+    df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRICS])
+    print(f'Number of subjects after dropping NaN values: {df_ses_01.shape[0]}')
+
     # # Keep only test subjects (i.e., those who were not used for SCIsegV2 training)
     # # https://github.com/ivadomed/model_seg_sci/blob/main/dataset-conversion/dataset_split_seed710.yaml
     # # Note: The following subjects were obtained using Claude
