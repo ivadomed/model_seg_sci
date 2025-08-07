@@ -383,6 +383,18 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
+    # Define metric thresholds for stratification (using equal increments)
+    metric_thresholds = {
+        'midsagittal_length': [0, 10, 20, 30, 40],
+        'midsagittal_width': [0, 2.5, 5, 7.5, 10],
+        'ventral_tissue_bridge': [0, 1, 2, 3, 4],
+        'dorsal_tissue_bridge': [0, 1, 2, 3, 4],
+        'total_tissue_bridge': [0, 2, 4, 6, 8]
+    }
+
+    # Define colors for each group
+    group_colors = ['blue', 'green', 'orange', 'red', 'purple']
+
     clinical_scores = ('uems', 'lems', 'ms', 'pp', 'lt')
     # Define time points with their actual time values in months from baseline
     time_point_mapping = {
@@ -421,13 +433,13 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
 
             metric_name = f'{metric}_sct'   # automatic lesion metric from SCT
 
-            # To stratify patients, determine median of the metric
-            median_value = df_ses_01[metric_name].median()
-            short_group_ids = []
-            long_group_ids = []
+            # Get the thresholds for this metric
+            thresholds = metric_thresholds[metric]
+
+            # Create groups for each threshold range
+            group_ids = [[] for _ in range(len(thresholds))]
             # Collect data for mean trajectories per group
-            short_group_data = {tp: [] for tp in time_points}
-            long_group_data = {tp: [] for tp in time_points}
+            group_data = [{tp: [] for tp in time_points} for _ in range(len(thresholds))]
 
             # For colormap
             min_value = df_ses_01[metric_name].min()
@@ -447,13 +459,18 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
 
                 # Get metric value for this participant (for coloring)
                 metric_value = participant_data[metric_name].values[0]
-                # Determine if this participant belongs to short or long group
-                if metric_value <= median_value:
-                    group = 'short'
-                    short_group_ids.append(participant_id)
-                else:
-                    group = 'long'
-                    long_group_ids.append(participant_id)
+
+                # Determine which group this participant belongs to
+                group_idx = 0
+                for i in range(len(thresholds) - 1):
+                    if thresholds[i] <= metric_value < thresholds[i+1]:
+                        group_idx = i
+                        break
+                if metric_value >= thresholds[-1]:
+                    group_idx = len(thresholds) - 1
+
+                # Add participant to the group
+                group_ids[group_idx].append(participant_id)
 
                 # Get clinical score values across time points
                 time_points_present = [tp for tp in time_points if f'{score}_{tp}' in participant_clinical.columns]
@@ -474,10 +491,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                         score_values.append(val)
 
                         # Add to group data for mean trajectory
-                        if group == 'short':
-                            short_group_data[tp].append(val)
-                        else:
-                            long_group_data[tp].append(val)
+                        group_data[group_idx][tp].append(val)
 
                 if len(time_values) < 2:  # Need at least 2 points to draw a line
                     continue
@@ -502,68 +516,52 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                 # Get x position in months
                 tp_month = time_point_mapping[tp]['months']
 
-                # Short group
-                short_values = short_group_data[tp]
-                if short_values:
-                    # Ensure all values are numeric
-                    short_values = [float(val) for val in short_values]
-                    short_mean = np.mean(short_values)
-                    # Calculate 95% confidence interval instead of standard error
-                    short_ci = 1.96 * np.std(short_values) / np.sqrt(len(short_values)) if len(short_values) > 1 else 0
-                    # Include sample size in the legend label
-                    label = f'Short {METRIC_TO_TITLE[metric].split("[")[0]} (≤{median_value:.1f} mm, n={len(short_group_ids)})'
-                    ax.errorbar(tp_month, short_mean, yerr=short_ci,
-                                fmt='o', color='blue', ecolor='blue',
-                                markersize=5, capsize=5,
-                                label=label if tp == '1m' else "")  # Only add label once
+                for group_idx in range(len(thresholds)):
+                    # Get group values for this time point
+                    group_values = group_data[group_idx][tp]
 
-                # Long group
-                long_values = long_group_data[tp]
-                if long_values:
-                    # Ensure all values are numeric
-                    long_values = [float(val) for val in long_values]
-                    long_mean = np.mean(long_values)
-                    # Calculate 95% confidence interval instead of standard error
-                    long_ci = 1.96 * np.std(long_values) / np.sqrt(len(long_values)) if len(long_values) > 1 else 0
-                    # Include sample size in the legend label
-                    label = f'Long {METRIC_TO_TITLE[metric].split("[")[0]} (>{median_value:.1f} mm, n={len(long_group_ids)})'
-                    ax.errorbar(tp_month, long_mean, yerr=long_ci,
-                                fmt='o', color='red', ecolor='red',
-                                markersize=5, capsize=5,
-                                label=label if tp == '1m' else "")  # Only add label once
+                    if group_values:
+                        # Ensure all values are numeric
+                        group_values = [float(val) for val in group_values]
+                        group_mean = np.mean(group_values)
+                        # Calculate 95% confidence interval
+                        group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(group_values) > 1 else 0
 
-            # Connect mean points with lines - using actual month values
-            mean_short_x = []
-            mean_short_y = []
-            mean_long_x = []
-            mean_long_y = []
+                        # Create group label based on the threshold range
+                        if group_idx == 0:
+                            label = f'Group 1: <{thresholds[1]} mm (n={len(group_ids[group_idx])})'
+                        elif group_idx == len(thresholds) - 1:
+                            label = f'Group {group_idx+1}: ≥{thresholds[group_idx]} mm (n={len(group_ids[group_idx])})'
+                        else:
+                            label = f'Group {group_idx+1}: {thresholds[group_idx]}-{thresholds[group_idx+1]} mm (n={len(group_ids[group_idx])})'
 
-            for tp in time_points:
-                tp_month = time_point_mapping[tp]['months']
+                        # Only show label in legend for the first time point (to avoid duplicates)
+                        ax.errorbar(tp_month, group_mean, yerr=group_ci,
+                                    fmt='o', color=group_colors[group_idx], ecolor=group_colors[group_idx],
+                                    markersize=5, capsize=5,
+                                    label=label if tp == '1m' else "")
 
-                short_values = short_group_data[tp]
-                if short_values:
-                    # Ensure all values are numeric
-                    short_values = [float(val) for val in short_values]
-                    mean_short_x.append(tp_month)
-                    mean_short_y.append(np.mean(short_values))
+            # Connect mean points with lines for each group
+            for group_idx in range(len(thresholds)):
+                mean_x = []
+                mean_y = []
 
-                long_values = long_group_data[tp]
-                if long_values:
-                    # Ensure all values are numeric
-                    long_values = [float(val) for val in long_values]
-                    mean_long_x.append(tp_month)
-                    mean_long_y.append(np.mean(long_values))
+                for tp in time_points:
+                    tp_month = time_point_mapping[tp]['months']
+                    group_values = group_data[group_idx][tp]
 
-            if len(mean_short_x) > 1:
-                ax.plot(mean_short_x, mean_short_y, '-', color='blue', linewidth=2.5)
+                    if group_values:
+                        # Ensure all values are numeric
+                        group_values = [float(val) for val in group_values]
+                        mean_x.append(tp_month)
+                        mean_y.append(np.mean(group_values))
 
-            if len(mean_long_x) > 1:
-                ax.plot(mean_long_x, mean_long_y, '-', color='red', linewidth=2.5)
+                if len(mean_x) > 1:
+                    ax.plot(mean_x, mean_y, '-', color=group_colors[group_idx], linewidth=2.5)
 
             # Set labels and title
             ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by '
-                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
+                        f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
             ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
 
@@ -578,7 +576,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
 
             # Add color bar for lesion metric
             sm = plt.cm.ScalarMappable(cmap=plt.cm.cool,
-                                       norm=plt.Normalize(vmin=min_value, vmax=max_value))
+                                      norm=plt.Normalize(vmin=min_value, vmax=max_value))
             sm.set_array([])
             cbar = fig.colorbar(sm, ax=ax)
             cbar.set_label(METRIC_TO_TITLE[metric], fontsize=FONT_SIZE)
