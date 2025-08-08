@@ -37,7 +37,7 @@
 set -x
 
 # Immediately exit if error
-set -e -o pipefail
+#set -e -o pipefail
 
 # Exit if user presses CTRL+C (Linux) or CMD+C (OSX)
 trap "echo Caught Keyboard Interrupt within script. Exiting now.; exit" INT
