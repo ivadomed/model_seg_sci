@@ -127,7 +127,7 @@ status=0
 sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
 # If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
 if [ $status -ne 0 ]; then
-    echo "❌No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_GT_analysis.log
+    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_GT_analysis.log
     exit 0
 else
   # If sct_analyze_lesion finished successfully, the outputs are:
@@ -162,7 +162,7 @@ status=0
 sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
 # If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
 if [ $status -ne 0 ]; then
-    echo "❌No lesion segmented by SCIsegV2 for ${file_t2}" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+    echo "❌ No lesion segmented by SCIsegV2 for ${file_t2}" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
     exit 0
 else
   # If sct_analyze_lesion finished successfully, the outputs are:
