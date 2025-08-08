@@ -109,33 +109,39 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     exit 1
 fi
 
-## ------------------------------------
-## Manual GT
-## ------------------------------------
-## Copy GT SC and lesion segmentations from derivatives/labels
-#copy_gt "${file_t2}" "seg"
-#copy_gt "${file_t2}" "lesion"
-#
-## Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask until https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4120 is fixed)
-#sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_bin.nii.gz
-#
-## Generate sagittal lesion QC report
-#sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
-#
-## Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained manually
-#sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
-## The outputs are:
-##   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-##   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
-##   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
-#
-## Remove pickle file -- we only need the XLSX file
-#rm ${file_t2}_lesion-manual_bin_analysis.pkl
-#
-## Copy the XLSX file to the results folder
-#cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}
-#echo "${file_t2}_lesion-manual_bin_analysis.xlsx created" >> ${PATH_LOG}/manual_GT_analysis.log
+# ------------------------------------
+# Manual GT
+# ------------------------------------
+# Copy GT SC and lesion segmentations from derivatives/labels
+copy_gt "${file_t2}" "seg"
+copy_gt "${file_t2}" "lesion"
 
+# Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask until https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4120 is fixed)
+sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_bin.nii.gz
+
+# Generate sagittal lesion QC report
+sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject "lesion_manual"
+
+# Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained manually
+status=0
+sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
+# If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
+if [ $status -ne 0 ]; then
+    echo "❌No lesion found in manual GT segmentation for subject ${file_t2}" >> ${PATH_LOG}/manual_GT_analysis.log
+    exit 0
+else
+  # If sct_analyze_lesion finished successfully, the outputs are:
+  #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+  #   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
+  #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
+
+  # Remove pickle file -- we only need the XLSX file
+  rm ${file_t2}_lesion-manual_bin_analysis.pkl
+
+  # Copy the XLSX file to the results folder
+  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}
+  echo "✅ ${file_t2}_lesion-manual_bin_analysis.xlsx created" >> ${PATH_LOG}/manual_GT_analysis.log
+fi
 # ----------------------------
 # SCIsegV2
 # ----------------------------
