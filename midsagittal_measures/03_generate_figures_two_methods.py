@@ -697,7 +697,7 @@ def main():
     # Scatter plot with linear regression lines
     create_scatterplot(df_ses_01, output_dir)
     # Scatter plot for 3D lesion length and width
-    create_scatterplot_3D_length_width(df, output_dir)
+    create_scatterplot_3D_length_width(df_ses_01, output_dir)
     # Bland-Altman Mean Difference Plot
     create_diff_plot(df_ses_01, output_dir)
 
