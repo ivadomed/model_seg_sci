@@ -19,7 +19,7 @@
 # {
 #  "path_data"   : "<PATH_TO_DATASET>",
 #  "path_output" : "<PATH_TO_DATASET>_2024-09-20",
-#  "script"      : "<PATH_TO_REPO>/model_seg_sci/midsagittal_measures/01_compute_midsagittal_lesion_length_and_width.sh",
+#  "script"      : "<PATH_TO_REPO>/model_seg_sci/midsagittal_measures/01_compute_midsagittal_lesion_measures.sh",
 #  "jobs"        : 8
 # }
 #
