@@ -253,14 +253,14 @@ def create_scatterplot(df, output_dir):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
+        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Automatic (from manual GTs)', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Automatic using SCT (from manual GTs)', fontsize=FONT_SIZE)
 
         if metric == 'midsagittal_length':
-            # Change axes ticks to 0, 50, 100, 150, 200
-            ax.set_xticks([0, 50, 100, 150, 200])
-            ax.set_yticks([0, 50, 100, 150, 200])
+            # Tweak axes ticks
+            ax.set_xticks([0, 25, 50, 75, 100])
+            ax.set_yticks([0, 25, 50, 75, 100])
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -317,12 +317,12 @@ def create_scatterplot_3D_length_width(df, output_dir):
 
         # Change axes labels
         ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Automatic (from manual GTs) 3D {metric} [mm]', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Automatic using SCT (from manual GTs) 3D {metric} [mm]', fontsize=FONT_SIZE)
 
         if metric == 'length':
-            # Change axes ticks to 0, 50, 100, 150, 200
-            ax.set_xticks([0, 50, 100, 150, 200])
-            ax.set_yticks([0, 50, 100, 150, 200])
+            # Tweak axes ticks
+            ax.set_xticks([0, 25, 50, 75, 100])
+            ax.set_yticks([0, 25, 50, 75, 100])
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -379,7 +379,8 @@ def create_diff_plot(df, output_dir):
         )
 
         # Set plot title and labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric]}\nManual vs Automatic (from manual GTs)', fontsize=FONT_SIZE)
+        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
+                     f'Manual vs Automatic (from manual GTs)', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Mean', fontsize=FONT_SIZE)
         ax.set_ylabel(f'Difference', fontsize=FONT_SIZE)
 
