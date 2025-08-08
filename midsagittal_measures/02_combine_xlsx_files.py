@@ -56,10 +56,12 @@ def get_parser():
     )
     parser.add_argument(
         '-o',
-        metavar='FILE_NAME',
+        metavar='DIR_NAME',
         required=True,
         type=str,
-        help='Output CSV file name. Example: \'<YOUR_PATH>/results/lesion_metrics_all_subjects.csv\' '
+        help='Path to the output folder where the CSV file with aggregated lesion metrics will be saved.'
+             'Example: \'<YOUR_PATH>/results/\'. The output CSV file will be named '
+             '\'lesion_metrics_all_subjects_<pred_type>.csv\', where <pred_type>'
     )
 
     return parser
@@ -174,14 +176,8 @@ def main():
     if not os.path.exists(path_input):
         raise ValueError(f'ERROR: {path_input} does not exist.')
 
-    # Output CSV file name
-    fname_out = os.path.abspath(os.path.expanduser(args.o))
-
     # For each participant_id, get XLSX files with lesion metrics
     df = get_fnames(path_input, pred_type)
-
-    # Remove sub-zh111 from the list of participants (it has multiple lesions)
-    df = df[df['participant_id'] != 'sub-zh111']
 
     # Iterate over the rows of the dataframe and read the XLSX files
     for index, row in df.iterrows():
@@ -193,10 +189,11 @@ def main():
     df.drop(columns=[f'fname'], inplace=True)
 
     # Save the dataframe with lesion metrics to a CSV file
-    output_folder = os.path.dirname(fname_out)
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-        print(f'Created output folder: {output_folder}')
+    dir_out = os.path.abspath(os.path.expanduser(args.o))
+    if not os.path.exists(dir_out):
+        os.makedirs(dir_out)
+        print(f'Created output folder: {dir_out}')
+    fname_out = os.path.join(dir_out, f'lesion_metrics_all_subjects_{pred_type}.csv')
     df.to_csv(fname_out, index=False)
     print(f'Saved lesion metrics to {fname_out}')
 
