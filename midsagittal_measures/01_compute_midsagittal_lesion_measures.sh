@@ -153,22 +153,28 @@ mv ${file_t2}_sc_seg.nii.gz ${file_t2}_sc_seg_SCIsegV2.nii.gz
 sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject ${SUBJECT}
 
 # Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
-sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT}
-# The outputs are:
-#   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-#   - ${file_t2}_lesion_seg_analysis.xlsx: XLSX file containing the morphometric measures
-#   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
+status=0
+sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
+# If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
+if [ $status -ne 0 ]; then
+    echo "❌No lesion found in manual GT segmentation for subject ${file_t2}" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+    exit 0
+else
+  # The outputs are:
+  #   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+  #   - ${file_t2}_lesion_seg_analysis.xlsx: XLSX file containing the morphometric measures
+  #   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
 
-# Remove pickle file -- we only need the XLSX file
-rm ${file_t2}_lesion_seg_analysis.pkl
+  # Remove pickle file -- we only need the XLSX file
+  rm ${file_t2}_lesion_seg_analysis.pkl
 
-# Rename the files to make clear they come from the SCIsegV2 model
-mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
-mv ${file_t2}_lesion_seg_analysis.xlsx ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx
-# Copy the XLSX file to the results folder
-cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx ${PATH_RESULTS}
-echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
-
+  # Rename the files to make clear they come from the SCIsegV2 model
+  mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
+  mv ${file_t2}_lesion_seg_analysis.xlsx ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx
+  # Copy the XLSX file to the results folder
+  cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx ${PATH_RESULTS}
+  echo "${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+fi
 # ------------------------------------------------------------------------------
 # End
 # ------------------------------------------------------------------------------
