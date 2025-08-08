@@ -43,7 +43,7 @@ def get_parser():
         required=True,
         type=str,
         help='Absolute path to the \'results\' folder with XLSX files generated using \'sct_analyze_lesion. '
-             'The results folders were generated using the \'01_compute_midsagittal_lesion_length_and_width.sh\' '
+             'The results folders were generated using the \'01_compute_midsagittal_lesion_measures.sh\' '
              'script.'
     )
     parser.add_argument(
