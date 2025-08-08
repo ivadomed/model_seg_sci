@@ -134,7 +134,6 @@ else
   #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
   #   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
   #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
-
   # Remove pickle file -- we only need the XLSX file
   rm ${file_t2}_lesion-manual_bin_analysis.pkl
 
@@ -166,11 +165,10 @@ if [ $status -ne 0 ]; then
     echo "❌No lesion segmented by SCIsegV2 for ${file_t2}" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
     exit 0
 else
-  # The outputs are:
+  # If sct_analyze_lesion finished successfully, the outputs are:
   #   - ${file_t2}_lesion_seg_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
   #   - ${file_t2}_lesion_seg_analysis.xlsx: XLSX file containing the morphometric measures
   #   - ${file_t2}_lesion_seg_analysis.pkl: Python Pickle file containing the morphometric measures
-
   # Remove pickle file -- we only need the XLSX file
   rm ${file_t2}_lesion_seg_analysis.pkl
 
