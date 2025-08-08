@@ -660,11 +660,11 @@ def main():
     # Convert mri_time_since_injury to numeric (in days)
     df_ses_01['mri_time_since_injury'] = pd.to_numeric(df_ses_01['mri_time_since_injury'], errors='coerce')
     desc = df_ses_01['mri_time_since_injury'].describe()
-    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
+    print(f'Number of subjects before filtering by MRI time since injury: {df_ses_01.shape[0]}')
     # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
     df_ses_01 = df_ses_01[(df_ses_01['mri_time_since_injury'] >= 12) & (df_ses_01['mri_time_since_injury'] <= 60)]
     desc = df_ses_01['mri_time_since_injury'].describe()
-    print(f'Description of MRI Time Since Injury (in days):\n{desc}')
+    print(f'Number of subjects after filtering by MRI time since injury: {df_ses_01.shape[0]}')
 
     # Drop rows with NaN values in the lesion metrics
     df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRICS])
