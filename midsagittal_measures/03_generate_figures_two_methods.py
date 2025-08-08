@@ -600,13 +600,6 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
             # Place minor ticks at the same positions as the major ticks
             ax.set_xticks(time_points_months, minor=True)
 
-            # Add color bar for lesion metric
-            sm = plt.cm.ScalarMappable(cmap=plt.cm.cool,
-                                      norm=plt.Normalize(vmin=min_value, vmax=max_value))
-            sm.set_array([])
-            cbar = fig.colorbar(sm, ax=ax)
-            cbar.set_label(METRIC_TO_TITLE[metric], fontsize=FONT_SIZE)
-
             # Add legend
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
