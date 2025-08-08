@@ -1,10 +1,12 @@
 #!/bin/bash
 #
-# Segment the spinal cord and lesions from T2w images and compute the midsagittal lesion length and width.
+# Compute midsagittal lesion measures (length, width, and tissue bridges) from manual and automated segmentations.
 #
 # The script does the following:
-#   1. Segment the spinal cord and lesions using SCIsegV2
-#   2. Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained using SCIsegV2
+#   1. Copies manual segmentations of spinal cord and lesions from derivatives/labels
+#   2. Computes midsagittal lesion measures based on the manual segment
+#   3. Segments spinal cord and lesions using SCIsegV2 model
+#   4. Computes midsagittal lesion measures based on the SCIsegV2
 #
 # NOTE: This script requires SCT v7.0 or higher (due to the new sct_deepseg syntax).
 
