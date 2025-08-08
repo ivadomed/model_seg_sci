@@ -529,20 +529,10 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                 if len(time_values) < 2:  # Need at least 2 points to draw a line
                     continue
 
-                # Normalize metric value for colormap (0-1 range)
-                norm_value = (metric_value - min_value) / (max_value - min_value) if max_value > min_value else 0.5
-
-                # Calculate marker size based on metric value (scale between 2-12)
-                marker_size = 2 + 10 * norm_value  # Scale normalized value to range between 2-12
-
-                # Baseline markers modulated by metric the baseline lesion metric value
-                ax.plot(time_values[0], score_values[0], 'o-', alpha=0.5,
-                        color=plt.cm.cool(norm_value),
-                        markersize=marker_size)
-                # Trajectory lines
-                ax.plot(time_values, score_values, 'o-', alpha=0.5,
-                        color=plt.cm.cool(norm_value),
-                        linewidth=1, markersize=1)
+                # Trajectory lines - match the group color
+                ax.plot(time_values, score_values, 'o-', alpha=0.3,
+                        color=group_colors[group_idx],
+                        linewidth=0.5, markersize=0)
 
             # Calculate and plot mean ± confidence interval (CI) trajectories for each group
             for tp in time_points:
