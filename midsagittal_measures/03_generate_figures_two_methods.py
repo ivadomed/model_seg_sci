@@ -552,11 +552,14 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
 
                         # Create group label based on the threshold range
                         if group_idx == 0:
-                            label = f'Group 1: <{thresholds[1]} mm (n={len(group_ids[group_idx])})'
+                            # First group
+                            label = f'<{thresholds[1]} mm (n={len(group_ids[group_idx])})'
                         elif group_idx == len(thresholds) - 1:
-                            label = f'Group {group_idx+1}: ≥{thresholds[group_idx]} mm (n={len(group_ids[group_idx])})'
+                            # Intermediate groups
+                            label = f'≥{thresholds[group_idx]} mm (n={len(group_ids[group_idx])})'
                         else:
-                            label = f'Group {group_idx+1}: {thresholds[group_idx]}-{thresholds[group_idx+1]} mm (n={len(group_ids[group_idx])})'
+                            # Last group
+                            label = f'{thresholds[group_idx]}-{thresholds[group_idx+1]} mm (n={len(group_ids[group_idx])})'
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
