@@ -227,6 +227,47 @@ def compute_regression(x, y):
     return intercept, slope, reg_predictor, r2_sc, x_vals, y_vals
 
 
+def combine_plot(figure_type, num_subjects, output_dir):
+    """
+    Combine all the plots into a single figure using bash convert command
+    This requires ImageMagick to be installed
+    :param figure_type: str: type of the figure to combine (e.g., 'scatterplot', or 'diffplot')
+    :param num_subjects: int: number of subjects in the dataframe
+    :param output_dir: str: output directory where the combined figure will be saved
+    """
+
+    print(f"Combining {figure_type}s into a single figure...")
+    # First row: midsagittal_length and midsagittal_width
+    cmd_row1 = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
+    # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
+    cmd_row2 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_tissue_bridge_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"{os.path.join(output_dir, f'{figure_type}_dorsal_tissue_bridge_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
+    # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
+    cmd_row3 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_bridge_ratio_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"{os.path.join(output_dir, f'{figure_type}_dorsal_bridge_ratio_manual_vs_sct_{num_subjects}subjects.png')} " \
+               f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
+    # Combine all rows
+    cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
+                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
+                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} " \
+                  f"-append {os.path.join(output_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}; " \
+                  f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
+                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
+                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
+    # Execute the commands
+    import subprocess
+    subprocess.run(cmd_row1, shell=True)
+    subprocess.run(cmd_row2, shell=True)
+    subprocess.run(cmd_row3, shell=True)
+    subprocess.run(cmd_combine, shell=True)
+    print(
+        f"Combined {figure_type} saved as {os.path.join(output_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
+
+
 def create_scatterplot(df, output_dir):
     """
     Create scatter plots with linear regression lines for each metric
@@ -284,45 +325,12 @@ def create_scatterplot(df, output_dir):
 
         # Save the plot
         num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_scatterplot_{num_subjects}subjects.png')
+        figure_fname = os.path.join(output_dir, f'scatterplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Pairplot for {metric} saved as {figure_fname}')
         plt.close()
 
-    # Combine all the scatter plots into a single figure using bash convert command
-    # This requires ImageMagick to be installed
-    print("Combining scatter plots into a single figure...")
-
-    # First row: midsagittal_length and midsagittal_width
-    cmd_row1 = f"convert {os.path.join(output_dir, f'midsagittal_length_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"{os.path.join(output_dir, f'midsagittal_width_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
-    # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
-    cmd_row2 = f"convert {os.path.join(output_dir, f'ventral_tissue_bridge_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"{os.path.join(output_dir, f'dorsal_tissue_bridge_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"{os.path.join(output_dir, f'total_tissue_bridge_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
-    # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
-    cmd_row3 = f"convert {os.path.join(output_dir, f'ventral_bridge_ratio_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"{os.path.join(output_dir, f'dorsal_bridge_ratio_manual_vs_sct_scatterplot_{num_subjects}subjects.png')} "\
-               f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # Combine all rows
-    cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} "\
-                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} "\
-                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} "\
-                  f"-append {os.path.join(output_dir, f'scatterplot_combined_{num_subjects}subjects.png')}; "\
-                  f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} "\
-                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} "\
-                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-
-    # Execute the commands
-    import subprocess
-    subprocess.run(cmd_row1, shell=True)
-    subprocess.run(cmd_row2, shell=True)
-    subprocess.run(cmd_row3, shell=True)
-    subprocess.run(cmd_combine, shell=True)
-
-    print(f"Combined scatterplot saved as {os.path.join(output_dir, f'scatterplot_combined_{num_subjects}subjects.png')}")
+    combine_plot('scatterplot', num_subjects, output_dir)
 
 
 def create_scatterplot_3D_length_width(df, output_dir):
@@ -451,10 +459,13 @@ def create_diff_plot(df, output_dir):
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_diffplot_{len(df_plot)}subjects.png')
+        num_subjects = len(df_plot)
+        figure_fname = os.path.join(output_dir, f'diffplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
+
+    combine_plot('diffplot', num_subjects, output_dir)
 
 
 def create_clinical_metrics_plots(df_ses_01, output_dir):
