@@ -252,19 +252,18 @@ def create_scatterplot(df, output_dir):
         x = df_plot[f'{metric}_manual']
         y = df_plot[f'{metric}_sct']
 
-        ax.scatter(x, y, s=90, alpha=0.5)
+        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
         ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
         ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
 
         # Add regression line
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '--', color='red')
+        ax.plot(x_vals, y_vals, '-', color='red')
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman ρ = {spearman_corr:.2f}\nSpearman p{format_pvalue(p_value)}\nn = {len(x)}',
-                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black',
-                bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\np{format_pvalue(p_value)}',
+                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
@@ -285,7 +284,7 @@ def create_scatterplot(df, output_dir):
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_scatterplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_scatterplot_{len(df_plot)}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Pairplot for {metric} saved as {figure_fname}')
         plt.close()
@@ -315,19 +314,18 @@ def create_scatterplot_3D_length_width(df, output_dir):
         x = df_plot[f'midsagittal_{metric}_manual']
         y = df_plot[f'{metric}_sct']
 
-        ax.scatter(x, y, s=90, alpha=0.5)
+        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
         ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
         ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
 
         # Add regression line
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '--', color='red')
+        ax.plot(x_vals, y_vals, '-', color='red')
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman ρ = {spearman_corr:.2f}\nSpearman p{format_pvalue(p_value)}\nn = {len(x)}',
-                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black',
-                bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\np{format_pvalue(p_value)}',
+                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
@@ -347,7 +345,7 @@ def create_scatterplot_3D_length_width(df, output_dir):
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_sct3D_scatterplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_sct3D_scatterplot_{len(df_plot)}subjects.png')
         plt.savefig(figure_fname, dpi=200)
         print(f'Pairplot for 3D {metric} saved as {figure_fname}')
         plt.close()
