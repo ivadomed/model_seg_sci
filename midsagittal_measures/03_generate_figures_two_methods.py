@@ -38,8 +38,8 @@ METRIC_TO_TITLE = {
     'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
     'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
     'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]',
-    'dorsal_bridge_ratio': 'Dorsal Tissue Bridge Ratio [%]',
-    'ventral_bridge_ratio': 'Ventral Tissue Bridge Ratio [%]',
+    'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
+    'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
 }
 
 CLINICAL_SCORES_TO_AXES = {
