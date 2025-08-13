@@ -32,7 +32,6 @@ from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 
 
-METRICS = ['midsagittal_length', 'midsagittal_width', 'ventral_tissue_bridge', 'dorsal_tissue_bridge', 'total_tissue_bridge']
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
@@ -238,7 +237,7 @@ def create_scatterplot(df, output_dir):
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    for metric in METRICS:
+    for metric in METRIC_TO_TITLE.keys():
         df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
         # Drop rows with NaN values
         df_plot = df_plot.dropna()
@@ -362,7 +361,7 @@ def create_diff_plot(df, output_dir):
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    for metric in METRICS:
+    for metric in METRIC_TO_TITLE.keys():
         df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
 
         fig, axes = plt.subplots(figsize=(5, 5))
@@ -478,7 +477,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
             df_ses_01_plot = df_ses_01
 
         # Loop over each lesion metric
-        for metric in METRICS:
+        for metric in METRIC_TO_TITLE.keys():
             # Create a figure for all participants
             fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -685,7 +684,7 @@ def main():
     print(f'Number of subjects after filtering by MRI time since injury: {df_ses_01.shape[0]}')
 
     # Drop rows with NaN values in the lesion metrics
-    df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRICS])
+    df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRIC_TO_TITLE.keys()])
     print(f'Number of subjects after dropping NaN values: {df_ses_01.shape[0]}')
 
     # # Keep only test subjects (i.e., those who were not used for SCIsegV2 training)
