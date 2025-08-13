@@ -123,6 +123,11 @@ def read_file_manual(file):
         lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
         if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
 
+    # Convert any string clinical score columns to numeric
+    for col in df_manual.columns:
+        if col.startswith(tuple(CLINICAL_SCORES_TO_AXES.keys())):
+            df_manual[col] = pd.to_numeric(df_manual[col], errors='coerce')
+
     # Drop 'comment' column and unnamed columns
     df_manual = df_manual.drop(columns=['comment'], errors='ignore')
     unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
@@ -502,7 +507,6 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
     # Define colors for each group
     group_colors = ['blue', 'green', 'orange', 'red', 'purple']
 
-    clinical_scores = ('uems', 'lems', 'ms', 'pp', 'lt')
     # Define time points with their actual time values in months from baseline
     time_point_mapping = {
         'bl': {'order': 0, 'months': 0},     # baseline = 0 months
@@ -516,13 +520,8 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
     # Get the actual month values for x-axis positioning
     time_points_months = [time_point_mapping[tp]['months'] for tp in time_points]
 
-    # Convert any string clinical score columns to numeric
-    for col in df_ses_01.columns:
-        if col.startswith(clinical_scores):
-            df_ses_01[col] = pd.to_numeric(df_ses_01[col], errors='coerce')
-
     # Loop over each clinical score
-    for score in clinical_scores:
+    for score in CLINICAL_SCORES_TO_AXES.keys():
         # Filtering for UEMS
         if score == 'uems':
             # For UEMS, keep only subjects with 'tetrapara_bl' == 0
