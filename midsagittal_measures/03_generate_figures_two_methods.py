@@ -630,7 +630,7 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
 
             # Save the plot
             plt.tight_layout()
-            figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot_5_groups.png')
+            figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot_5_groups_{len(df_ses_01_plot)}subjects.png')
             plt.savefig(figure_fname, dpi=300)
             print(f'Trajectory plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
