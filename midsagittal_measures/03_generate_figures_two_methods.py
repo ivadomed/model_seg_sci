@@ -376,20 +376,23 @@ def create_diff_plot(df, output_dir):
             sd_limit=1.96,  # The default of 1.96 will produce 95% confidence intervals for the means of the differences
             ax=ax,
             scatter_kwds={
-                's': 90,
-                'alpha': 0.5,
+                's': 20,
+                'alpha': 1,
+                'color': 'black',
+                'edgecolor': 'black',
+
             },
             mean_line_kwds={
                 'color': 'black',
                 'linestyle': '-',
                 'alpha': 0.5,
-                'linewidth': 2
+                'linewidth': 1
             },
             limit_lines_kwds={
                 'color': 'black',
                 'linestyle': '--',
                 'alpha': 0.5,
-                'linewidth': 2
+                'linewidth': 1
             }
         )
 
@@ -413,7 +416,7 @@ def create_diff_plot(df, output_dir):
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_diffplot.png')
+        figure_fname = os.path.join(output_dir, f'{metric}_manual_vs_sct_diffplot_{len(df_plot)}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
