@@ -50,7 +50,7 @@ METHOD_TO_TITLE = {
 CLINICAL_SCORES_TO_AXES = {
     'uems': 'UEMS',
     'lems': 'LEMS',
-    'ms': 'Motor Score',
+    'ms': 'Total Motor Score',
     'pp': 'Pinprick Score',
     'lt': 'Light-Touch Score'
 }
