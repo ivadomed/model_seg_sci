@@ -495,6 +495,8 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
         'ventral_tissue_bridge': [0, 1, 2, 3, 4],
         'dorsal_tissue_bridge': [0, 1, 2, 3, 4],
         'total_tissue_bridge': [0, 2, 4, 6, 8]
+        'dorsal_bridge_ratio': [0, 50],
+        'ventral_bridge_ratio': [0, 50]
     }
 
     # Define colors for each group
@@ -623,15 +625,16 @@ def create_clinical_metrics_plots(df_ses_01, output_dir):
                         group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(group_values) > 1 else 0
 
                         # Create group label based on the threshold range
+                        unit = '%' if 'ratio' in metric else 'mm'
                         if group_idx == 0:
                             # First group
-                            label = f'<{thresholds[1]} mm (n={len(group_ids[group_idx])})'
+                            label = f'<{thresholds[1]} {unit} (n={len(group_ids[group_idx])})'
                         elif group_idx == len(thresholds) - 1:
                             # Intermediate groups
-                            label = f'≥{thresholds[group_idx]} mm (n={len(group_ids[group_idx])})'
+                            label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
                         else:
                             # Last group
-                            label = f'{thresholds[group_idx]}-{thresholds[group_idx+1]} mm (n={len(group_ids[group_idx])})'
+                            label = f'{thresholds[group_idx]}-{thresholds[group_idx+1]} {unit} (n={len(group_ids[group_idx])})'
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
