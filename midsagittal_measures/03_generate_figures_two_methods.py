@@ -38,7 +38,9 @@ METRIC_TO_TITLE = {
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
     'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
     'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
-    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]'
+    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]',
+    'dorsal_bridge_ratio': 'Dorsal Tissue Bridge Ratio [%]',
+    'ventral_bridge_ratio': 'Ventral Tissue Bridge Ratio [%]',
 }
 
 CLINICAL_SCORES_TO_AXES = {
@@ -109,10 +111,25 @@ def read_file_manual(file):
                               'total_tissue_bridge': 'total_tissue_bridge_manual'},
                      inplace=True)
 
+    # Compute tissue bridge ratios
+    df_manual['dorsal_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['dorsal_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+    df_manual['ventral_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+
     # Drop 'comment' column and unnamed columns
     df_manual = df_manual.drop(columns=['comment'], errors='ignore')
     unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
     df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
+
+    # Reorder the columns to have participant_id, session_id, and mri_time_since_injury first, followed by manual
+    # metrics (_manual suffix)
+    cols = ['participant_id', 'session_id', 'mri_time_since_injury'] + \
+           [col for col in df_manual.columns if col.endswith('_manual')] + \
+           [col for col in df_manual.columns if not col.endswith('_manual') and col not in ['participant_id', 'session_id', 'mri_time_since_injury']]
+    df_manual = df_manual[cols]
 
     print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
     return df_manual
