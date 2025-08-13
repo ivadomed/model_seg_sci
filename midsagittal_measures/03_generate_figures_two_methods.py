@@ -42,6 +42,11 @@ METRIC_TO_TITLE = {
     'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
 }
 
+METHOD_TO_TITLE = {
+    'GT': 'Semi-automatic (manual lesion masks + SCT)',
+    'SCIsegV2': 'Automatic (SCIsegV2 + SCT)'
+}
+
 CLINICAL_SCORES_TO_AXES = {
     'uems': 'UEMS',
     'lems': 'LEMS',
@@ -268,11 +273,12 @@ def combine_plot(figure_type, num_subjects, output_dir):
         f"Combined {figure_type} saved as {os.path.join(output_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
 
 
-def create_scatterplot(df, output_dir):
+def create_scatterplot(df, output_dir, method):
     """
     Create scatter plots with linear regression lines for each metric
     :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
+    :param method: str: method ('GT' or 'SCIsegV2')
     """
 
     # Set font to Arial
@@ -311,7 +317,7 @@ def create_scatterplot(df, output_dir):
         # Change axes labels
         ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Automatic using SCT (from manual GTs)', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'{METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
 
         if metric == 'midsagittal_length':
             # Tweak axes ticks
@@ -325,21 +331,22 @@ def create_scatterplot(df, output_dir):
 
         # Save the plot
         num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'scatterplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
+        figure_fname = os.path.join(output_dir, f'{method}_scatterplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Pairplot for {metric} saved as {figure_fname}')
         plt.close()
 
-    combine_plot('scatterplot', num_subjects, output_dir)
+    combine_plot(f'{method}_scatterplot', num_subjects, output_dir)
 
 
-def create_scatterplot_3D_length_width(df, output_dir):
+def create_scatterplot_3D_length_width(df, output_dir, method):
     """
     Create scatter plots with linear regression lines for each metric
         - between 3D length and manual midsagittal length
         - between 3D width and manual midsagittal width
     :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
+    :param method: str: method ('GT' or 'SCIsegV2')
     """
 
     # Set font to Arial
@@ -375,7 +382,7 @@ def create_scatterplot_3D_length_width(df, output_dir):
 
         # Change axes labels
         ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Automatic using SCT (from manual GTs) 3D {metric} [mm]', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'{METHOD_TO_TITLE[method]} 3D {metric} [mm]', fontsize=FONT_SIZE)
 
         if metric == 'length':
             # Tweak axes ticks
@@ -388,18 +395,19 @@ def create_scatterplot_3D_length_width(df, output_dir):
         plt.tight_layout()
 
         # Save the plot
-        figure_fname = os.path.join(output_dir, f'{metric}_manual_sct3D_scatterplot_{len(df_plot)}subjects.png')
+        figure_fname = os.path.join(output_dir, f'{method}_{metric}_manual_sct3D_scatterplot_{len(df_plot)}subjects.png')
         plt.savefig(figure_fname, dpi=200)
         print(f'Pairplot for 3D {metric} saved as {figure_fname}')
         plt.close()
 
 
-def create_diff_plot(df, output_dir):
+def create_diff_plot(df, output_dir, method):
     """
     Create a Bland-Altman Mean Difference Plot for each metric
     https://www.statsmodels.org/devel/generated/statsmodels.graphics.agreement.mean_diff_plot.html
     :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
+    :method: str: method ('GT' or 'SCIsegV2')
     """
 
     # Set font to Arial
@@ -441,7 +449,7 @@ def create_diff_plot(df, output_dir):
 
         # Set plot title and labels
         ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
-                     f'Manual vs Automatic (from manual GTs)', fontsize=FONT_SIZE)
+                     f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Mean', fontsize=FONT_SIZE)
         ax.set_ylabel(f'Difference', fontsize=FONT_SIZE)
 
@@ -460,12 +468,12 @@ def create_diff_plot(df, output_dir):
 
         # Save the plot
         num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'diffplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
+        figure_fname = os.path.join(output_dir, f'{method}_diffplot_{metric}_manual_vs_sct_{num_subjects}subjects.png')
         plt.savefig(figure_fname, dpi=300)
         print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
 
-    combine_plot('diffplot', num_subjects, output_dir)
+    combine_plot(f'{method}_diffplot', num_subjects, output_dir)
 
 
 def create_clinical_metrics_plots(df_ses_01, output_dir):
@@ -696,6 +704,8 @@ def main():
     # CSV file with lesion metrics computed using sct_analyze_lesion
     #----------------
     df_sct = read_file_sct(file_sct)
+    # Get 'GT' or 'SCIsegV2' method from the filename
+    method = file_sct.split('_')[-1].replace('.csv','')
 
     #----------------
     # XLSX file with manually measured lesion metrics and clinical scores
@@ -759,11 +769,11 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Scatter plot with linear regression lines
-    create_scatterplot(df_ses_01, output_dir)
+    create_scatterplot(df_ses_01, output_dir, method)
     # Scatter plot for 3D lesion length and width
-    create_scatterplot_3D_length_width(df_ses_01, output_dir)
+    create_scatterplot_3D_length_width(df_ses_01, output_dir, method)
     # Bland-Altman Mean Difference Plot
-    create_diff_plot(df_ses_01, output_dir)
+    create_diff_plot(df_ses_01, output_dir, method)
 
     #----------------
     # Clinical scores and baseline metrics over time
