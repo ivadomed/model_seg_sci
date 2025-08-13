@@ -55,6 +55,14 @@ CLINICAL_SCORES_TO_AXES = {
     'lt': 'Light-Touch Score'
 }
 
+CLINICAL_SCORES_MAX = {
+    'uems': 50,  # Maximum UEMS score
+    'lems': 50,  # Maximum LEMS score
+    'ms': 100,    # Maximum Total Motor Score
+    'pp': 112,   # Maximum Pinprick Score
+    'lt': 112    # Maximum Light-Touch Score
+}
+
 FONT_SIZE = 12
 
 
@@ -142,6 +150,61 @@ def read_file_manual(file):
 
     print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
     return df_manual
+
+
+def normalize_sensorimotor_scores(df_ses_01):
+    """
+    Normalize clinical scores (uems, lems, ms, pp, lt) between follow-ups (e.g., from baseline to M1, M3, M6, M12)
+    dividing them by the maximal score improvable. Then, scale the normalized scores using the min-max scaling method:
+        xʹ = x – min(x) / max(x) – min(x)
+    :param df_ses_01: pandas DataFrame with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    multiple time points
+    :return df_ses_01: pandas DataFrame with normalized clinical scores
+    """
+    # Get unique participant IDs
+    participants = df_ses_01['participant_id'].unique()
+
+    # Loop through each participant
+    for participant in participants:
+        # Get data for the current participant
+        participant_data = df_ses_01[df_ses_01['participant_id'] == participant]
+
+        # Get baseline values for each clinical score
+        baseline_values = {}
+        for score in CLINICAL_SCORES_TO_AXES.keys():
+            bl_col = f"{score}_bl"
+            if bl_col in participant_data.columns and not participant_data[bl_col].isna().all():
+                baseline_values[score] = participant_data[bl_col].values[0]
+
+        # Skip if no baseline data
+        if not baseline_values:
+            continue
+
+        # Calculate normalized scores for each follow-up time point
+        for score, baseline_value in baseline_values.items():
+            max_score = CLINICAL_SCORES_MAX[score]
+            # Calculate maximal improvable score (difference between max possible and baseline)
+            max_improvable = max_score - baseline_value
+
+            # Normalize each follow-up time point
+            for time_point in ['1m', '3m', '6m', '12m']:
+                follow_up_col = f"{score}_{time_point}"
+                if follow_up_col in participant_data.columns and not participant_data[follow_up_col].isna().all():
+                    # Calculate improvement from baseline
+                    follow_up_value = participant_data[follow_up_col].values[0]
+                    improvement = follow_up_value - baseline_value
+
+                    # Create new column for normalized score
+                    normalized_col = f"{follow_up_col}_improvement_normalized"
+
+                    # Normalize improvement by maximal improvable score
+                    if max_improvable <= 0:     # If no room for improvement, skip normalization
+                        df_ses_01.loc[participant_data.index, normalized_col] = 0  # or should I use `np.nan`?
+                    else:
+                        normalized_improvement = improvement / max_improvable
+                        df_ses_01.loc[participant_data.index, normalized_col] = normalized_improvement
+
+    return df_ses_01
 
 
 def read_file_sct(file_sct):
@@ -729,6 +792,11 @@ def main():
     # Print number of subjects
     print(f'ses-01: Number of subjects: {df_ses_01.shape[0]}')
     print(f'Multiple sessions: Number of subjects: {df_multiple_ses.shape[0]}')
+
+    #----------------
+    # Normalize sensorimotor scores
+    #----------------
+    df_ses_01 = normalize_sensorimotor_scores(df_ses_01)
 
     #----------------
     # Filter subjects based on MRI time since injury
