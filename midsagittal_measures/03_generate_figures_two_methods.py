@@ -154,9 +154,13 @@ def read_file_manual(file):
 
 def normalize_sensorimotor_scores(df_ses_01):
     """
-    Normalize clinical scores (uems, lems, ms, pp, lt) between follow-ups (e.g., from baseline to M1, M3, M6, M12)
-    dividing them by the maximal score improvable. Then, scale the normalized scores using the min-max scaling method:
-        xʹ = x – min(x) / max(x) – min(x)
+    Normalize clinical scores (uems, lems, ms, pp, lt) between follow-ups.
+    Works with subjects who have either baseline or 1m as their first exam.
+    For each subject:
+    1. Identifies the first available time point (baseline or 1m)
+    2. Computes maximal improvable score from this first time point
+    3. Normalizes subsequent scores by dividing improvement by maximal improvable score
+
     :param df_ses_01: pandas DataFrame with baseline lesion metrics (ses-01 sessions only) and clinical scores across
     multiple time points
     :return df_ses_01: pandas DataFrame with normalized clinical scores
@@ -164,41 +168,54 @@ def normalize_sensorimotor_scores(df_ses_01):
     # Get unique participant IDs
     participants = df_ses_01['participant_id'].unique()
 
+    # Time points in order
+    time_points = ['bl', '1m', '3m', '6m', '12m']
+
     # Loop through each participant
     for participant in participants:
         # Get data for the current participant
         participant_data = df_ses_01[df_ses_01['participant_id'] == participant]
 
-        # Get baseline values for each clinical score
-        baseline_values = {}
+        # Process each clinical score
         for score in CLINICAL_SCORES_TO_AXES.keys():
-            bl_col = f"{score}_bl"
-            if bl_col in participant_data.columns and not participant_data[bl_col].isna().all():
-                baseline_values[score] = participant_data[bl_col].values[0]
+            # Find first available time point for this score
+            first_tp = None
+            first_value = None
 
-        # Skip if no baseline data
-        if not baseline_values:
-            continue
+            # Check time points in order (baseline first, then 1m)
+            for tp in time_points:
+                col_name = f"{score}_{tp}"
+                if col_name in participant_data.columns and not pd.isna(participant_data[col_name].values[0]):
+                    first_tp = tp
+                    first_value = participant_data[col_name].values[0]
+                    break
 
-        # Calculate normalized scores for each follow-up time point
-        for score, baseline_value in baseline_values.items():
+            # Skip if no data available for this score
+            if first_tp is None:
+                continue
+
+            # Get maximum possible score for this clinical measure
             max_score = CLINICAL_SCORES_MAX[score]
-            # Calculate maximal improvable score (difference between max possible and baseline)
-            max_improvable = max_score - baseline_value
 
-            # Normalize each follow-up time point
-            for time_point in ['1m', '3m', '6m', '12m']:
-                follow_up_col = f"{score}_{time_point}"
-                if follow_up_col in participant_data.columns and not participant_data[follow_up_col].isna().all():
-                    # Calculate improvement from baseline
+            # Calculate maximal improvable score (difference between max possible and first value)
+            max_improvable = max_score - first_value
+
+            # Find all subsequent time points to normalize
+            subsequent_tps = time_points[time_points.index(first_tp) + 1:]
+
+            # Normalize each follow-up time point after the first available one
+            for tp in subsequent_tps:
+                follow_up_col = f"{score}_{tp}"
+                if follow_up_col in participant_data.columns and not pd.isna(participant_data[follow_up_col].values[0]):
+                    # Calculate improvement from first time point
                     follow_up_value = participant_data[follow_up_col].values[0]
-                    improvement = follow_up_value - baseline_value
+                    improvement = follow_up_value - first_value
 
                     # Create new column for normalized score
                     normalized_col = f"{follow_up_col}_improvement_normalized"
 
                     # Normalize improvement by maximal improvable score
-                    if max_improvable <= 0:     # If no room for improvement, skip normalization
+                    if max_improvable <= 0:  # If no room for improvement, set to 0
                         df_ses_01.loc[participant_data.index, normalized_col] = 0  # or should I use `np.nan`?
                     else:
                         normalized_improvement = improvement / max_improvable
