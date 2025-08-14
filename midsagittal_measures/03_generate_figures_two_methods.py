@@ -570,6 +570,7 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
+    Also creates plots showing normalized improvement scores for follow-up time points.
 
     :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
     multiple time points
@@ -603,6 +604,32 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
     }
     # Sort time points in a logical order
     time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order', 99))
+
+    # PART 1: Raw trajectory plots
+    create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+                                time_point_mapping,  time_points)
+
+    # PART 2: Normalized improvement scores trajectory plots
+    create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+                                       time_point_mapping, time_points)
+
+
+def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir, time_point_mapping,
+                                time_points):
+    """
+    Create trajectory plots for raw (i.e., non-normalized) clinical scores across time points for each participant,
+    with lines colored by baseline lesion metrics.
+
+    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    multiple time points
+    :param group_colors: list of colors for each group
+    :param method: str: method ('GT' or 'SCIsegV2')
+    :param metric_thresholds: dict: thresholds for each metric to create groups
+    :param output_dir: output directory
+    :param time_point_mapping: dict: mapping of time points to their actual time values in months from baseline
+    :param time_points: list of time points in logical order
+    """
+
     # Get the actual month values for x-axis positioning
     time_points_months = [time_point_mapping[tp]['months'] for tp in time_points]
 
@@ -643,8 +670,8 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
                 participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
                 if (participant_id not in df_ses_01_plot['participant_id'].values or
-                    metric_name not in participant_data.columns or
-                    pd.isna(participant_data[metric_name].values[0])):
+                        metric_name not in participant_data.columns or
+                        pd.isna(participant_data[metric_name].values[0])):
                     continue
 
                 participant_clinical = df_ses_01_plot[df_ses_01_plot['participant_id'] == participant_id]
@@ -655,7 +682,7 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
                 # Determine which group this participant belongs to
                 group_idx = 0
                 for i in range(len(thresholds) - 1):
-                    if thresholds[i] <= metric_value < thresholds[i+1]:
+                    if thresholds[i] <= metric_value < thresholds[i + 1]:
                         group_idx = i
                         break
                 if metric_value >= thresholds[-1]:
@@ -676,7 +703,8 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
 
                 for tp in time_points_present:
                     col_name = f'{score}_{tp}'
-                    if col_name in participant_clinical.columns and not pd.isna(participant_clinical[col_name].values[0]):
+                    if col_name in participant_clinical.columns and not pd.isna(
+                            participant_clinical[col_name].values[0]):
                         val = float(participant_clinical[col_name].values[0])  # Ensure value is float
                         # Use actual month values for x-axis
                         time_values.append(time_point_mapping[tp]['months'])
@@ -707,7 +735,8 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
                         group_values = [float(val) for val in group_values]
                         group_mean = np.mean(group_values)
                         # Calculate 95% confidence interval
-                        group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(group_values) > 1 else 0
+                        group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(
+                            group_values) > 1 else 0
 
                         # Create group label based on the threshold range
                         unit = '%' if 'ratio' in metric else 'mm'
@@ -719,7 +748,7 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
                             label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
                         else:
                             # Last group
-                            label = f'{thresholds[group_idx]}-{thresholds[group_idx+1]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'{thresholds[group_idx]}-{thresholds[group_idx + 1]} {unit} (n={len(group_ids[group_idx])})'
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
@@ -747,7 +776,7 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
 
             # Set labels and title
             ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by '
-                        f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE+2)
+                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE + 2)
             ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
 
@@ -763,8 +792,8 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
             # Add legend
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE-2, framealpha=0.9,
-                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}', title_fontsize=FONT_SIZE-2)
+            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE - 2, framealpha=0.9,
+                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}', title_fontsize=FONT_SIZE - 2)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
@@ -772,10 +801,212 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
 
             # Save the plot
             plt.tight_layout()
-            figure_fname = os.path.join(output_dir, f'{score}_by_{metric}_trajectory_plot_5_groups_{len(df_ses_01_plot)}subjects.png')
+            num_subjects = len(df_ses_01_plot)
+            figure_fname = os.path.join(output_dir,
+                                        f'{method}_trajectory_plot_{score}_{metric}_{num_subjects}subjects.png')
             plt.savefig(figure_fname, dpi=300)
             print(f'Trajectory plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
+        # Combine individual trajectory plots for this score
+        combine_plot(f'{method}_trajectory_plot_{score}', num_subjects, output_dir)
+
+
+def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+                                       time_point_mapping, time_points):
+    """
+    Create trajectory plots for normalized clinical scores across follow-up time points for each participant,
+    with lines colored by baseline lesion metrics.
+    This function assumes that the normalized improvement scores have already been computed and added to the dataframe
+    using the `normalize_sensorimotor_scores` function.
+
+    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    multiple time points
+    :param group_colors: list of colors for each group
+    :param method: str: method ('GT' or 'SCIsegV2')
+    :param metric_thresholds: dict: thresholds for each metric to create groups
+    :param output_dir: output directory
+    :param time_point_mapping: dict: mapping of time points to their actual time values in months from baseline
+    :param time_points: list of time points in logical order
+    """
+    # Loop over each clinical score
+    for score in CLINICAL_SCORES_TO_AXES.keys():
+        # Filtering for UEMS
+        if score == 'uems':
+            # For UEMS, keep only subjects with 'tetrapara_bl' == 0
+            #   0: tetraplegic
+            #   1: paraplegic -- max UEMS at baseline (no impairment)
+            df_ses_01_plot = df_ses_01[df_ses_01['tetrapara_bl'] == 0]
+        # Keeping all subjects for LEMS and other scores
+        else:
+            df_ses_01_plot = df_ses_01
+
+        # Get the follow-up time points (excluding baseline)
+        follow_up_time_points = [tp for tp in time_points if tp != 'bl']
+
+        # Loop over each lesion metric
+        for metric in METRIC_TO_TITLE.keys():
+            # Create a figure for all participants
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            metric_name = f'{metric}_sct'  # automatic lesion metric from SCT
+
+            # Get the thresholds for this metric
+            thresholds = metric_thresholds[metric]
+
+            # Create groups for each threshold range
+            group_ids = [[] for _ in range(len(thresholds))]
+
+            # Collect data for mean normalized improvements per group and follow-up
+            group_normalized_data = [{tp: [] for tp in follow_up_time_points} for _ in range(len(thresholds))]
+
+            # Process each participant
+            for participant_id in df_ses_01['participant_id'].unique():
+                # Get participant data
+                participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+                # Check if participant has clinical data and the metric
+                if (participant_id not in df_ses_01_plot['participant_id'].values or
+                        metric_name not in participant_data.columns or
+                        pd.isna(participant_data[metric_name].values[0])):
+                    continue
+
+                participant_clinical = df_ses_01_plot[df_ses_01_plot['participant_id'] == participant_id]
+
+                # Get metric value for this participant (for grouping)
+                metric_value = participant_data[metric_name].values[0]
+
+                # Determine which group this participant belongs to
+                group_idx = 0
+                for i in range(len(thresholds) - 1):
+                    if thresholds[i] <= metric_value < thresholds[i + 1]:
+                        group_idx = i
+                        break
+                if metric_value >= thresholds[-1]:
+                    group_idx = len(thresholds) - 1
+
+                # Add participant to the group
+                group_ids[group_idx].append(participant_id)
+
+                # Get normalized improvement values for each follow-up time point
+                time_values = []
+                normalized_improvement_values = []
+
+                for tp in follow_up_time_points:
+                    normalized_col = f"{score}_{tp}_improvement_normalized"
+
+                    if normalized_col in participant_clinical.columns and not pd.isna(
+                            participant_clinical[normalized_col].values[0]):
+                        val = float(participant_clinical[normalized_col].values[0])
+                        # Use actual month values for x-axis
+                        time_values.append(time_point_mapping[tp]['months'])
+                        normalized_improvement_values.append(val)
+
+                        # Add to group data for mean trajectory
+                        group_normalized_data[group_idx][tp].append(val)
+
+                if len(time_values) < 1:  # Need at least 1 point
+                    continue
+
+                # Trajectory lines - only if there are multiple points
+                if len(time_values) > 1:
+                    ax.plot(time_values, normalized_improvement_values, 'o-', alpha=0.3,
+                            color=group_colors[group_idx],
+                            linewidth=0.5, markersize=0)
+
+            # Calculate and plot mean ± confidence interval (CI) for normalized improvements
+            for tp in follow_up_time_points:
+                # Get x position in months
+                tp_month = time_point_mapping[tp]['months']
+
+                for group_idx in range(len(thresholds)):
+                    # Get group values for this time point
+                    group_values = group_normalized_data[group_idx][tp]
+
+                    if group_values:
+                        # Ensure all values are numeric
+                        group_values = [float(val) for val in group_values]
+                        group_mean = np.mean(group_values)
+                        # Calculate 95% confidence interval
+                        group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(
+                            group_values) > 1 else 0
+
+                        # Create group label based on the threshold range
+                        unit = '%' if 'ratio' in metric else 'mm'
+                        if group_idx == 0:
+                            # First group
+                            label = f'<{thresholds[1]} {unit} (n={len(group_ids[group_idx])})'
+                        elif group_idx == len(thresholds) - 1:
+                            # Intermediate groups
+                            label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
+                        else:
+                            # Last group
+                            label = f'{thresholds[group_idx]}-{thresholds[group_idx + 1]} {unit} (n={len(group_ids[group_idx])})'
+
+                        # Only show label in legend for the first time point (to avoid duplicates)
+                        ax.errorbar(tp_month, group_mean, yerr=group_ci,
+                                    fmt='o', color=group_colors[group_idx], ecolor=group_colors[group_idx],
+                                    markersize=5, capsize=5,
+                                    label=label if tp == '1m' else "")
+
+            # Connect mean points with lines for each group
+            for group_idx in range(len(thresholds)):
+                mean_x = []
+                mean_y = []
+
+                for tp in follow_up_time_points:
+                    tp_month = time_point_mapping[tp]['months']
+                    group_values = group_normalized_data[group_idx][tp]
+
+                    if group_values:
+                        # Ensure all values are numeric
+                        group_values = [float(val) for val in group_values]
+                        mean_x.append(tp_month)
+                        mean_y.append(np.mean(group_values))
+
+                if len(mean_x) > 1:
+                    ax.plot(mean_x, mean_y, '-', color=group_colors[group_idx], linewidth=2.5)
+
+            # Set labels and title
+            ax.set_title(f'Normalized improvement in {CLINICAL_SCORES_TO_AXES[score]} stratified by '
+                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE + 2)
+            ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
+            ax.set_ylabel(f'Normalized Improvement', fontsize=FONT_SIZE)
+
+            # Add a horizontal line at y=0 (no improvement)
+            ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+
+            # Set y-axis limits from -0.2 to 1.0
+            ax.set_ylim(-0.2, 1.2)
+
+            # Set x-ticks at follow-up month points (1, 3, 6, 12)
+            follow_up_months = [time_point_mapping[tp]['months'] for tp in follow_up_time_points]
+            ax.set_xticks(follow_up_months)
+            ax.set_xticklabels(['M1', 'M3', 'M6', 'M12'], fontsize=FONT_SIZE)
+
+            # Add minor ticks only at the labeled tick positions for better visualization
+            ax.tick_params(axis='x', which='minor', bottom=True, length=4)
+            # Place minor ticks at the same positions as the major ticks
+            ax.set_xticks(follow_up_months, minor=True)
+
+            # Add legend
+            handles, labels = ax.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys(), loc='upper left', fontsize=FONT_SIZE - 2, framealpha=0.9,
+                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}', title_fontsize=FONT_SIZE - 2)
+
+            # Remove the top and right spines
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+            # Save the plot
+            plt.tight_layout()
+            num_subjects = len(df_ses_01_plot)
+            figure_fname = os.path.join(output_dir,
+                                        f'{method}_normalized_improvement_{score}_{metric}_{num_subjects}subjects.png')
+            plt.savefig(figure_fname, dpi=300)
+            print(f'Normalized improvement plot for {score} by {metric} saved as {figure_fname}')
+            plt.close()
+        # Combine individual trajectory plots for this score
+        combine_plot(f'{method}_normalized_improvement_{score}', num_subjects, output_dir)
 
 
 def main():
