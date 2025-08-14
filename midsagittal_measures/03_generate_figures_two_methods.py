@@ -660,10 +660,6 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             # Collect data for mean trajectories per group
             group_data = [{tp: [] for tp in time_points} for _ in range(len(thresholds))]
 
-            # For colormap
-            min_value = df_ses_01[metric_name].min()
-            max_value = df_ses_01[metric_name].max()
-
             # Process each participant
             for participant_id in df_ses_01['participant_id'].unique():
                 # Get participant data
