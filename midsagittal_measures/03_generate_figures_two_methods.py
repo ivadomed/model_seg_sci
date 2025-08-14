@@ -566,7 +566,7 @@ def create_diff_plot(df, output_dir, method):
     combine_plot(f'{method}_diffplot', num_subjects, output_dir)
 
 
-def create_clinical_trajectory_plots(df_ses_01, output_dir, method):
+def create_trajectory_plots(df_ses_01, output_dir, method):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -871,7 +871,7 @@ def main():
     #----------------
     # Clinical scores and baseline metrics over time
     #----------------
-    create_clinical_trajectory_plots(df_ses_01, output_dir, method)
+    create_trajectory_plots(df_ses_01, output_dir, method)
 
 
 if __name__ == '__main__':
