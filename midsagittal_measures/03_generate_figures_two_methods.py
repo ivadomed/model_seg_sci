@@ -978,8 +978,11 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             # Add a horizontal line at y=0 (no improvement)
             ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
 
-            # Set y-axis limits from -0.2 to 1.0
-            ax.set_ylim(-0.2, 1.2)
+            # Tweak y-axis limits for sensory scores
+            if score in ['pp', 'lt']:
+                ax.set_ylim(-0.8, 1.2)
+            else:
+                ax.set_ylim(-0.2, 1.2)
 
             # Set x-ticks at follow-up month points (1, 3, 6, 12)
             follow_up_months = [time_point_mapping[tp]['months'] for tp in follow_up_time_points]
