@@ -7,7 +7,7 @@ The script:
 - merges the dataframes
 - creates scatter plots with linear regression lines for each metric
 - creates Bland-Altman Mean Difference plot for each metric
-- creates plots of clinical scores over time for each participant with baseline metrics
+- creates trajectory plots of clinical scores over time for each participant with baseline metrics
 
 Example usage:
     python 03_generate_figures_two_methods.py
