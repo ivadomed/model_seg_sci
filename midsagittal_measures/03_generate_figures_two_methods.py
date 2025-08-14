@@ -242,34 +242,16 @@ def read_file_sct(file_sct):
     return df_sct
 
 
-def format_pvalue(p_value, alpha=0.05, decimal_places=3, include_space=True, include_equal=True):
+def format_pvalue(p_value, alpha=0.05):
     """
-    Format p-value.
-    If the p-value is lower than alpha, format it to "<0.05", otherwise, round it to three decimals
-
-    :param p_value: input p-value as a float
-    :param alpha: significance level
-    :param decimal_places: number of decimal places the p-value will be rounded
-    :param include_space: include space or not (e.g., ' = 0.06')
-    :param include_equal: include equal sign ('=') to the p-value (e.g., '=0.06') or not (e.g., '0.06')
-    :return: p_value: the formatted p-value (e.g., '<0.05') as a str
+    Format p-value for display.
     """
-    if include_space:
-        space = ' '
+    if p_value < 0.001:
+        return 'p < 0.001'
+    elif p_value < alpha:
+        return f'p < {alpha}'
     else:
-        space = ''
-
-    # If the p-value is lower than alpha, return '<alpha' (e.g., <0.001)
-    if p_value < alpha:
-        p_value = space + "<" + space + str(alpha)
-    # If the p-value is greater than alpha, round it number of decimals specified by decimal_places
-    else:
-        if include_equal:
-            p_value = space + '=' + space + str(round(p_value, decimal_places))
-        else:
-            p_value = space + str(round(p_value, decimal_places))
-
-    return p_value
+        return f'p = {p_value:.3f}'
 
 
 def compute_regression(x, y):
@@ -398,7 +380,7 @@ def create_scatterplot(df, output_dir, method):
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\np{format_pvalue(p_value)}',
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
@@ -464,7 +446,7 @@ def create_scatterplot_3D_length_width(df, output_dir, method):
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\np{format_pvalue(p_value)}',
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
