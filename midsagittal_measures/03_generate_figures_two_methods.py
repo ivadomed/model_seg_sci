@@ -793,7 +793,7 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
             ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE - 2, framealpha=0.9,
-                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}', title_fontsize=FONT_SIZE - 2)
+                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}\nmean ± CI', title_fontsize=FONT_SIZE - 2)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
@@ -995,7 +995,7 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
             ax.legend(by_label.values(), by_label.keys(), loc='upper left', fontsize=FONT_SIZE - 2, framealpha=0.9,
-                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}', title_fontsize=FONT_SIZE - 2)
+                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}\nmean ± CI', title_fontsize=FONT_SIZE - 2)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
