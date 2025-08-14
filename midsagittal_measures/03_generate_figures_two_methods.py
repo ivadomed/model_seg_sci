@@ -650,7 +650,11 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             # Create a figure for all participants
             fig, ax = plt.subplots(figsize=(10, 6))
 
-            metric_name = f'{metric}_sct'   # automatic lesion metric from SCT
+            # Use lesion metrics computed by SCT (and not manually measured ones)
+            # Note: there are still two possible options controlled by the `method` variable:
+            #   1. 'GT' - manual lesion masks + sct_analyze_lesion
+            #   2. 'SCIsegV2' - SCIsegV2 lesion masks + sct_analyze_lesion
+            metric_name = f'{metric}_sct'
 
             # Get the thresholds for this metric
             thresholds = metric_thresholds[metric]
@@ -844,7 +848,11 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             # Create a figure for all participants
             fig, ax = plt.subplots(figsize=(10, 6))
 
-            metric_name = f'{metric}_sct'  # automatic lesion metric from SCT
+            # Use lesion metrics computed by SCT (and not manually measured ones)
+            # Note: there are still two possible options controlled by the `method` variable:
+            #   1. 'GT' - manual lesion masks + sct_analyze_lesion
+            #   2. 'SCIsegV2' - SCIsegV2 lesion masks + sct_analyze_lesion
+            metric_name = f'{metric}_sct'
 
             # Get the thresholds for this metric
             thresholds = metric_thresholds[metric]
