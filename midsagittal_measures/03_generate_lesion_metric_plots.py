@@ -7,9 +7,11 @@ The script:
 - merges the dataframes
 - creates correlation matrices for each metric showing correlations between manual, semi-automatic (GT), and automatic (SCIsegV2) methods
 - computes both Pearson and Spearman correlations with statistical significance
+- creates scatter plots with linear regression lines for each metric
+- creates Bland-Altman Mean Difference plot for each metric
 
 Example usage:
-    python 04_generate_correlation_matrices.py
+    python 03_generate_lesion_metric_plots.py
         -file-gt <PATH_TO_GT_CSV_FILE>
         -file-scisegv2 <PATH_TO_SCISEGV2_CSV_FILE>
         -file-manual <PATH_TO_XLSX_FILE>

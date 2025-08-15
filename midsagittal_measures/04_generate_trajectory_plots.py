@@ -5,12 +5,10 @@ The script:
 - reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
 - reads XLSX file with manually measured lesion metrics (including clinical scores)
 - merges the dataframes
-- creates scatter plots with linear regression lines for each metric
-- creates Bland-Altman Mean Difference plot for each metric
 - creates trajectory plots of clinical scores over time for each participant with baseline metrics
 
 Example usage:
-    python 03_generate_figures_two_methods.py
+    python 04_generate_trajectory_plots.py
         -file-sct <PATH_TO_CSV_FILE>
         -file-manual <PATH_TO_XLSX_FILE>
         -o <OUTPUT_DIR>
