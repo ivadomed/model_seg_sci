@@ -564,17 +564,17 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
 
     # Define metric thresholds for stratification (using equal increments)
     metric_thresholds = {
-        'midsagittal_length': [0, 10, 20, 30, 40],
-        'midsagittal_width': [0, 2.5, 5, 7.5, 10],
-        'ventral_tissue_bridge': [0, 1, 2, 3, 4],
-        'dorsal_tissue_bridge': [0, 1, 2, 3, 4],
-        'total_tissue_bridge': [0, 2, 4, 6, 8]
+        'midsagittal_length': [0, 10, 20],
+        'midsagittal_width': [0, 3, 6],
+        'ventral_tissue_bridge': [0, 1],
+        'dorsal_tissue_bridge': [0, 1],
+        'total_tissue_bridge': [0, 1, 2],
         'dorsal_bridge_ratio': [0, 50],
         'ventral_bridge_ratio': [0, 50]
     }
 
     # Define colors for each group
-    group_colors = ['blue', 'green', 'orange', 'red', 'purple']
+    group_colors = ['blue', 'green', 'red']
 
     # Define time points with their actual time values in months from baseline
     time_point_mapping = {
