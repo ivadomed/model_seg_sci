@@ -698,10 +698,10 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
                 if len(time_values) < 2:  # Need at least 2 points to draw a line
                     continue
 
-                # Trajectory lines - match the group color
-                ax.plot(time_values, score_values, 'o-', alpha=0.3,
-                        color=group_colors[group_idx],
-                        linewidth=0.5, markersize=0)
+                # # Trajectory lines - match the group color
+                # ax.plot(time_values, score_values, 'o-', alpha=0.3,
+                #         color=group_colors[group_idx],
+                #         linewidth=0.5, markersize=0)
 
             # Calculate and plot mean ± confidence interval (CI) trajectories for each group
             for tp in time_points:
@@ -892,11 +892,11 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
                 if len(time_values) < 1:  # Need at least 1 point
                     continue
 
-                # Trajectory lines - only if there are multiple points
-                if len(time_values) > 1:
-                    ax.plot(time_values, normalized_improvement_values, 'o-', alpha=0.3,
-                            color=group_colors[group_idx],
-                            linewidth=0.5, markersize=0)
+                # # Trajectory lines - only if there are multiple points
+                # if len(time_values) > 1:
+                #     ax.plot(time_values, normalized_improvement_values, 'o-', alpha=0.3,
+                #             color=group_colors[group_idx],
+                #             linewidth=0.5, markersize=0)
 
             # Calculate and plot mean ± confidence interval (CI) for normalized improvements
             for tp in follow_up_time_points:
