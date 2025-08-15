@@ -28,10 +28,6 @@ import matplotlib.pyplot as plt
 import argparse
 import subprocess
 
-from scipy import stats
-from sklearn.linear_model import LinearRegression
-import statsmodels.api as sm
-
 
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
@@ -46,6 +42,11 @@ METRIC_TO_TITLE = {
 METHOD_TO_TITLE = {
     'GT': 'Semi-automatic (manual lesion masks + SCT)',
     'SCIsegV2': 'Automatic (SCIsegV2 + SCT)'
+}
+
+METHOD_TO_FNAME = {
+    'GT': 'semiautomatic',
+    'SCIsegV2': 'automatic'
 }
 
 CLINICAL_SCORES_TO_AXES = {
@@ -254,52 +255,6 @@ def format_pvalue(p_value, alpha=0.05):
         return f'p = {p_value:.3f}'
 
 
-def compute_regression(x, y):
-    """
-    Compute a linear regression between x and y:
-    y = Slope * x + Intercept
-    https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html
-
-    You can then plot the linear fit by
-    ax.plot(x_vals, y_vals, '--', color='red')
-
-    :param x: ndarray: input - regressor
-    :param y: ndarray: output - response
-    :return: intercept: ndarray: intercept constant (bias term)
-    :return: slope: ndarray: slope
-    :return: reg_predictor: ndarray:
-    :return: r2_sc: float: coefficient of determination
-    :return x_vals: ndarray: x values for the linear fit plot
-    :return y_vals: ndarray: y values for the linear fit plot
-    """
-    # Make sure we are working with numpy arrays
-    if isinstance(x, pd.Series):
-        x = x.to_numpy()
-    if isinstance(y, pd.Series):
-        y = y.to_numpy()
-
-    # Create an instance of the class LinearRegression, which will represent the regression model
-    linear_regression = LinearRegression()
-    # Perform linear regression (compute slope and intercept)
-    linear_regression.fit(x.reshape(-1, 1), y.reshape(-1, 1))
-    intercept = linear_regression.intercept_        # underscore indicates that an attribute is estimated
-    slope = linear_regression.coef_                 # underscore indicates that an attribute is estimated
-
-    # Get x and y values to plot the linear fit
-    x_vals = np.array([x.min(), x.max()])
-    y_vals = intercept + slope * x_vals
-    y_vals = np.squeeze(y_vals)                     # change shape from (1,N) to (N,)
-
-    # Compute prediction (pass the regressor as the argument and get the corresponding predicted response)
-    # Identical as reg_predictor = slope * x + intercept
-    reg_predictor = linear_regression.predict(x.reshape(-1, 1))
-
-    # Compute coefficient of determination R^2 of the prediction
-    r2_sc = linear_regression.score(x.reshape(-1, 1), y.reshape(-1, 1))
-
-    return intercept, slope, reg_predictor, r2_sc, x_vals, y_vals
-
-
 def combine_plot(figure_type, num_subjects, output_dir):
     """
     Combine all the plots into a single figure using bash convert command
@@ -341,211 +296,7 @@ def combine_plot(figure_type, num_subjects, output_dir):
     subprocess.run(cmd_row2, shell=True)
     subprocess.run(cmd_row3, shell=True)
     subprocess.run(cmd_combine, shell=True)
-    print(
-        f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
-
-
-def create_scatterplot(df, output_dir, method):
-    """
-    Create scatter plots with linear regression lines for each metric
-    :param df: pandas dataframe with lesion metrics
-    :param output_dir: output directory
-    :param method: str: method ('GT' or 'SCIsegV2')
-    """
-
-    # Set font to Arial
-    plt.rcParams['font.sans-serif'] = 'Arial'
-
-    for metric in METRIC_TO_TITLE.keys():
-        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
-        # Drop rows with NaN values
-        df_plot = df_plot.dropna()
-
-        fig, axes = plt.subplots(figsize=(5, 5))
-
-        max_val = df_plot.max().max()
-        min_val = df_plot.min().min()
-
-        ax = axes
-        x = df_plot[f'{metric}_manual']
-        y = df_plot[f'{metric}_sct']
-
-        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
-        ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
-        ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
-
-        # Add regression line
-        intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '-', color='red')
-
-        # Compute Spearman correlation
-        spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
-                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
-
-        # Add diagonal line
-        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
-
-        # Change axes labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
-        ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'{METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
-
-        if metric == 'midsagittal_length':
-            # Tweak axes ticks
-            ax.set_xticks([0, 25, 50, 75, 100])
-            ax.set_yticks([0, 25, 50, 75, 100])
-
-        # Remove the top and right spines
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        plt.tight_layout()
-
-        # Save the plot
-        num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'{method}_scatterplot_{metric}_{num_subjects}subjects.png')
-        plt.savefig(figure_fname, dpi=300)
-        print(f'Pairplot for {metric} saved as {figure_fname}')
-        plt.close()
-
-    combine_plot(f'{method}_scatterplot', num_subjects, output_dir)
-
-
-def create_scatterplot_3D_length_width(df, output_dir, method):
-    """
-    Create scatter plots with linear regression lines for each metric
-        - between 3D length and manual midsagittal length
-        - between 3D width and manual midsagittal width
-    :param df: pandas dataframe with lesion metrics
-    :param output_dir: output directory
-    :param method: str: method ('GT' or 'SCIsegV2')
-    """
-
-    # Set font to Arial
-    plt.rcParams['font.sans-serif'] = 'Arial'
-
-    for metric in ['length', 'width']:
-        df_plot = df[[f'midsagittal_{metric}_manual', f'{metric}_sct']]
-
-        fig, axes = plt.subplots(figsize=(5, 5))
-
-        max_val = df_plot.max().max()
-        min_val = df_plot.min().min()
-
-        ax = axes
-        x = df_plot[f'midsagittal_{metric}_manual']
-        y = df_plot[f'{metric}_sct']
-
-        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
-        ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
-        ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
-
-        # Add regression line
-        intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '-', color='red')
-
-        # Compute Spearman correlation
-        spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
-                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
-
-        # Add diagonal line
-        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
-
-        # Change axes labels
-        ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'{METHOD_TO_TITLE[method]} 3D {metric} [mm]', fontsize=FONT_SIZE)
-
-        if metric == 'length':
-            # Tweak axes ticks
-            ax.set_xticks([0, 25, 50, 75, 100])
-            ax.set_yticks([0, 25, 50, 75, 100])
-
-        # Remove the top and right spines
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        plt.tight_layout()
-
-        # Save the plot
-        figure_fname = os.path.join(output_dir, f'{method}_{metric}_manual_sct3D_scatterplot_{len(df_plot)}subjects.png')
-        plt.savefig(figure_fname, dpi=200)
-        print(f'Pairplot for 3D {metric} saved as {figure_fname}')
-        plt.close()
-
-
-def create_diff_plot(df, output_dir, method):
-    """
-    Create a Bland-Altman Mean Difference Plot for each metric
-    https://www.statsmodels.org/devel/generated/statsmodels.graphics.agreement.mean_diff_plot.html
-    :param df: pandas dataframe with lesion metrics
-    :param output_dir: output directory
-    :method: str: method ('GT' or 'SCIsegV2')
-    """
-
-    # Set font to Arial
-    plt.rcParams['font.sans-serif'] = 'Arial'
-
-    for metric in METRIC_TO_TITLE.keys():
-        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
-
-        fig, axes = plt.subplots(figsize=(5, 5))
-
-        ax = axes
-        x = df_plot[f'{metric}_manual']
-        y = df_plot[f'{metric}_sct']
-
-        sm.graphics.mean_diff_plot(
-            x, y,
-            sd_limit=1.96,  # The default of 1.96 will produce 95% confidence intervals for the means of the differences
-            ax=ax,
-            scatter_kwds={
-                's': 20,
-                'alpha': 1,
-                'color': 'black',
-                'edgecolor': 'black',
-
-            },
-            mean_line_kwds={
-                'color': 'black',
-                'linestyle': '-',
-                'alpha': 0.5,
-                'linewidth': 1
-            },
-            limit_lines_kwds={
-                'color': 'black',
-                'linestyle': '--',
-                'alpha': 0.5,
-                'linewidth': 1
-            }
-        )
-
-        # Set plot title and labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
-                     f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
-        ax.set_xlabel(f'Mean', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Difference', fontsize=FONT_SIZE)
-
-        # Get the limits and means for custom styling
-        diff = x - y            # Difference between x and y
-        sd = np.std(diff)       # Standard deviation of the difference
-        # Adjust y-lim
-        ax.set_ylim(-1.96 * sd * 1.5, 1.96 * sd * 1.5)
-
-        # Remove the top and right spines
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        # Draw dashed gray horizontal line at y=0
-        ax.axhline(y=0, color='gray', linestyle=':', alpha=0.5)
-        plt.tight_layout()
-
-        # Save the plot
-        num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'{method}_diffplot_{metric}_{num_subjects}subjects.png')
-        plt.savefig(figure_fname, dpi=300)
-        print(f'Diffplot for {metric} saved as {figure_fname}')
-        plt.close()
-
-    combine_plot(f'{method}_diffplot', num_subjects, output_dir)
+    print(f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
 
 
 def create_trajectory_plots(df_ses_01, output_dir, method):
@@ -785,12 +536,12 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             plt.tight_layout()
             num_subjects = len(df_ses_01_plot)
             figure_fname = os.path.join(output_dir,
-                                        f'{method}_trajectory_plot_{score}_{metric}_{num_subjects}subjects.png')
+                                        f'{METHOD_TO_FNAME[method]}_trajectory_plot_{score}_{metric}_{num_subjects}subjects.png')
             plt.savefig(figure_fname, dpi=300)
             print(f'Trajectory plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
         # Combine individual trajectory plots for this score
-        combine_plot(f'{method}_trajectory_plot_{score}', num_subjects, output_dir)
+        combine_plot(f'{METHOD_TO_FNAME[method]}_trajectory_plot_{score}', num_subjects, output_dir)
 
 
 def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
@@ -990,12 +741,12 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             plt.tight_layout()
             num_subjects = len(df_ses_01_plot)
             figure_fname = os.path.join(output_dir,
-                                        f'{method}_normalized_improvement_{score}_{metric}_{num_subjects}subjects.png')
+                                        f'{METHOD_TO_FNAME[method]}_normalized_improvement_{score}_{metric}_{num_subjects}subjects.png')
             plt.savefig(figure_fname, dpi=300)
             print(f'Normalized improvement plot for {score} by {metric} saved as {figure_fname}')
             plt.close()
         # Combine individual trajectory plots for this score
-        combine_plot(f'{method}_normalized_improvement_{score}', num_subjects, output_dir)
+        combine_plot(f'{METHOD_TO_FNAME[method]}_normalized_improvement_{score}', num_subjects, output_dir)
 
 
 def main():
@@ -1078,15 +829,7 @@ def main():
     # Plotting
     #----------------
     output_dir = args.o
-    # create output directory if it does not exist
     os.makedirs(output_dir, exist_ok=True)
-
-    # Scatter plot with linear regression lines
-    create_scatterplot(df_ses_01, output_dir, method)
-    # Scatter plot for 3D lesion length and width
-    create_scatterplot_3D_length_width(df_ses_01, output_dir, method)
-    # Bland-Altman Mean Difference Plot
-    create_diff_plot(df_ses_01, output_dir, method)
 
     #----------------
     # Clinical scores and baseline metrics over time
