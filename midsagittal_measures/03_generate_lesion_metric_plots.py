@@ -130,6 +130,7 @@ def read_file_manual(file):
             df_manual.rename(columns={col: f'{col}_manual'}, inplace=True)
 
     print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
+    print(f'Number of unique participants in the manual metrics file: {df_manual['participant_id'].nunique()}')
     return df_manual
 
 
