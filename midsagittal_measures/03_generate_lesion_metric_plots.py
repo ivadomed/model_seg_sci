@@ -426,7 +426,7 @@ def create_scatterplot(df, output_dir, method):
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
@@ -492,7 +492,7 @@ def create_scatterplot_3D_length_width(df, output_dir, method):
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.2f}\n{format_pvalue(p_value)}',
+        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
