@@ -439,8 +439,8 @@ def create_scatterplot(df, output_dir, method):
 
         if metric == 'midsagittal_length':
             # Tweak axes ticks
-            ax.set_xticks([0, 25, 50, 75, 100])
-            ax.set_yticks([0, 25, 50, 75, 100])
+            ax.set_xticks([0, 50, 100, 150, 200])
+            ax.set_yticks([0, 50, 100, 150, 200])
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -504,8 +504,8 @@ def create_scatterplot_3D_length_width(df, output_dir, method):
 
         if metric == 'length':
             # Tweak axes ticks
-            ax.set_xticks([0, 25, 50, 75, 100])
-            ax.set_yticks([0, 25, 50, 75, 100])
+            ax.set_xticks([0, 50, 75, 100, 150, 200])
+            ax.set_yticks([0, 50, 75, 100, 150, 200])
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
