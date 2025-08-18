@@ -123,6 +123,10 @@ def read_file_manual(file):
     unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
     df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
 
+    # Remove any strings from the 'mri_time_since_injury' column
+    if 'mri_time_since_injury' in df_manual.columns:
+        df_manual['mri_time_since_injury'] = df_manual['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
+
     # Add suffix to distinguish from other methods
     metric_cols = list(METRIC_TO_TITLE.keys())
     for col in metric_cols:
