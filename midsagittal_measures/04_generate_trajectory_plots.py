@@ -131,6 +131,10 @@ def read_file_manual(file):
         lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
         if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
 
+    # Remove any strings from the 'mri_time_since_injury' column
+    if 'mri_time_since_injury' in df_manual.columns:
+        df_manual['mri_time_since_injury'] = df_manual['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
+
     # Convert any string clinical score columns to numeric
     for col in df_manual.columns:
         if col.startswith(tuple(CLINICAL_SCORES_TO_AXES.keys())):
