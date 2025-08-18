@@ -242,7 +242,8 @@ def create_correlation_matrix(df, metric, output_dir):
 
     # Define method columns for this metric
     method_cols = [f'{metric}_manual', f'{metric}_gt', f'{metric}_scisegv2']
-    method_labels = ['Manual', 'Semi-automatic\n(GT + SCT)', 'Automatic\n(SCIsegV2 + SCT)']
+    method_labels_x = ['Manual', 'Semi-automatic\n(GT + SCT)']
+    method_labels_y = ['Semi-automatic\n(GT + SCT)', 'Automatic\n(SCIsegV2 + SCT)']
 
     # Extract data for this metric, dropping rows with any NaN values
     df_metric = df[['participant_id', 'session_id'] + method_cols].dropna()
@@ -274,42 +275,46 @@ def create_correlation_matrix(df, metric, output_dir):
                 _, p_spearman = stats.spearmanr(corr_data.iloc[:, i], corr_data.iloc[:, j])
                 spearman_pvals[i, j] = p_spearman
 
+    # Remove the first row and the last column from pearson_corr to reduce it from 3x3 to 2x2
+    pearson_corr = pearson_corr.iloc[1:, :-1]
+    spearman_corr = spearman_corr.iloc[1:, :-1]
+    pearson_pvals = pearson_pvals[1:, :-1]
+    spearman_pvals = spearman_pvals[1:, :-1]
+
     # Create figure with two subplots side by side
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     # Pearson correlation matrix
-    mask_pearson = np.triu(np.ones_like(pearson_corr, dtype=bool))
+    mask_pearson = np.array([[False, True], [False, False]], dtype=bool)    # 2x2
     sns.heatmap(pearson_corr, mask=mask_pearson, annot=True, cmap='RdBu_r', center=0,
                 square=True, linewidths=.5, cbar_kws={"shrink": .5},
-                xticklabels=method_labels, yticklabels=method_labels,
+                xticklabels=method_labels_x, yticklabels=method_labels_y,
                 vmin=-1, vmax=1, fmt='.3f', ax=ax1, annot_kws={'size': FONT_SIZE})
     ax1.set_title(f'Pearson Correlation\n{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE + 2)
 
     # Add p-values as text annotations
-    for i in range(n_methods):
-        for j in range(n_methods):
-            if i > j:  # Lower triangle only
-                p_val = pearson_pvals[i, j]
-                if not np.isnan(p_val):
-                    ax1.text(j + 0.5, i + 0.75, format_pvalue(p_val),
-                            ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
+    for i in range(n_methods-1):    # 3x3 --> 2x2
+        for j in range(n_methods-1):    # 3x3 --> 2x2
+            p_val = pearson_pvals[i, j]
+            if not np.isnan(p_val):
+                ax1.text(j + 0.5, i + 0.75, format_pvalue(p_val),
+                        ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
 
     # Spearman correlation matrix
-    mask_spearman = np.triu(np.ones_like(spearman_corr, dtype=bool))
+    mask_spearman = np.array([[False, True], [False, False]], dtype=bool)
     sns.heatmap(spearman_corr, mask=mask_spearman, annot=True, cmap='RdBu_r', center=0,
                 square=True, linewidths=.5, cbar_kws={"shrink": .5},
-                xticklabels=method_labels, yticklabels=method_labels,
+                xticklabels=method_labels_x, yticklabels=method_labels_y,
                 vmin=-1, vmax=1, fmt='.3f', ax=ax2, annot_kws={'size': FONT_SIZE})
     ax2.set_title(f'Spearman Correlation\n{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE + 2)
 
     # Add p-values as text annotations
-    for i in range(n_methods):
-        for j in range(n_methods):
-            if i > j:  # Lower triangle only
-                p_val = spearman_pvals[i, j]
-                if not np.isnan(p_val):
-                    ax2.text(j + 0.5, i + 0.75, format_pvalue(p_val),
-                            ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
+    for i in range(n_methods-1):  # 3x3 --> 2x2
+        for j in range(n_methods-1):  # 3x3 --> 2x2
+            p_val = spearman_pvals[i, j]
+            if not np.isnan(p_val):
+                ax2.text(j + 0.5, i + 0.75, format_pvalue(p_val),
+                        ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
 
     plt.tight_layout()
 
