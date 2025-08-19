@@ -110,7 +110,7 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
 fi
 
 # ------------------------------------
-# Manual GT
+# Semi-automatic method (manual GT + sct_analyze_lesion)
 # ------------------------------------
 # Copy GT SC and lesion segmentations from derivatives/labels
 copy_gt "${file_t2}" "seg"
@@ -141,8 +141,9 @@ else
   cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}
   echo "✅ ${file_t2}_lesion-manual_bin_analysis.xlsx created" >> ${PATH_LOG}/manual_GT_analysis.log
 fi
+
 # ----------------------------
-# SCIsegV2
+# Automatic method (SCIsegV2 + sct_analyze_lesion)
 # ----------------------------
 # Segment the spinal cord and lesions using SCIsegV2
 #CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
