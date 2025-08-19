@@ -111,7 +111,7 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
 fi
 
 # ------------------------------------
-# Semi-automatic method (manual GT + sct_analyze_lesion)
+# Semi-automatic method (manual lesion + sct_analyze_lesion)
 # ------------------------------------
 # Copy GT SC and lesion segmentations from derivatives/labels
 copy_gt "${file_t2}" "seg"
