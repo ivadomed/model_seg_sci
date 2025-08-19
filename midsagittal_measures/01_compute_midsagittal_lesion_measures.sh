@@ -7,6 +7,7 @@
 #   2. Computes midsagittal lesion measures based on the manual segment
 #   3. Segments spinal cord and lesions using SCIsegV2 model
 #   4. Computes midsagittal lesion measures based on the SCIsegV2
+#   5. Computes midsagittal lesion measures based on the manual lesion and SCIsegV2 spinal cord segmentation
 #
 # NOTE: This script requires SCT v7.0 or higher (due to the new sct_deepseg syntax).
 
@@ -180,6 +181,34 @@ else
   cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx ${PATH_RESULTS}
   echo "✅ ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
 fi
+
+# ----------------------------
+# Semi-automatic method II (manual lesion + SCIsegV2 spinal cord + sct_analyze_lesion)
+# ----------------------------
+
+# Generate sagittal lesion QC report (manual lesion + SCIsegV2 spinal cord)
+sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject "lesion_manual_scisegv2_cord"
+
+# Compute the midsagittal lesion length and width (manual lesion + SCIsegV2 spinal cord)
+status=0
+sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
+# If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
+if [ $status -ne 0 ]; then
+    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_scisegv2_cord_analysis.log
+    exit 0
+else
+  # If sct_analyze_lesion finished successfully, the outputs are:
+  #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
+  #   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
+  #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
+  # Remove pickle file -- we only need the XLSX file
+  rm ${file_t2}_lesion-manual_bin_analysis.pkl
+
+  # Copy the XLSX file to the results folder
+  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_lesion-manual_bin_scisegv2_cord_analysis.xlsx
+  echo "✅ ${file_t2}_lesion-manual_bin_scisegv2_cord_analysis.xlsx created" >> ${PATH_LOG}/manual_lesion_scisegv2_cord_analysis.log
+fi
+
 # ------------------------------------------------------------------------------
 # End
 # ------------------------------------------------------------------------------
