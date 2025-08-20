@@ -361,31 +361,37 @@ def combine_plot(figure_type, num_subjects, output_dir):
         os.makedirs(combined_dir)
 
     print(f"Combining {figure_type}s into a single figure...")
-    # First row: midsagittal_length and midsagittal_width
-    cmd_row1 = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
-               f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
-               f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
-    # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
-    cmd_row2 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_tissue_bridge_{num_subjects}subjects.png')} " \
-               f"{os.path.join(output_dir, f'{figure_type}_dorsal_tissue_bridge_{num_subjects}subjects.png')} " \
-               f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
-               f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
-    # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
-    cmd_row3 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_bridge_ratio_{num_subjects}subjects.png')} " \
-               f"{os.path.join(output_dir, f'{figure_type}_dorsal_bridge_ratio_{num_subjects}subjects.png')} " \
-               f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # Combine all rows
-    cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} " \
-                  f"-append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}; " \
-                  f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-                  f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-                  f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # Execute the commands
-    subprocess.run(cmd_row1, shell=True)
-    subprocess.run(cmd_row2, shell=True)
-    subprocess.run(cmd_row3, shell=True)
+    # 1 row, 3 columns:
+    cmd_combine = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
+          f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
+          f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
+          f"+append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}"
+    # 3 rows, 3 columns:
+    # # First row: midsagittal_length and midsagittal_width
+    # cmd_row1 = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
+    #            f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
+    #            f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
+    # # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
+    # cmd_row2 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_tissue_bridge_{num_subjects}subjects.png')} " \
+    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_tissue_bridge_{num_subjects}subjects.png')} " \
+    #            f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
+    #            f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
+    # # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
+    # cmd_row3 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_bridge_ratio_{num_subjects}subjects.png')} " \
+    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_bridge_ratio_{num_subjects}subjects.png')} " \
+    #            f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
+    # # Combine all rows
+    # cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
+    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
+    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} " \
+    #               f"-append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}; " \
+    #               f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
+    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
+    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
+    # # Execute the commands
+    # subprocess.run(cmd_row1, shell=True)
+    # subprocess.run(cmd_row2, shell=True)
+    # subprocess.run(cmd_row3, shell=True)
     subprocess.run(cmd_combine, shell=True)
     print(
         f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
