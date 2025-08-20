@@ -158,12 +158,13 @@ def read_file_manual(file):
 
 def normalize_sensorimotor_scores(df):
     """
-    Normalize clinical scores (uems, lems, ms, pp, lt) between follow-ups.
-    Works with subjects who have either baseline or 1m as their first exam.
+    Compute normalized recovery rates by calculating the change from baseline (i.e., first available measurement) to
+    follow-up and dividing them by the maximal score improvable.
+
     For each subject:
-    1. Identifies the first available time point (baseline or 1m)
-    2. Computes maximal improvable score from this first time point
-    3. Normalizes subsequent scores by dividing improvement by maximal improvable score
+        1. Identifies the first available time point (baseline or 1m)
+        2. Computes maximal improvable score from this first time point
+        3. Normalizes subsequent scores by dividing improvement by maximal improvable score
 
     :param df: pandas DataFrame with baseline lesion metrics and clinical scores across
     multiple time points
