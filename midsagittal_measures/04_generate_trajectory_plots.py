@@ -814,23 +814,6 @@ def main():
     df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRIC_TO_TITLE.keys()])
     print(f'Number of subjects after dropping NaN values: {df_ses_01.shape[0]}')
 
-    # # Keep only test subjects (i.e., those who were not used for SCIsegV2 training)
-    # # https://github.com/ivadomed/model_seg_sci/blob/main/dataset-conversion/dataset_split_seed710.yaml
-    # # Note: The following subjects were obtained using Claude
-    # test_subjects = ['sub-zh03_ses-01', 'sub-zh06_ses-01', 'sub-zh06_ses-02', 'sub-zh15_ses-01', 'sub-zh18_ses-01',
-    #                  'sub-zh19_ses-01', 'sub-zh22_ses-01', 'sub-zh22_ses-02', 'sub-zh27_ses-01', 'sub-zh30_ses-01',
-    #                  'sub-zh34_ses-01', 'sub-zh54_ses-01', 'sub-zh66_ses-01']
-    # # Create a new column that combines participant_id and session_id
-    # df['combined_id'] = df['participant_id'] + '_' + df['session_id']
-    # # Filter the dataframe to keep only the test subjects
-    # df_filtered = df[df['combined_id'].isin(test_subjects)]
-    # # If you want to remove the 'combined_id' column after filtering:
-    # df = df_filtered.drop('combined_id', axis=1)
-
-    # # Exclude sub-zh15, sub-zh81
-    # df = df[~df['participant_id'].isin(['sub-zh15', 'sub-zh81'])]
-    # print(len(df))
-
     #----------------
     # Plotting
     #----------------
