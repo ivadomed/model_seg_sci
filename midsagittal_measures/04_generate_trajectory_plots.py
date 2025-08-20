@@ -158,17 +158,20 @@ def read_file_manual(file):
 
 def normalize_sensorimotor_scores(df):
     """
-    Compute normalized recovery rates by calculating the change from baseline (i.e., first available measurement) to
+    Compute normalized recovery rates by calculating the change from baseline (or the first available measurement) to
     follow-up and dividing them by the maximal score improvable.
+    Then, scale the normalized sensorimotor recovery rates using min-max scaling method (per participant and score):
+        x' = (x - min(x)) / (max(x) - min(x))
 
     For each subject:
         1. Identifies the first available time point (baseline or 1m)
         2. Computes maximal improvable score from this first time point
         3. Normalizes subsequent scores by dividing improvement by maximal improvable score
+        4. Applies min-max scaling to the normalized recovery rates per participant and score
 
     :param df: pandas DataFrame with baseline lesion metrics and clinical scores across
     multiple time points
-    :return df: pandas DataFrame with normalized clinical scores
+    :return df: pandas DataFrame with min-max scaled normalized clinical scores
     """
     # Get unique participant IDs
     participants = df['participant_id'].unique()
@@ -176,7 +179,8 @@ def normalize_sensorimotor_scores(df):
     # Time points in order
     time_points = ['bl', '1m', '3m', '6m', '12m']
 
-    # Loop through each participant
+    # First pass: compute normalized recovery rates by calculating the change from baseline (i.e., first available
+    # measurement) to follow-up and dividing them by the maximal score improvable
     for participant in participants:
         # Get data for the current participant
         participant_data = df[df['participant_id'] == participant]
@@ -225,6 +229,49 @@ def normalize_sensorimotor_scores(df):
                     else:
                         normalized_improvement = improvement / max_improvable
                         df.loc[participant_data.index, normalized_col] = normalized_improvement
+
+    # Second pass: apply min-max scaling to normalized recovery rates (separately for each participant and
+    # clinical score)
+    normalized_columns = [col for col in df.columns if col.endswith('_improvement_normalized')]
+
+    for participant in participants:
+        participant_idx = df['participant_id'] == participant
+        participant_data = df.loc[participant_idx]
+
+        # Process each clinical score separately
+        for score in CLINICAL_SCORES_TO_AXES.keys():
+            # Get normalized values for this participant and this specific clinical score
+            score_normalized_values = []
+            score_columns = []
+
+            # Debug - subject with decreased light touch score for 1m from baseline
+            # if participant == 'sub-zh12' and score == 'lt':
+            #     print('here')
+
+            for col in normalized_columns:
+                if col.startswith(f"{score}_") and col in participant_data.columns and not pd.isna(participant_data[col].values[0]):
+                    score_normalized_values.append(participant_data[col].values[0])
+                    score_columns.append(col)
+
+            # Apply min-max scaling if there are values for this participant and this score
+            if len(score_normalized_values) > 0:
+                min_val = min(score_normalized_values)
+                max_val = max(score_normalized_values)
+
+                # Apply min-max scaling: x' = (x - min(x)) / (max(x) - min(x))
+                if max_val != min_val:  # Avoid division by zero
+                    for col in score_columns:
+                        original_val = participant_data[col].values[0]
+                        scaled_val = (original_val - min_val) / (max_val - min_val)
+                        # Create new column with _scaled suffix
+                        scaled_col = col.replace('_improvement_normalized', '_improvement_normalized_scaled')
+                        df.loc[participant_idx, scaled_col] = scaled_val
+                else:
+                    # If all values are the same for this participant and score, set to 0.5 (middle value)
+                    for col in score_columns:
+                        # Create new column with _scaled suffix
+                        scaled_col = col.replace('_improvement_normalized', '_improvement_normalized_scaled')
+                        df.loc[participant_idx, scaled_col] = 0.5
 
     return df
 
