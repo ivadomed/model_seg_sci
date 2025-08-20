@@ -803,12 +803,9 @@ def main():
     df = df.dropna(subset=[f'{metric}_sct' for metric in METRIC_TO_TITLE.keys()])
     print(f'Number of subjects after dropping NaN values: {df.shape[0]}')
 
-    #----------------
-    # Plotting
-    #----------------
+
     output_dir = args.o
     os.makedirs(output_dir, exist_ok=True)
-
     #----------------
     # Clinical scores and baseline metrics over time
     #----------------
