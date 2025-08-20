@@ -88,7 +88,7 @@ def get_parser():
         '-file-manual',
         required=True,
         type=str,
-        help='Absolute path to an XLSX file with manually measured lesion metrics and clinical scores. '
+        help='Absolute path to an XLSX file with manually measured lesion metrics and baseline clinical scores. '
     )
     parser.add_argument(
         '-o',
@@ -156,7 +156,7 @@ def read_file_manual(file):
     return df_manual
 
 
-def normalize_sensorimotor_scores(df_ses_01):
+def normalize_sensorimotor_scores(df):
     """
     Normalize clinical scores (uems, lems, ms, pp, lt) between follow-ups.
     Works with subjects who have either baseline or 1m as their first exam.
@@ -165,12 +165,12 @@ def normalize_sensorimotor_scores(df_ses_01):
     2. Computes maximal improvable score from this first time point
     3. Normalizes subsequent scores by dividing improvement by maximal improvable score
 
-    :param df_ses_01: pandas DataFrame with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    :param df: pandas DataFrame with baseline lesion metrics and clinical scores across
     multiple time points
-    :return df_ses_01: pandas DataFrame with normalized clinical scores
+    :return df: pandas DataFrame with normalized clinical scores
     """
     # Get unique participant IDs
-    participants = df_ses_01['participant_id'].unique()
+    participants = df['participant_id'].unique()
 
     # Time points in order
     time_points = ['bl', '1m', '3m', '6m', '12m']
@@ -178,7 +178,7 @@ def normalize_sensorimotor_scores(df_ses_01):
     # Loop through each participant
     for participant in participants:
         # Get data for the current participant
-        participant_data = df_ses_01[df_ses_01['participant_id'] == participant]
+        participant_data = df[df['participant_id'] == participant]
 
         # Process each clinical score
         for score in CLINICAL_SCORES_TO_AXES.keys():
@@ -220,12 +220,12 @@ def normalize_sensorimotor_scores(df_ses_01):
 
                     # Normalize improvement by maximal improvable score
                     if max_improvable <= 0:  # If no room for improvement, set to 0
-                        df_ses_01.loc[participant_data.index, normalized_col] = 0  # or should I use `np.nan`?
+                        df.loc[participant_data.index, normalized_col] = 0  # or should I use `np.nan`?
                     else:
                         normalized_improvement = improvement / max_improvable
-                        df_ses_01.loc[participant_data.index, normalized_col] = normalized_improvement
+                        df.loc[participant_data.index, normalized_col] = normalized_improvement
 
-    return df_ses_01
+    return df
 
 
 def read_file_sct(file_sct):
@@ -307,13 +307,13 @@ def combine_plot(figure_type, num_subjects, output_dir):
     print(f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
 
 
-def create_trajectory_plots(df_ses_01, output_dir, method):
+def create_trajectory_plots(df, output_dir, method):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
     Also creates plots showing normalized improvement scores for follow-up time points.
 
-    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    :param df: pandas dataframe with baseline lesion metrics and clinical scores across
     multiple time points
     :param output_dir: output directory
     :method: str: method ('GT' or 'SCIsegV2')
@@ -347,21 +347,21 @@ def create_trajectory_plots(df_ses_01, output_dir, method):
     time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order', 99))
 
     # PART 1: Raw trajectory plots
-    create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+    create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
                                 time_point_mapping,  time_points)
 
     # PART 2: Normalized improvement scores trajectory plots
-    create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+    create_normalized_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
                                        time_point_mapping, time_points)
 
 
-def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir, time_point_mapping,
+def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir, time_point_mapping,
                                 time_points):
     """
     Create trajectory plots for raw (i.e., non-normalized) clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
 
-    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
+    :param df: pandas dataframe with baseline lesion metrics and clinical scores across
     multiple time points
     :param group_colors: list of colors for each group
     :param method: str: method ('GT' or 'SCIsegV2')
@@ -381,10 +381,10 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             # For UEMS, keep only subjects with 'tetrapara_bl' == 0
             #   0: tetraplegic
             #   1: paraplegic -- max UEMS at baseline (no impairment)
-            df_ses_01_plot = df_ses_01[df_ses_01['tetrapara_bl'] == 0]
+            df_plot = df[df['tetrapara_bl'] == 0]
         # Keeping all subjects for LEMS and other scores
         else:
-            df_ses_01_plot = df_ses_01
+            df_plot = df
 
         # Loop over each lesion metric
         for metric in METRIC_TO_TITLE.keys():
@@ -406,16 +406,16 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
             group_data = [{tp: [] for tp in time_points} for _ in range(len(thresholds))]
 
             # Process each participant
-            for participant_id in df_ses_01['participant_id'].unique():
+            for participant_id in df['participant_id'].unique():
                 # Get participant data
-                participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+                participant_data = df[df['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
-                if (participant_id not in df_ses_01_plot['participant_id'].values or
+                if (participant_id not in df_plot['participant_id'].values or
                         metric_name not in participant_data.columns or
                         pd.isna(participant_data[metric_name].values[0])):
                     continue
 
-                participant_clinical = df_ses_01_plot[df_ses_01_plot['participant_id'] == participant_id]
+                participant_clinical = df_plot[df_plot['participant_id'] == participant_id]
 
                 # Get metric value for this participant (for coloring)
                 metric_value = participant_data[metric_name].values[0]
@@ -542,7 +542,7 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
 
             # Save the plot
             plt.tight_layout()
-            num_subjects = len(df_ses_01_plot)
+            num_subjects = len(df_plot)
             figure_fname = os.path.join(output_dir,
                                         f'{METHOD_TO_FNAME[method]}_trajectory_plot_{score}_{metric}_{num_subjects}subjects.png')
             plt.savefig(figure_fname, dpi=300)
@@ -552,7 +552,7 @@ def create_raw_trajectory_plots(df_ses_01, group_colors, method, metric_threshol
         combine_plot(f'{METHOD_TO_FNAME[method]}_trajectory_plot_{score}', num_subjects, output_dir)
 
 
-def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_thresholds, output_dir,
+def create_normalized_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
                                        time_point_mapping, time_points):
     """
     Create trajectory plots for normalized clinical scores across follow-up time points for each participant,
@@ -560,8 +560,7 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
     This function assumes that the normalized improvement scores have already been computed and added to the dataframe
     using the `normalize_sensorimotor_scores` function.
 
-    :param df_ses_01: pandas dataframe with baseline lesion metrics (ses-01 sessions only) and clinical scores across
-    multiple time points
+    :param df: pandas dataframe with baseline lesion metrics and clinical scores across multiple time points
     :param group_colors: list of colors for each group
     :param method: str: method ('GT' or 'SCIsegV2')
     :param metric_thresholds: dict: thresholds for each metric to create groups
@@ -576,10 +575,10 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             # For UEMS, keep only subjects with 'tetrapara_bl' == 0
             #   0: tetraplegic
             #   1: paraplegic -- max UEMS at baseline (no impairment)
-            df_ses_01_plot = df_ses_01[df_ses_01['tetrapara_bl'] == 0]
+            df_plot = df[df['tetrapara_bl'] == 0]
         # Keeping all subjects for LEMS and other scores
         else:
-            df_ses_01_plot = df_ses_01
+            df_plot = df
 
         # Get the follow-up time points (excluding baseline)
         follow_up_time_points = [tp for tp in time_points if tp != 'bl']
@@ -605,16 +604,16 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
             group_normalized_data = [{tp: [] for tp in follow_up_time_points} for _ in range(len(thresholds))]
 
             # Process each participant
-            for participant_id in df_ses_01['participant_id'].unique():
+            for participant_id in df['participant_id'].unique():
                 # Get participant data
-                participant_data = df_ses_01[df_ses_01['participant_id'] == participant_id]
+                participant_data = df[df['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
-                if (participant_id not in df_ses_01_plot['participant_id'].values or
+                if (participant_id not in df_plot['participant_id'].values or
                         metric_name not in participant_data.columns or
                         pd.isna(participant_data[metric_name].values[0])):
                     continue
 
-                participant_clinical = df_ses_01_plot[df_ses_01_plot['participant_id'] == participant_id]
+                participant_clinical = df_plot[df_plot['participant_id'] == participant_id]
 
                 # Get metric value for this participant (for grouping)
                 metric_value = participant_data[metric_name].values[0]
@@ -747,7 +746,7 @@ def create_normalized_trajectory_plots(df_ses_01, group_colors, method, metric_t
 
             # Save the plot
             plt.tight_layout()
-            num_subjects = len(df_ses_01_plot)
+            num_subjects = len(df_plot)
             figure_fname = os.path.join(output_dir,
                                         f'{METHOD_TO_FNAME[method]}_normalized_improvement_{score}_{metric}_{num_subjects}subjects.png')
             plt.savefig(figure_fname, dpi=300)
@@ -785,34 +784,24 @@ def main():
     df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
 
     #----------------
-    # Create new dataframes for ses-01 and multiple sessions
-    #----------------
-    # Keep only subjects with more than 1 session
-    df_multiple_ses = df.groupby('participant_id').filter(lambda x: len(x) > 1 and x['session_id'].nunique() > 1)
-    # Keep only 'ses-01' sessions
-    df_ses_01 = df[df['session_id'] == 'ses-01']
-    # Print number of subjects
-    print(f'ses-01: Number of subjects: {df_ses_01.shape[0]}')
-    print(f'Multiple sessions: Number of subjects: {df_multiple_ses.shape[0]}')
-
-    #----------------
     # Normalize sensorimotor scores
     #----------------
-    df_ses_01 = normalize_sensorimotor_scores(df_ses_01)
+    print(f'Number of subjects: {df.shape[0]}')
+    df = normalize_sensorimotor_scores(df)
 
     #----------------
     # Filter subjects based on MRI time since injury
     #----------------
     # Convert mri_time_since_injury to numeric (in days)
-    df_ses_01['mri_time_since_injury'] = pd.to_numeric(df_ses_01['mri_time_since_injury'])
-    print(f'Number of subjects before filtering by MRI time since injury: {df_ses_01.shape[0]}')
+    df['mri_time_since_injury'] = pd.to_numeric(df['mri_time_since_injury'])
+    print(f'Number of subjects before filtering by MRI time since injury: {df.shape[0]}')
     # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
-    df_ses_01 = df_ses_01[(df_ses_01['mri_time_since_injury'] >= 12) & (df_ses_01['mri_time_since_injury'] <= 133)]
-    print(f'Number of subjects after filtering by MRI time since injury: {df_ses_01.shape[0]}')
+    df = df[(df['mri_time_since_injury'] >= 12) & (df['mri_time_since_injury'] <= 133)]
+    print(f'Number of subjects after filtering by MRI time since injury: {df.shape[0]}')
 
     # Drop rows with NaN values in the lesion metrics
-    df_ses_01 = df_ses_01.dropna(subset=[f'{metric}_sct' for metric in METRIC_TO_TITLE.keys()])
-    print(f'Number of subjects after dropping NaN values: {df_ses_01.shape[0]}')
+    df = df.dropna(subset=[f'{metric}_sct' for metric in METRIC_TO_TITLE.keys()])
+    print(f'Number of subjects after dropping NaN values: {df.shape[0]}')
 
     #----------------
     # Plotting
@@ -823,7 +812,7 @@ def main():
     #----------------
     # Clinical scores and baseline metrics over time
     #----------------
-    create_trajectory_plots(df_ses_01, output_dir, method)
+    create_trajectory_plots(df, output_dir, method)
 
 
 if __name__ == '__main__':
