@@ -445,8 +445,8 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
 
             # Use lesion metrics computed by SCT (and not manually measured ones)
             # Note: there are still two possible options controlled by the `method` variable:
-            #   1. 'GT' - manual lesion masks + sct_analyze_lesion
-            #   2. 'SCIsegV2' - SCIsegV2 lesion masks + sct_analyze_lesion
+            #   1. 'GT' - manual lesion masks + sct_analyze_lesion --> '_manual' suffix
+            #   2. 'SCIsegV2' - SCIsegV2 lesion masks + sct_analyze_lesion --> '_sct' suffix
             metric_name = f'{metric}_sct'
 
             # Get the thresholds for this metric
