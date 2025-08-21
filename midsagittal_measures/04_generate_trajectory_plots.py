@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 import argparse
 import subprocess
 
+from sklearn.cluster import KMeans
+
 
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
@@ -355,7 +357,7 @@ def combine_plot(figure_type, num_subjects, output_dir):
     print(f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
 
 
-def create_trajectory_plots(df, output_dir, method):
+def create_trajectory_plots(df, output_dir, method, stratification_method='kmeans', n_groups=3):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -364,24 +366,41 @@ def create_trajectory_plots(df, output_dir, method):
     :param df: pandas dataframe with baseline lesion metrics and clinical scores across
     multiple time points
     :param output_dir: output directory
-    :method: str: method ('GT' or 'SCIsegV2')
+    :param method: str: method ('GT' or 'SCIsegV2')
+    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans')
+    :param n_groups: int: number of groups to create (default: 3)
     """
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    # Define metric thresholds for stratification (using equal increments)
-    metric_thresholds = {
-        'midsagittal_length': [0, 10, 20],
-        'midsagittal_width': [0, 3, 6],
-        'ventral_tissue_bridge': [0, 1],
-        'dorsal_tissue_bridge': [0, 1],
-        'total_tissue_bridge': [0, 1, 2],
-        'dorsal_bridge_ratio': [0, 50],
-        'ventral_bridge_ratio': [0, 50]
-    }
+    # Compute metric thresholds based on the chosen stratification method
+    if stratification_method == 'fixed':
+        # Use predefined thresholds
+        metric_thresholds = {
+            'midsagittal_length': [0, 10, 20],
+            'midsagittal_width': [0, 3, 6],
+            'ventral_tissue_bridge': [0, 1],
+            'dorsal_tissue_bridge': [0, 1],
+            'total_tissue_bridge': [0, 1, 2],
+            'dorsal_bridge_ratio': [0, 50],
+            'ventral_bridge_ratio': [0, 50]
+        }
+    else:
+        # Compute thresholds using K-means clustering
+        metric_thresholds = {}
+        for metric in METRIC_TO_TITLE.keys():
+            thresholds = compute_kmeans_thresholds(df, metric, n_groups, visualize=True, output_dir=output_dir)
 
-    # Define colors for each group
-    group_colors = ['blue', 'green', 'red']
+            metric_thresholds[metric] = thresholds
+            print(f"K-means thresholds for {metric} ({stratification_method}): {[f'{t:.2f}' for t in thresholds]}")
+
+    # Define colors for each group (adjust based on number of groups)
+    if n_groups <= 3:
+        group_colors = ['blue', 'green', 'red'][:n_groups]
+    else:
+        # Generate more colors using matplotlib colormap
+        import matplotlib.cm as cm
+        group_colors = [cm.Set1(i/n_groups) for i in range(n_groups)]
 
     # Define time points with their actual time values in months from baseline
     time_point_mapping = {
@@ -1006,6 +1025,141 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
             plt.close()
         # Combine individual trajectory plots for this score
         combine_plot(f'{METHOD_TO_FNAME[method]}_normalized_scaled_improvement_{score}', num_subjects, output_dir)
+
+
+def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir=None):
+    """
+    Use K-means clustering to determine optimal thresholds for stratification.
+
+    :param df: pandas DataFrame with lesion metrics
+    :param metric: str: metric name
+    :param n_groups: int: number of groups to create
+    :param visualize: bool: whether to create visualization plots
+    :param output_dir: str: directory to save visualization plots
+    :return: list of threshold values
+    """
+    metric_name = f'{metric}_sct'
+    values = df[metric_name].dropna().values.reshape(-1, 1)
+
+    # Fit K-means
+    kmeans = KMeans(n_clusters=n_groups, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(values)
+
+    # Get cluster centers and sort them
+    centers = sorted(kmeans.cluster_centers_.flatten())
+
+    # Create thresholds at midpoints between centers
+    thresholds = [values.min()]
+    for i in range(len(centers) - 1):
+        threshold = (centers[i] + centers[i + 1]) / 2
+        thresholds.append(threshold)
+    thresholds.append(values.max() + 0.01)  # slight offset for inclusive upper bound
+
+    # Print group information
+    print(f"\nK-means clustering results for {metric}:")
+    print(f"Number of groups: {n_groups}")
+    print(f"Cluster centers: {[f'{c:.2f}' for c in centers]}")
+    print(f"Thresholds: {[f'{t:.2f}' for t in thresholds]}")
+
+    # Count subjects in each group
+    for i in range(n_groups):
+        cluster_mask = labels == i
+        n_subjects = np.sum(cluster_mask)
+        cluster_center = centers[i]
+
+        # Determine group range
+        if i == 0:
+            range_text = f"< {thresholds[1]:.2f}"
+        elif i == n_groups - 1:
+            range_text = f"≥ {thresholds[i]:.2f}"
+        else:
+            range_text = f"{thresholds[i]:.2f} - {thresholds[i+1]:.2f}"
+
+        unit = '%' if 'ratio' in metric else 'mm'
+        print(f"Group {i+1}: {range_text} {unit} (center: {cluster_center:.2f}, n={n_subjects})")
+
+    # Create visualization if requested
+    if visualize and output_dir:
+        # Set up the plot
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+
+        # Plot 1: Histogram with K-means results
+        ax1.hist(values.flatten(), bins=30, alpha=0.7, color='lightblue', edgecolor='black')
+
+        # Color points by cluster assignment
+        colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray'][:n_groups]
+
+        # Add cluster centers
+        for i, center in enumerate(centers):
+            ax1.axvline(center, color=colors[i], linestyle='--', linewidth=2,
+                       label=f'Cluster {i+1} center: {center:.2f}')
+
+        # Add thresholds
+        for i, threshold in enumerate(thresholds[1:-1], 1):  # Skip first and last
+            ax1.axvline(threshold, color='black', linestyle='-', linewidth=1.5, alpha=0.8,
+                       label=f'Threshold {i}: {threshold:.2f}')
+
+        ax1.set_xlabel(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
+        ax1.set_ylabel('Frequency', fontsize=12)
+        ax1.set_title(f'K-means Clustering for {METRIC_TO_TITLE[metric]} (n_groups={n_groups})', fontsize=14)
+        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax1.grid(True, alpha=0.3)
+
+        # Plot 2: Scatter plot showing cluster assignments
+        y_jitter = np.random.normal(0, 0.1, len(values))  # Add jitter for better visualization
+
+        for i in range(n_groups):
+            cluster_mask = labels == i
+            cluster_values = values[cluster_mask]
+            cluster_jitter = y_jitter[cluster_mask]
+
+            ax2.scatter(cluster_values, cluster_jitter, c=colors[i], alpha=0.6, s=50,
+                       label=f'Group {i+1} (n={np.sum(cluster_mask)})')
+
+        # Add cluster centers
+        for i, center in enumerate(centers):
+            ax2.axvline(center, color=colors[i], linestyle='--', linewidth=2, alpha=0.8)
+
+        # Add thresholds
+        for threshold in thresholds[1:-1]:  # Skip first and last
+            ax2.axvline(threshold, color='black', linestyle='-', linewidth=1.5, alpha=0.8)
+
+        ax2.set_xlabel(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
+        ax2.set_ylabel('Random Jitter (for visualization)', fontsize=12)
+        ax2.set_title(f'Subject Assignment to Groups', fontsize=14)
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        ax2.set_ylim(-0.5, 0.5)
+
+        # Add text box with threshold summary
+        threshold_text = f"Thresholds: {[f'{t:.2f}' for t in thresholds]}\n"
+        threshold_text += f"Groups created:\n"
+        for i in range(n_groups):
+            if i == 0:
+                range_text = f"Group {i+1}: < {thresholds[1]:.2f}"
+            elif i == n_groups - 1:
+                range_text = f"Group {i+1}: ≥ {thresholds[i]:.2f}"
+            else:
+                range_text = f"Group {i+1}: {thresholds[i]:.2f} - {thresholds[i+1]:.2f}"
+
+            n_subjects = np.sum(labels == i)
+            unit = '%' if 'ratio' in metric else 'mm'
+            threshold_text += f"{range_text} {unit} (n={n_subjects})\n"
+
+        ax2.text(0.02, 0.98, threshold_text, transform=ax2.transAxes, fontsize=10,
+                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+
+        plt.tight_layout()
+
+        # Save the plot
+        os.makedirs(output_dir, exist_ok=True)
+        plot_filename = os.path.join(output_dir, f'kmeans_{n_groups}_groups_{metric}.png')
+        plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+        plt.close()
+
+        print(f"K-means visualization saved as: {plot_filename}")
+
+    return thresholds
 
 
 def main():
