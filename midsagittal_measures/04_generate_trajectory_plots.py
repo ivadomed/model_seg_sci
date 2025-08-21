@@ -1081,13 +1081,13 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
     # Create visualization if requested
     if visualize and output_dir:
         # Set up the plot
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
 
         # Plot 1: Histogram with K-means results
         ax1.hist(values.flatten(), bins=30, alpha=0.7, color='lightblue', edgecolor='black')
 
         # Color points by cluster assignment
-        colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray'][:n_groups]
+        colors = ['blue', 'green', 'red', 'orange', 'purple', 'brown', 'pink', 'gray'][:n_groups]
 
         # Add cluster centers
         for i, center in enumerate(centers):
@@ -1099,14 +1099,18 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
             ax1.axvline(threshold, color='black', linestyle='-', linewidth=1.5, alpha=0.8,
                        label=f'Threshold {i}: {threshold:.2f}')
 
+        # Compute and plot median line
+        median_value = np.median(values)
+        ax1.axvline(median_value, color='gray', linestyle=':', linewidth=2, label='Median')
+
         ax1.set_xlabel(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
         ax1.set_ylabel('Frequency', fontsize=12)
         ax1.set_title(f'K-means Clustering for {METRIC_TO_TITLE[metric]} (n_groups={n_groups})', fontsize=14)
-        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax1.legend(loc='upper right')
         ax1.grid(True, alpha=0.3)
 
         # Plot 2: Scatter plot showing cluster assignments
-        y_jitter = np.random.normal(0, 0.1, len(values))  # Add jitter for better visualization
+        y_jitter = np.random.normal(0, 0.05, len(values))  # Add jitter for better visualization
 
         for i in range(n_groups):
             cluster_mask = labels == i
@@ -1122,32 +1126,18 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
 
         # Add thresholds
         for threshold in thresholds[1:-1]:  # Skip first and last
-            ax2.axvline(threshold, color='black', linestyle='-', linewidth=1.5, alpha=0.8)
+            ax2.axvline(threshold, color='black', linestyle='-', linewidth=1.5, alpha=0.8,
+                        label=f'Threshold {i}: {threshold:.2f}')
+
+        # Plot median line
+        ax2.axvline(median_value, color='gray', linestyle=':', linewidth=2, label='Median')
 
         ax2.set_xlabel(f'{METRIC_TO_TITLE[metric]}', fontsize=12)
         ax2.set_ylabel('Random Jitter (for visualization)', fontsize=12)
         ax2.set_title(f'Subject Assignment to Groups', fontsize=14)
-        ax2.legend()
+        ax2.legend(loc='upper right')
         ax2.grid(True, alpha=0.3)
         ax2.set_ylim(-0.5, 0.5)
-
-        # Add text box with threshold summary
-        threshold_text = f"Thresholds: {[f'{t:.2f}' for t in thresholds]}\n"
-        threshold_text += f"Groups created:\n"
-        for i in range(n_groups):
-            if i == 0:
-                range_text = f"Group {i+1}: < {thresholds[1]:.2f}"
-            elif i == n_groups - 1:
-                range_text = f"Group {i+1}: ≥ {thresholds[i]:.2f}"
-            else:
-                range_text = f"Group {i+1}: {thresholds[i]:.2f} - {thresholds[i+1]:.2f}"
-
-            n_subjects = np.sum(labels == i)
-            unit = '%' if 'ratio' in metric else 'mm'
-            threshold_text += f"{range_text} {unit} (n={n_subjects})\n"
-
-        ax2.text(0.02, 0.98, threshold_text, transform=ax2.transAxes, fontsize=10,
-                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
         plt.tight_layout()
 
