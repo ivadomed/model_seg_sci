@@ -63,7 +63,7 @@ CLINICAL_SCORES_MAX = {
     'lt': 112    # Maximum Light-Touch Score
 }
 
-FONT_SIZE = 12
+FONT_SIZE = 16
 
 
 def get_parser():
@@ -569,7 +569,7 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
 
             # Set labels and title
             ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by '
-                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE + 2)
+                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
             ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
 
@@ -763,7 +763,7 @@ def create_normalized_trajectory_plots(df, group_colors, method, metric_threshol
 
             # Set labels and title
             ax.set_title(f'Normalized improvement in {CLINICAL_SCORES_TO_AXES[score]} stratified by '
-                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE + 2)
+                         f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
             ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
             ax.set_ylabel(f'Normalized Improvement', fontsize=FONT_SIZE)
 
