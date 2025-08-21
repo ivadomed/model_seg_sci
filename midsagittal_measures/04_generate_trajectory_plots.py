@@ -1045,8 +1045,13 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
     kmeans = KMeans(n_clusters=n_groups, random_state=42, n_init=10)
     labels = kmeans.fit_predict(values)
 
-    # Get cluster centers and sort them
-    centers = sorted(kmeans.cluster_centers_.flatten())
+    # Get cluster centers and their original indices, then sort by center value
+    centers_with_indices = [(i, center[0]) for i, center in enumerate(kmeans.cluster_centers_)]
+    centers_with_indices.sort(key=lambda x: x[1])  # Sort by center value
+
+    # Extract sorted centers and create mapping from original label to sorted index
+    centers = [center for _, center in centers_with_indices]
+    original_to_sorted = {orig_idx: sorted_idx for sorted_idx, (orig_idx, _) in enumerate(centers_with_indices)}
 
     # Create thresholds at midpoints between centers
     thresholds = [values.min()]
@@ -1065,18 +1070,21 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
     for i in range(n_groups):
         cluster_mask = labels == i
         n_subjects = np.sum(cluster_mask)
-        cluster_center = centers[i]
+        # Use the sorted index for consistent coloring (because K-means algorithm assigns cluster labels (0, 1, etc.)
+        # based on the order it finds clusters during fitting
+        sorted_idx = original_to_sorted[i]
+        cluster_center = centers[sorted_idx]
 
         # Determine group range
-        if i == 0:
+        if sorted_idx == 0:
             range_text = f"< {thresholds[1]:.2f}"
-        elif i == n_groups - 1:
-            range_text = f"≥ {thresholds[i]:.2f}"
+        elif sorted_idx == n_groups - 1:
+            range_text = f"≥ {thresholds[sorted_idx]:.2f}"
         else:
-            range_text = f"{thresholds[i]:.2f} - {thresholds[i+1]:.2f}"
+            range_text = f"{thresholds[sorted_idx]:.2f} - {thresholds[sorted_idx+1]:.2f}"
 
         unit = '%' if 'ratio' in metric else 'mm'
-        print(f"Group {i+1}: {range_text} {unit} (center: {cluster_center:.2f}, n={n_subjects})")
+        print(f"Group {sorted_idx+1}: {range_text} {unit} (center: {cluster_center:.2f}, n={n_subjects})")
 
     # Create visualization if requested
     if visualize and output_dir:
@@ -1117,8 +1125,11 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
             cluster_values = values[cluster_mask]
             cluster_jitter = y_jitter[cluster_mask]
 
-            ax2.scatter(cluster_values, cluster_jitter, c=colors[i], alpha=0.6, s=50,
-                       label=f'Group {i+1} (n={np.sum(cluster_mask)})')
+            # Use the sorted index for consistent coloring (because K-means algorithm assigns cluster labels (0, 1,
+            # etc.) based on the order it finds clusters during fitting
+            sorted_idx = original_to_sorted[i]
+            ax2.scatter(cluster_values, cluster_jitter, c=colors[sorted_idx], alpha=0.6, s=50,
+                       label=f'Group {sorted_idx+1} (n={np.sum(cluster_mask)})')
 
         # Add cluster centers
         for i, center in enumerate(centers):
