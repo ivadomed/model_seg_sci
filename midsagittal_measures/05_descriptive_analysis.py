@@ -1,0 +1,745 @@
+"""
+Generate descriptive statistical analysis and publication-ready figures for SCI lesion data.
+
+This script:
+- Reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
+- Reads XLSX file with manually measured lesion metrics (including clinical scores)
+- Reads TSV file with participant demographics
+- Merges the dataframes
+- Creates publication-ready descriptive statistics table and figures
+- Generates comprehensive demographic and clinical characterization plots
+
+Example usage:
+    python 05_descriptive_analysis.py
+        -file-sct <PATH_TO_CSV_FILE>
+        -file-manual <PATH_TO_XLSX_FILE>
+        -file-participants <PATH_TO_TSV_FILE>
+        -o <OUTPUT_DIR>
+
+Author: Jan Valosek
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import argparse
+import warnings
+warnings.filterwarnings('ignore')
+
+# Import functions from the trajectory plots script
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Define constants
+CLINICAL_SCORES_TO_AXES = {
+    'uems': 'Upper Extremity Motor Score',
+    'lems': 'Lower Extremity Motor Score',
+    'ms': 'Total Motor Score',
+    'pp': 'Pinprick Score',
+    'lt': 'Light-Touch Score'
+}
+
+CLINICAL_SCORES_MAX = {
+    'uems': 50,
+    'lems': 50,
+    'ms': 100,
+    'pp': 112,
+    'lt': 112
+}
+
+AIS_LABELS = {
+    'A': 'Complete',
+    'B': 'Sensory Incomplete',
+    'C': 'Motor Incomplete',
+    'D': 'Motor Incomplete'
+}
+
+TETRAPARA_LABELS = {
+    0: 'Tetraplegia',
+    1: 'Paraplegia'
+}
+
+TITLE_SIZE = 18
+LABEL_SIZE = FONT_SIZE = TITLE_SIZE - 2
+TICK_SIZE = TITLE_SIZE - 6
+
+# Based on cm.Pastel1
+PIE_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6', '#FFFFCC', '#E5D8BD', '#FDDAEC', '#F2F2F2']
+TRAJECTORY_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6']
+
+
+def get_parser():
+    """Parser function for command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Generate descriptive statistical analysis for SCI lesion data.',
+        prog=os.path.basename(__file__).strip('.py')
+    )
+    parser.add_argument(
+        '-file-sct',
+        required=True,
+        type=str,
+        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion.'
+    )
+    parser.add_argument(
+        '-file-manual',
+        required=True,
+        type=str,
+        help='Absolute path to an XLSX file with manually measured lesion metrics and clinical scores.'
+    )
+    parser.add_argument(
+        '-file-participants',
+        required=True,
+        type=str,
+        help='Absolute path to a TSV file with participant demographics (participants.tsv).'
+    )
+    parser.add_argument(
+        '-o',
+        required=True,
+        type=str,
+        help='Path to the output folder where figures and tables will be saved.'
+    )
+
+    return parser
+
+
+def read_file_manual(file):
+    """
+    Read the XLSX file with manually measured metrics and clinical scores.
+    (Copied from 04_generate_trajectory_plots.py)
+    """
+    df_manual = pd.read_excel(file)
+    # Drop rows where 'participant_id' is NaN or 'exclude' -- rows with comments
+    df_manual = df_manual.dropna(subset=['participant_id'])
+    df_manual = df_manual[df_manual['participant_id'] != 'exclude']
+    # If session_id is nan in the manual file, set it to 'ses-01'
+    df_manual['session_id'] = df_manual['session_id'].fillna('ses-01')
+
+    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
+    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
+    # Rename columns to distinguish manual metrics from SCT metrics
+    df_manual.rename(columns={'midsagittal_length': 'midsagittal_length_manual',
+                              'midsagittal_width': 'midsagittal_width_manual',
+                              'ventral_tissue_bridge': 'ventral_tissue_bridge_manual',
+                              'dorsal_tissue_bridge': 'dorsal_tissue_bridge_manual',
+                              'total_tissue_bridge': 'total_tissue_bridge_manual'},
+                     inplace=True)
+
+    # Compute tissue bridge ratios
+    df_manual['dorsal_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['dorsal_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+    df_manual['ventral_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+
+    # Remove any strings from the 'mri_time_since_injury' column
+    if 'mri_time_since_injury' in df_manual.columns:
+        df_manual['mri_time_since_injury'] = df_manual['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
+
+    # Convert any string clinical score columns to numeric
+    for col in df_manual.columns:
+        if col.startswith(tuple(CLINICAL_SCORES_TO_AXES.keys())):
+            df_manual[col] = pd.to_numeric(df_manual[col], errors='coerce')
+
+    # Drop 'comment' column and unnamed columns
+    df_manual = df_manual.drop(columns=['comment'], errors='ignore')
+    unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
+    df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
+
+    # Reorder the columns
+    cols = ['participant_id', 'session_id', 'mri_time_since_injury'] + \
+           [col for col in df_manual.columns if col.endswith('_manual')] + \
+           [col for col in df_manual.columns if not col.endswith('_manual') and col not in ['participant_id', 'session_id', 'mri_time_since_injury']]
+    df_manual = df_manual[cols]
+
+    print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
+    return df_manual
+
+
+def read_file_sct(file_sct):
+    """
+    Read CSV file with SCT-computed lesion metrics.
+    (Copied from 04_generate_trajectory_plots.py)
+    """
+    df_sct = pd.read_csv(file_sct)
+    # Rename columns to match the manual metrics
+    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
+                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
+                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
+                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
+                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
+                  inplace=True)
+    # Add suffix to all columns except participant_id and session_id
+    df_sct = df_sct.add_suffix('_sct')
+    df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
+
+    print(f'Read {len(df_sct)} rows from the SCT metrics file: {file_sct}')
+    return df_sct
+
+
+def read_participants_file(file):
+    """
+    Read the participants.tsv file with demographic information.
+    :param file: str: path to the TSV file
+    :return df_participants: pandas DataFrame: dataframe with demographic information
+    """
+    df_participants = pd.read_csv(file, sep='\t')
+
+    # Convert columns to appropriate types
+    if 'age' in df_participants.columns:
+        df_participants['age'] = pd.to_numeric(df_participants['age'], errors='coerce')
+
+    if 'MagneticFieldStrength' in df_participants.columns:
+        df_participants['MagneticFieldStrength'] = pd.to_numeric(df_participants['MagneticFieldStrength'], errors='coerce')
+
+    print(f'Read {len(df_participants)} participants from the demographics file: {file}')
+    return df_participants
+
+
+def create_descriptive_table(df, output_dir):
+    """
+    Create a publication-ready descriptive statistics table.
+    """
+    # Initialize results dictionary
+    results = {}
+
+    # Demographics
+    n_total = len(df)
+    results['Total participants'] = f"{n_total}"
+
+    # Sex distribution
+    if 'sex' in df.columns:
+        sex_counts = df['sex'].value_counts()
+        male_n = sex_counts.get('M', 0) if 'M' in sex_counts else sex_counts.get('male', 0)
+        female_n = sex_counts.get('F', 0) if 'F' in sex_counts else sex_counts.get('female', 0)
+        male_pct = (male_n / n_total) * 100
+        female_pct = (female_n / n_total) * 100
+        results['Sex (Male/Female)'] = f"{male_n} ({male_pct:.1f}%) / {female_n} ({female_pct:.1f}%)"
+
+    # Age
+    if 'age' in df.columns:
+        age_mean = df['age'].mean()
+        age_std = df['age'].std()
+        age_median = df['age'].median()
+        age_q25 = df['age'].quantile(0.25)
+        age_q75 = df['age'].quantile(0.75)
+        results['Age (years)'] = f"{age_mean:.1f} ± {age_std:.1f} (median: {age_median:.1f}, IQR: {age_q25:.1f}-{age_q75:.1f})"
+
+    # Time since injury
+    if 'mri_time_since_injury' in df.columns:
+        tsi_mean = df['mri_time_since_injury'].mean()
+        tsi_std = df['mri_time_since_injury'].std()
+        tsi_median = df['mri_time_since_injury'].median()
+        tsi_q25 = df['mri_time_since_injury'].quantile(0.25)
+        tsi_q75 = df['mri_time_since_injury'].quantile(0.75)
+        results['Time since injury (days)'] = f"{tsi_mean:.1f} ± {tsi_std:.1f} (median: {tsi_median:.1f}, IQR: {tsi_q25:.1f}-{tsi_q75:.1f})"
+
+    # AIS grade distribution
+    if 'ais_bl' in df.columns:
+        ais_counts = df['ais_bl'].value_counts().sort_index()
+        ais_descriptions = []
+        for grade, count in ais_counts.items():
+            pct = (count / n_total) * 100
+            grade_label = AIS_LABELS.get(grade, grade)
+            ais_descriptions.append(f"{grade} ({grade_label}): {count} ({pct:.1f}%)")
+        results['AIS Grade'] = "; ".join(ais_descriptions)
+
+    # Tetraplegia/Paraplegia distribution
+    if 'tetrapara_bl' in df.columns:
+        tetra_counts = df['tetrapara_bl'].value_counts()
+        tetra_n = tetra_counts.get(0, 0)  # 0: tetraplegic
+        para_n = tetra_counts.get(1, 0)   # 1: paraplegic
+        tetra_pct = (tetra_n / n_total) * 100
+        para_pct = (para_n / n_total) * 100
+        results['Injury level'] = f"Tetraplegia: {tetra_n} ({tetra_pct:.1f}%); Paraplegia: {para_n} ({para_pct:.1f}%)"
+
+    # Neurological level of injury
+    if 'nli' in df.columns:
+        nli_counts = df['nli'].value_counts().sort_index()
+        # Show most common levels
+        top_nli = nli_counts.head(5)
+        nli_descriptions = []
+        for level, count in top_nli.items():
+            pct = (count / n_total) * 100
+            nli_descriptions.append(f"{level}: {count} ({pct:.1f}%)")
+        results['Neurological level (top 5)'] = "; ".join(nli_descriptions)
+
+    # Clinical scores at baseline
+    for score_key, score_name in CLINICAL_SCORES_TO_AXES.items():
+        bl_col = f'{score_key}_bl'
+        if bl_col in df.columns:
+            score_data = df[bl_col].dropna()
+            if len(score_data) > 0:
+                score_mean = score_data.mean()
+                score_std = score_data.std()
+                score_median = score_data.median()
+                score_q25 = score_data.quantile(0.25)
+                score_q75 = score_data.quantile(0.75)
+                max_possible = CLINICAL_SCORES_MAX[score_key]
+                results[f'{score_name} (baseline)'] = f"{score_mean:.1f} ± {score_std:.1f} (median: {score_median:.1f}, IQR: {score_q25:.1f}-{score_q75:.1f}) [max: {max_possible}]"
+
+    # Lesion metrics (using SCT measurements)
+    lesion_metrics = {
+        'midsagittal_length_sct': 'Midsagittal lesion length (mm)',
+        'midsagittal_width_sct': 'Midsagittal lesion width (mm)',
+        'total_tissue_bridge_sct': 'Total tissue bridge width (mm)'
+    }
+
+    for metric_col, metric_name in lesion_metrics.items():
+        if metric_col in df.columns:
+            metric_data = df[metric_col].dropna()
+            if len(metric_data) > 0:
+                metric_mean = metric_data.mean()
+                metric_std = metric_data.std()
+                metric_median = metric_data.median()
+                metric_q25 = metric_data.quantile(0.25)
+                metric_q75 = metric_data.quantile(0.75)
+                results[metric_name] = f"{metric_mean:.2f} ± {metric_std:.2f} (median: {metric_median:.2f}, IQR: {metric_q25:.2f}-{metric_q75:.2f})"
+
+    # Create DataFrame and save as CSV
+    results_df = pd.DataFrame(list(results.items()), columns=['Characteristic', 'Value'])
+
+    # Save to CSV
+    table_path = os.path.join(output_dir, 'descriptive_statistics_table.csv')
+    results_df.to_csv(table_path, index=False)
+    print(f"Descriptive statistics table saved to: {table_path}")
+
+    return results_df
+
+
+def create_comprehensive_figure(df, output_dir):
+    """
+    Create a comprehensive publication-ready figure with multiple subplots for descriptive analysis.
+    """
+    # Set style for publication
+    plt.style.use('default')
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['font.size'] = FONT_SIZE
+    plt.rcParams['axes.labelsize'] = LABEL_SIZE
+    plt.rcParams['xtick.labelsize'] = TICK_SIZE
+    plt.rcParams['ytick.labelsize'] = TICK_SIZE
+
+    # Create figure with larger size and tighter spacing
+    fig = plt.figure(figsize=(24, 20))
+
+    # Subplot 1: Sex distribution (pie chart)
+    ax1 = plt.subplot(3, 4, 1)
+    if 'sex' in df.columns:
+        sex_counts = df['sex'].value_counts()
+        # Handle different sex encodings
+        if 'M' in sex_counts.index or 'F' in sex_counts.index:
+            labels = ['Male' if x == 'M' else 'Female' for x in sex_counts.index]
+        else:
+            labels = ['Male' if 'male' in str(x).lower() else 'Female' for x in sex_counts.index]
+
+        wedges, texts, autotexts = ax1.pie(sex_counts.values, labels=labels, autopct='%1.1f%%',
+                                          colors=PIE_COLORS[:len(sex_counts)], startangle=90,
+                                          textprops={'fontsize': TICK_SIZE})
+        ax1.set_title('Sex', fontsize=TITLE_SIZE, fontweight='bold')
+
+    # Subplot 2: Age distribution (pie chart by decades)
+    ax2 = plt.subplot(3, 4, 2)
+    if 'age' in df.columns:
+        age_data = df['age'].dropna()
+
+        # Calculate mean and standard deviation
+        age_mean = age_data.mean()
+        age_std = age_data.std()
+        age_min = int(age_data.min())
+
+        # Create age groups by decades
+        def age_to_decade(age):
+            if pd.isna(age):
+                return 'Unknown'
+            elif age < 20:
+                return f'{age_min}-19'
+            elif age < 30:
+                return '20-29'
+            elif age < 40:
+                return '30-39'
+            elif age < 50:
+                return '40-49'
+            elif age < 60:
+                return '50-59'
+            elif age < 70:
+                return '60-69'
+            elif age < 80:
+                return '70-79'
+            else:
+                return '80+'
+
+        age_decades = age_data.apply(age_to_decade)
+        age_counts = age_decades.value_counts()
+
+        # Sort age groups logically
+        decade_order = [f'{age_min}-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+']
+        sorted_decades = [decade for decade in decade_order if decade in age_counts.index]
+        sorted_counts = [age_counts[decade] for decade in sorted_decades]
+
+        wedges, texts, autotexts = ax2.pie(sorted_counts, labels=sorted_decades, autopct='%1.1f%%',
+                                          colors=PIE_COLORS[:len(sorted_decades)], startangle=90,
+                                          textprops={'fontsize': TICK_SIZE})
+        ax2.set_title('Age', fontsize=TITLE_SIZE, fontweight='bold')
+
+        # Add mean (SD) age below the pie chart
+        ax2.text(0.5, -0.05, f'Mean (SD): {age_mean:.1f} ({age_std:.1f}) years',
+                ha='center', va='center', fontsize=LABEL_SIZE,
+                transform=ax2.transAxes)
+
+    # Subplot 3: AIS grade distribution across time (stacked bar chart)
+    ax3 = plt.subplot(3, 4, 3)
+
+    # Define time points for AIS grades
+    ais_time_points = ['bl', '1m', '3m', '6m', '12m']
+
+    # Check which AIS time points have data
+    available_ais_timepoints = []
+    for tp in ais_time_points:
+        ais_col = f'ais_{tp}'
+        if ais_col in df.columns and not df[ais_col].dropna().empty:
+            available_ais_timepoints.append(tp)
+
+    if available_ais_timepoints:
+        # Get all unique AIS grades across all time points, excluding NT values
+        all_grades = set()
+        for tp in available_ais_timepoints:
+            ais_col = f'ais_{tp}'
+            grades = df[ais_col].dropna()
+            # Filter out NT values
+            grades = grades[grades != 'NT']
+            all_grades.update(grades.unique())
+
+        # Sort grades (A, B, C, D, E, then any others)
+        grade_order = ['A', 'B', 'C', 'D', 'E']
+        sorted_grades = [g for g in grade_order if g in all_grades]
+        sorted_grades.extend([g for g in sorted(all_grades) if g not in grade_order])
+
+        # Prepare data for stacked bar chart
+        tp_labels = [tp.upper() if tp != 'bl' else 'BL' for tp in available_ais_timepoints]
+        grade_counts = {grade: [] for grade in sorted_grades}
+        total_counts = []
+
+        for tp in available_ais_timepoints:
+            ais_col = f'ais_{tp}'
+            tp_data = df[ais_col].dropna()
+            tp_total = len(tp_data)
+            total_counts.append(tp_total)
+
+            tp_counts = tp_data.value_counts()
+            for grade in sorted_grades:
+                count = tp_counts.get(grade, 0)
+                grade_counts[grade].append(count)
+
+        # Create stacked bar chart
+        bottom = np.zeros(len(available_ais_timepoints))
+        x_pos = range(len(available_ais_timepoints))
+
+        bars = []
+        for i, grade in enumerate(sorted_grades):
+            # Use the same colormap as other subplots
+            color = PIE_COLORS[i % len(PIE_COLORS)]
+            label = f"AIS {grade}" if grade in AIS_LABELS else f"AIS {grade}"
+            bar = ax3.bar(x_pos, grade_counts[grade], bottom=bottom,
+                         color=color, alpha=0.8, label=label,
+                         edgecolor='white', linewidth=0.5)
+            bars.append(bar)
+
+            # Add count labels for each sub-bar (only if count > 0)
+            for j, (x, count) in enumerate(zip(x_pos, grade_counts[grade])):
+                if count > 0:  # Only show label if there are participants
+                    y_center = bottom[j] + count / 2  # Center of the sub-bar
+                    ax3.text(x, y_center, str(count), ha='center', va='center',
+                            fontsize=TICK_SIZE, fontweight='bold', color='black')
+
+            bottom += grade_counts[grade]
+
+        # Customize the plot
+        ax3.set_xticks(x_pos)
+        ax3.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
+        ax3.set_xlabel('Time Point', fontsize=LABEL_SIZE)
+        ax3.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
+        ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold')
+        ax3.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+
+        # Add legend at right center (0.78, 0.42)
+        ax3.legend(bbox_to_anchor=(1, 0.9), loc='center left', fontsize=TICK_SIZE-2, framealpha=0.9)
+
+        # Remove the total sample size annotations above bars since we now show counts within sub-bars
+
+        # Remove right and top spines
+        ax3.spines['right'].set_visible(False)
+        ax3.spines['top'].set_visible(False)
+
+        # Set y-axis to start from 0
+        ax3.set_ylim(0, max(total_counts) * 1.1)
+
+    else:
+        # Fallback: show only baseline AIS grade distribution as pie chart if no longitudinal data
+        if 'ais_bl' in df.columns:
+            # Filter out NT values
+            ais_data = df['ais_bl'][df['ais_bl'] != 'NT']
+            ais_counts = ais_data.value_counts().sort_index()
+            labels = []
+            for grade in ais_counts.index:
+                if grade in AIS_LABELS:
+                    labels.append(f"AIS {grade}\n({AIS_LABELS[grade]})")
+                else:
+                    labels.append(f"AIS {grade}")
+            wedges, texts, autotexts = ax3.pie(ais_counts.values, labels=labels, autopct='%1.1f%%',
+                                              colors=PIE_COLORS[:len(ais_counts)], startangle=90,
+                                              textprops={'fontsize': TICK_SIZE})
+            ax3.set_title('AIS Grade (Baseline Only)', fontsize=TITLE_SIZE, fontweight='bold')
+
+    # Subplot 4: Tetraplegia/Paraplegia distribution (pie chart)
+    ax4 = plt.subplot(3, 4, 4)
+    if 'tetrapara_bl' in df.columns:
+        tetra_counts = df['tetrapara_bl'].value_counts().sort_index()
+        labels = [TETRAPARA_LABELS.get(x, f'Level {x}') for x in tetra_counts.index]
+        wedges, texts, autotexts = ax4.pie(tetra_counts.values, labels=labels, autopct='%1.1f%%',
+                                          colors=PIE_COLORS[:len(tetra_counts)], startangle=90,
+                                          textprops={'fontsize': TICK_SIZE})
+        ax4.set_title('Injury Level', fontsize=TITLE_SIZE, fontweight='bold')
+
+    # Subplot 5: MagneticFieldStrength distribution (pie chart with merged values)
+    ax5 = plt.subplot(3, 4, 5)
+    if 'MagneticFieldStrength' in df.columns:
+        mfs_data = df['MagneticFieldStrength'].dropna()
+
+        # Merge similar field strengths
+        def standardize_field_strength(field):
+            if pd.isna(field):
+                return 'Unknown'
+            elif 1.4 <= field <= 1.6:  # Merge 1.494T with 1.5T
+                return '1.5T'
+            elif 2.9 <= field <= 3.1:  # Handle 3T variations
+                return '3.0T'
+            elif 6.9 <= field <= 7.1:  # Handle 7T variations
+                return '7.0T'
+            else:
+                return f'{field:.1f}T'
+
+        standardized_mfs = mfs_data.apply(standardize_field_strength)
+        mfs_counts = standardized_mfs.value_counts().sort_index()
+
+        # Create pie chart
+        labels = list(mfs_counts.index)
+        wedges, texts, autotexts = ax5.pie(mfs_counts.values, labels=labels, autopct='%1.1f%%',
+                                          colors=PIE_COLORS[:len(mfs_counts)], startangle=90,
+                                          textprops={'fontsize': TICK_SIZE})
+        ax5.set_title('MRI Field Strength', fontsize=TITLE_SIZE, fontweight='bold')
+
+    # Subplot 6: Time since injury histogram
+    ax6 = plt.subplot(3, 4, 6)
+    if 'mri_time_since_injury' in df.columns:
+        tsi_data = df['mri_time_since_injury'].dropna()
+        ax6.hist(tsi_data, bins=20, color=PIE_COLORS[0], alpha=0.8, edgecolor='white', linewidth=0.5)
+        # ax6.axvline(tsi_data.median(), color='#D62728', linestyle='--', linewidth=3,
+        #            label=f'Median: {tsi_data.median():.1f} (IQR: {tsi_data.quantile(0.25):.1f}-{tsi_data.quantile(0.75):.1f})')
+        ax6.set_xlabel('Days', fontsize=LABEL_SIZE)
+        ax6.set_ylabel('Frequency', fontsize=LABEL_SIZE)
+        ax6.set_title('Time from injury to MRI', fontsize=TITLE_SIZE, fontweight='bold')
+
+        # Add min and max age text annotations
+        ax6.text(0.95, 0.95,
+                 f'Min: {tsi_data.min():.1f} days\nMax: {tsi_data.max():.1f} days\n'
+                 f'Mean: {tsi_data.mean():.1f} days\nSD: {tsi_data.std():.1f} days',
+                ha='right', va='top', fontsize=TICK_SIZE, transform=ax6.transAxes,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='gray'))
+
+        # ax6.legend(fontsize=TICK_SIZE)
+        ax6.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+        # Remove right and top spines
+        ax6.spines['right'].set_visible(False)
+        ax6.spines['top'].set_visible(False)
+
+    # Subplot 7: Neurological level of injury
+    ax7 = plt.subplot(3, 4, 7)
+    if 'nli_bl' in df.columns:
+        # Replace 'NT' with 'Unknown' in the data
+        nli_data = df['nli_bl'].replace('NT', 'Unknown')
+        nli_counts = nli_data.value_counts()
+
+        # Custom sorting function for anatomical order
+        def sort_nli(level):
+            """Sort neurological levels anatomically: C1-C8, T1-T12, L1-L5, S1-S5, Unknown"""
+            if level == 'Unknown':
+                return (999, 0)  # Put Unknown at the end
+
+            # Extract letter and number
+            if len(level) >= 2 and level[0].isalpha():
+                letter = level[0].upper()
+                try:
+                    number = int(level[1:])
+                except (ValueError, IndexError):
+                    return (999, 0)  # Invalid format goes to end
+
+                # Assign order: C=1, T=2, L=3, S=4
+                letter_order = {'C': 1, 'T': 2, 'L': 3, 'S': 4}
+                return (letter_order.get(letter, 999), number)
+            else:
+                return (999, 0)  # Invalid format goes to end
+
+        # Sort the counts anatomically
+        sorted_levels = sorted(nli_counts.index, key=sort_nli)
+        sorted_counts = [nli_counts[level] for level in sorted_levels]
+
+        # Create the bar plot
+        bars = ax7.bar(range(len(sorted_levels)), sorted_counts, color=PIE_COLORS[1], alpha=0.8,
+                      edgecolor='white', linewidth=0.5)
+        ax7.set_xticks(range(len(sorted_levels)))
+        ax7.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
+        ax7.set_xlabel('Neurological Level', fontsize=LABEL_SIZE)
+        ax7.set_ylabel('Frequency', fontsize=LABEL_SIZE)
+        ax7.set_title('Injury Neurological Level', fontsize=TITLE_SIZE, fontweight='bold')
+        ax7.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+        # Remove right and top spines
+        ax7.spines['right'].set_visible(False)
+        ax7.spines['top'].set_visible(False)
+
+        # Add value labels on bars (only if not too many bars to avoid clutter)
+        if len(sorted_levels) <= 20:
+            for bar, value in zip(bars, sorted_counts):
+                ax7.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
+                        str(value), ha='center', va='bottom', fontsize=TICK_SIZE)
+
+        # Adjust layout for better visibility of labels
+        plt.setp(ax7.get_xticklabels(), rotation=45, ha='right')
+
+    # Subplots 8-12: Clinical scores baseline vs follow-up (trajectory plots)
+    clinical_scores = ['ms', 'uems', 'lems', 'pp', 'lt']
+    time_points = ['bl', '1m', '3m', '6m', '12m']
+
+    for i, score in enumerate(clinical_scores):
+        ax = plt.subplot(3, 4, 8 + i)
+
+        # Filter for appropriate subjects (tetraplegic only for UEMS)
+        if score == 'uems':
+            df_plot = df[df['tetrapara_bl'] == 0] if 'tetrapara_bl' in df.columns else df
+        else:
+            df_plot = df
+
+        # Collect mean and std for each time point
+        means = []
+        stds = []
+        ns = []
+        valid_timepoints = []
+
+        for tp in time_points:
+            col_name = f'{score}_{tp}'
+            if col_name in df_plot.columns:
+                data = df_plot[col_name].dropna()
+                if len(data) > 0:
+                    means.append(data.mean())
+                    stds.append(data.std())
+                    ns.append(len(data))
+                    valid_timepoints.append(tp)
+
+        if means:
+            # Convert timepoint labels
+            tp_labels = [tp.upper() if tp != 'bl' else 'BL' for tp in valid_timepoints]
+
+            # Create trajectory plot with error bars
+            x_pos = range(len(valid_timepoints))
+            ax.errorbar(x_pos, means, yerr=stds, marker='o', linewidth=3, markersize=8,
+                       color=TRAJECTORY_COLORS[i], capsize=5, capthick=2,
+                       markerfacecolor='white', markeredgewidth=2, markeredgecolor=TRAJECTORY_COLORS[i])
+
+            # Add sample size annotations
+            for j, (x, n) in enumerate(zip(x_pos, ns)):
+                ax.text(x, means[j] + stds[j] + (max(means) * 0.05), f'n={n}',
+                       ha='center', va='bottom', fontsize=TICK_SIZE, alpha=0.8)
+
+            ax.set_xticks(x_pos)
+            ax.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
+            ax.set_ylabel(CLINICAL_SCORES_TO_AXES[score], fontsize=LABEL_SIZE)
+            ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=TITLE_SIZE, fontweight='bold')
+            ax.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+            # Remove right and top spines
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+            # Add horizontal line at maximum score
+            max_score = CLINICAL_SCORES_MAX[score]
+            ax.axhline(y=max_score, color='#D62728', linestyle=':', alpha=0.6, linewidth=2)
+
+            # Set y-axis limits
+            y_max = max(max_score, max([m + s for m, s in zip(means, stds)]) * 1.1)
+            ax.set_ylim(0, y_max)
+
+    # Use tighter layout with minimal padding
+    plt.tight_layout(pad=1.5, h_pad=1.0, w_pad=1.0)
+
+    # Save the figure
+    figure_path = os.path.join(output_dir, 'descriptive_analysis_comprehensive.png')
+    plt.savefig(figure_path, dpi=300, bbox_inches='tight', facecolor='white')
+    plt.savefig(figure_path.replace('.png', '.pdf'), dpi=300, bbox_inches='tight', facecolor='white')
+
+    print(f"Comprehensive descriptive figure saved to: {figure_path}")
+    plt.close()
+
+
+def main():
+    """Main function to run the descriptive analysis."""
+
+    # Parse command line arguments
+    parser = get_parser()
+    args = parser.parse_args()
+
+    # Create output directory
+    output_dir = args.o
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("Starting descriptive statistical analysis...")
+
+    # Read the data files
+    print("\nReading data files...")
+    df_sct = read_file_sct(args.file_sct)
+    df_manual = read_file_manual(args.file_manual)
+    df_participants = read_participants_file(args.file_participants)
+
+    # Merge the dataframes
+    print("\nMerging dataframes...")
+    df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
+    df = pd.merge(df, df_participants, on='participant_id', how='left')
+    print(f"Merged dataframe contains {len(df)} subjects")
+
+    # Apply any necessary filtering (following the trajectory script logic)
+    print("\nApplying data filters...")
+
+    # Convert mri_time_since_injury to numeric (in days)
+    if 'mri_time_since_injury' in df.columns:
+        df['mri_time_since_injury'] = pd.to_numeric(df['mri_time_since_injury'])
+        print(f'Number of subjects before filtering by MRI time since injury: {df.shape[0]}')
+        # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months (133 days)
+        df = df[(df['mri_time_since_injury'] >= 12) & (df['mri_time_since_injury'] <= 133)]
+        print(f'Number of subjects after filtering by MRI time since injury: {df.shape[0]}')
+
+    # Drop rows with NaN values in key lesion metrics
+    lesion_metrics = ['midsagittal_length_sct', 'midsagittal_width_sct', 'total_tissue_bridge_sct']
+    available_metrics = [metric for metric in lesion_metrics if metric in df.columns]
+    if available_metrics:
+        df = df.dropna(subset=available_metrics)
+        print(f'Number of subjects after dropping NaN values in lesion metrics: {df.shape[0]}')
+
+    # Create descriptive statistics table
+    print("\nCreating descriptive statistics table...")
+    descriptive_table = create_descriptive_table(df, output_dir)
+
+    # Create comprehensive figure
+    print("\nCreating comprehensive descriptive figure...")
+    create_comprehensive_figure(df, output_dir)
+
+    # Print summary statistics
+    print(f"\nSummary:")
+    print(f"- Total subjects analyzed: {len(df)}")
+    print(f"- Descriptive table saved as CSV")
+    print(f"- Comprehensive figure with {12} subplots created")
+    print(f"- All outputs saved to: {output_dir}")
+
+    print("\nDescriptive analysis completed successfully!")
+
+
+if __name__ == '__main__':
+    main()
