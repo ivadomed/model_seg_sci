@@ -162,6 +162,9 @@ def normalize_sensorimotor_scores(df):
     """
     Compute normalized recovery rates by calculating the change from baseline (or the first available measurement) to
     follow-up and dividing them by the maximal score improvable.
+        Refs:
+            - http://dx.doi.org/10.1016/S1474-4422(24)00173-X
+            - http://dx.doi.org/10.1016/j.nicl.2023.103339
     Then, scale the normalized sensorimotor recovery rates using min-max scaling method (per participant and score):
         x' = (x - min(x)) / (max(x) - min(x))
 
