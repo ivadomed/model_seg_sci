@@ -46,16 +46,18 @@ METRIC_TO_TITLE = {
 }
 
 METHOD_TO_TITLE = {
-    'GT': 'Semi-automatic (manual lesion masks + SCT)',
-    'SCIsegV2': 'Automatic (SCIsegV2 + SCT)'
+    'GT': 'Manual lesion + sct_analyze_lesion',
+    'cord_SCIsegV2': 'Semi-automatic',  # (Manual lesions + SCIsegV2 cord + sct_analyze_lesion)
+    'SCIsegV2': 'Automatic' # (SCIsegV2 lesion and cord + sct_analyze_lesion)
 }
 
 METHOD_TO_FNAME = {
     'GT': 'semiautomatic',
+    'cord_SCIsegV2': 'semiautomatic_cord',
     'SCIsegV2': 'automatic'
 }
 
-FONT_SIZE = 12
+FONT_SIZE = 16
 
 
 def get_parser():
@@ -63,14 +65,21 @@ def get_parser():
     parser function
     """
     parser = argparse.ArgumentParser(
-        description='Generate correlation matrices between manual, semi-automatic (GT), and automatic (SCIsegV2) methods for each lesion metric.',
+        description='Generate correlation matrices between manual, semi-automatic (manual lesions), and automatic (SCIsegV2) methods for each lesion metric.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
         '-file-gt',
         required=True,
         type=str,
-        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on GT (manual) lesion masks.'
+        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on manual lesion masks.'
+    )
+    parser.add_argument(
+        '-file-cord-scisegv2',
+        required=True,
+        type=str,
+        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on manual lesion masks '
+             'and SCIsegV2 segmented spinal cords.'
     )
     parser.add_argument(
         '-file-scisegv2',
@@ -234,116 +243,105 @@ def format_pvalue(p_value, alpha=0.05):
         return f'p = {p_value:.3f}'
 
 
-def create_correlation_matrix(df, metric, output_dir):
+def create_correlation_matrix(df, output_dir):
     """
     Create correlation matrix for a specific metric across the three methods.
     :param df: pandas DataFrame with all three methods' data
-    :param metric: str: metric name (e.g., 'midsagittal_length')
     :param output_dir: str: output directory
     """
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    # Define method columns for this metric
-    method_cols = [f'{metric}_manual', f'{metric}_gt', f'{metric}_scisegv2']
-    method_labels_x = ['Manual', 'Semi-automatic\n(GT + SCT)']
-    method_labels_y = ['Semi-automatic\n(GT + SCT)', 'Automatic\n(SCIsegV2 + SCT)']
+    # Loop over metrics (length, width, ...)
+    for metric in METRIC_TO_TITLE.keys():
+        # Define method columns for this metric
+        method_cols = [f'{metric}_manual',
+                       # f'{metric}_gt',
+                       f'{metric}_cord_scisegv2',
+                       f'{metric}_scisegv2']
+        method_labels_x = ['Manual',
+                           # 'Semi-automatic',      # \n(manual lesion)
+                           'Semi-automatic']        # \n(manual lesion + SCIsegV2 cord)
+        method_labels_y = [#'Semi-automatic\n(manual lesion)',
+                           'Semi-automatic',    # \n(manual lesion + SCIsegV2 cord)
+                           'Automatic']         # \n(SCIsegV2 + SCT)
 
-    # Extract data for this metric, dropping rows with any NaN values
-    df_metric = df[['participant_id', 'session_id'] + method_cols].dropna()
+        # Extract data for this metric, dropping rows with any NaN values
+        df_metric = df[['participant_id', 'session_id'] + method_cols].dropna()
 
-    if len(df_metric) == 0:
-        print(f'No valid data for {metric}, skipping...')
-        return
+        if len(df_metric) == 0:
+            print(f'No valid data for {metric}, skipping...')
+            return
 
-    # Create correlation data
-    corr_data = df_metric[method_cols]
+        # Create correlation data
+        corr_data = df_metric[method_cols]
 
-    # Compute Pearson and Spearman correlations
-    pearson_corr = corr_data.corr(method='pearson')
-    spearman_corr = corr_data.corr(method='spearman')
+        # Check normality using Shapiro-Wilk test
+        for col in method_cols:
+            stat, p = stats.shapiro(corr_data[col])
+            if p > 0.05:
+                print(f'{col} looks Gaussian (fail to reject H0) with p={p:.3f}')
+            else:
+                print(f'{col} does not look Gaussian (reject H0) with p={p:.3f}')
 
-    # Compute p-values for correlations
-    n_methods = len(method_cols)
-    pearson_pvals = np.full((n_methods, n_methods), np.nan)
-    spearman_pvals = np.full((n_methods, n_methods), np.nan)
+        # Compute correlations
+        spearman_corr = corr_data.corr(method='spearman')
 
-    for i in range(n_methods):
-        for j in range(n_methods):
-            if i != j:
-                # Pearson p-value
-                _, p_pearson = stats.pearsonr(corr_data.iloc[:, i], corr_data.iloc[:, j])
-                pearson_pvals[i, j] = p_pearson
+        # Compute p-values for correlations
+        n_methods = len(method_cols)
+        spearman_pvals = np.full((n_methods, n_methods), np.nan)
 
-                # Spearman p-value
-                _, p_spearman = stats.spearmanr(corr_data.iloc[:, i], corr_data.iloc[:, j])
-                spearman_pvals[i, j] = p_spearman
+        for i in range(n_methods):
+            for j in range(n_methods):
+                if i != j:
+                    # Spearman p-value
+                    _, p_spearman = stats.spearmanr(corr_data.iloc[:, i], corr_data.iloc[:, j])
+                    spearman_pvals[i, j] = p_spearman
 
-    # Remove the first row and the last column from pearson_corr to reduce it from 3x3 to 2x2
-    pearson_corr = pearson_corr.iloc[1:, :-1]
-    spearman_corr = spearman_corr.iloc[1:, :-1]
-    pearson_pvals = pearson_pvals[1:, :-1]
-    spearman_pvals = spearman_pvals[1:, :-1]
+        # Remove the first row and the last column from pearson_corr to remove the diagonal
+        spearman_corr = spearman_corr.iloc[1:, :-1]
+        spearman_pvals = spearman_pvals[1:, :-1]
 
-    # Create figure with two subplots side by side
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        # Create figure with two subplots side by side
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        # Spearman correlation matrix
+        mask_spearman = np.array([[False, True], [False, False]], dtype=bool)    # 2x2   # [[False, True, True], [False, False, True], [False, False, False]] for 3x3
+        sns.heatmap(spearman_corr, mask=mask_spearman, annot=True, cmap='RdBu_r', center=0,
+                    square=True, linewidths=.5, cbar_kws={"shrink": .5},
+                    xticklabels=method_labels_x, yticklabels=method_labels_y,
+                    vmin=-1, vmax=1, fmt='.3f', ax=ax, annot_kws={'size': FONT_SIZE},
+                    cbar=False)
+        ax.set_title(f'{METRIC_TO_TITLE[metric].replace(' [mm]', '')}', fontsize=FONT_SIZE)      # Spearman Correlation\n
 
-    # Pearson correlation matrix
-    mask_pearson = np.array([[False, True], [False, False]], dtype=bool)    # 2x2
-    sns.heatmap(pearson_corr, mask=mask_pearson, annot=True, cmap='RdBu_r', center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5},
-                xticklabels=method_labels_x, yticklabels=method_labels_y,
-                vmin=-1, vmax=1, fmt='.3f', ax=ax1, annot_kws={'size': FONT_SIZE})
-    ax1.set_title(f'Pearson Correlation\n{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE + 2)
+        # # Add p-values as text annotations
+        # for i in range(n_methods-1):    # remove the diagonal
+        #     for j in range(n_methods-1):    # remove the diagonal
+        #         p_val = spearman_pvals[i, j]
+        #         if not np.isnan(p_val):
+        #             ax.text(j + 0.5, i + 0.75, format_pvalue(p_val),
+        #                     ha='center', va='center', fontsize=FONT_SIZE, color='black')
 
-    # Add p-values as text annotations
-    for i in range(n_methods-1):    # 3x3 --> 2x2
-        for j in range(n_methods-1):    # 3x3 --> 2x2
-            p_val = pearson_pvals[i, j]
-            if not np.isnan(p_val):
-                ax1.text(j + 0.5, i + 0.75, format_pvalue(p_val),
-                        ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
+        # Increase font size of axis labels
+        ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
 
-    # Spearman correlation matrix
-    mask_spearman = np.array([[False, True], [False, False]], dtype=bool)
-    sns.heatmap(spearman_corr, mask=mask_spearman, annot=True, cmap='RdBu_r', center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5},
-                xticklabels=method_labels_x, yticklabels=method_labels_y,
-                vmin=-1, vmax=1, fmt='.3f', ax=ax2, annot_kws={'size': FONT_SIZE})
-    ax2.set_title(f'Spearman Correlation\n{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE + 2)
+        # Save the plot
+        plt.tight_layout()
+        num_subjects = len(df_metric)
+        figure_fname = os.path.join(output_dir, f'correlation_matrix_{metric}_{num_subjects}subjects.png')
+        plt.savefig(figure_fname, dpi=300, bbox_inches='tight')
+        print(f'Correlation matrix for {metric} saved as {figure_fname}')
+        plt.close()
 
-    # Add p-values as text annotations
-    for i in range(n_methods-1):  # 3x3 --> 2x2
-        for j in range(n_methods-1):  # 3x3 --> 2x2
-            p_val = spearman_pvals[i, j]
-            if not np.isnan(p_val):
-                ax2.text(j + 0.5, i + 0.75, format_pvalue(p_val),
-                        ha='center', va='center', fontsize=FONT_SIZE - 2, color='black')
+        # # Print correlation summary to console
+        # print(f'\n--- {METRIC_TO_TITLE[metric]} ({num_subjects} subjects) ---')
+        # print('Spearman correlations:')
+        # for i in range(n_methods):
+        #     for j in range(i + 1, n_methods):
+        #         corr_val = spearman_corr.iloc[i, j]
+        #         p_val = spearman_pvals[i, j]
+        #         print(f'  {method_labels[i]} vs {method_labels[j]}: ρ = {corr_val:.3f}, {format_pvalue(p_val)}')
 
-    plt.tight_layout()
-
-    # Save the plot
-    num_subjects = len(df_metric)
-    figure_fname = os.path.join(output_dir, f'correlation_matrix_{metric}_{num_subjects}subjects.png')
-    plt.savefig(figure_fname, dpi=300, bbox_inches='tight')
-    print(f'Correlation matrix for {metric} saved as {figure_fname}')
-    plt.close()
-
-    # # Print correlation summary to console
-    # print(f'\n--- {METRIC_TO_TITLE[metric]} ({num_subjects} subjects) ---')
-    # print('Pearson correlations:')
-    # for i in range(n_methods):
-    #     for j in range(i + 1, n_methods):
-    #         corr_val = pearson_corr.iloc[i, j]
-    #         p_val = pearson_pvals[i, j]
-    #         print(f'  {method_labels[i]} vs {method_labels[j]}: r = {corr_val:.3f}, {format_pvalue(p_val)}')
-    #
-    # print('Spearman correlations:')
-    # for i in range(n_methods):
-    #     for j in range(i + 1, n_methods):
-    #         corr_val = spearman_corr.iloc[i, j]
-    #         p_val = spearman_pvals[i, j]
-    #         print(f'  {method_labels[i]} vs {method_labels[j]}: ρ = {corr_val:.3f}, {format_pvalue(p_val)}')
+    combine_plot('correlation_matrix', num_subjects, output_dir)
 
 
 def combine_plot(figure_type, num_subjects, output_dir):
@@ -413,7 +411,7 @@ def create_scatterplot(df, output_dir, method):
         # # Drop rows with NaN values
         # df_plot = df_plot.dropna()
 
-        fig, axes = plt.subplots(figsize=(5, 5))
+        fig, axes = plt.subplots(figsize=(6, 6))
 
         max_val = df_plot.max().max()
         min_val = df_plot.min().min()
@@ -439,7 +437,7 @@ def create_scatterplot(df, output_dir, method):
         ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
 
         # Change axes labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
+        ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
         ax.set_ylabel(f'{METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
 
@@ -447,6 +445,7 @@ def create_scatterplot(df, output_dir, method):
             # Tweak axes ticks
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
+            ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -512,6 +511,7 @@ def create_scatterplot_3D_length_width(df, output_dir, method):
             # Tweak axes ticks
             ax.set_xticks([0, 50, 75, 100, 150, 200])
             ax.set_yticks([0, 50, 75, 100, 150, 200])
+            ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -540,7 +540,7 @@ def create_diff_plot(df, output_dir, method):
     for metric in METRIC_TO_TITLE.keys():
         df_plot = df[[f'{metric}_manual', f'{metric}_{method.lower()}']]
 
-        fig, axes = plt.subplots(figsize=(5, 5))
+        fig, axes = plt.subplots(figsize=(6, 6))
 
         ax = axes
         x = df_plot[f'{metric}_manual']
@@ -572,10 +572,11 @@ def create_diff_plot(df, output_dir, method):
         )
 
         # Set plot title and labels
-        ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
-                     f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
-        ax.set_xlabel(f'Mean', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Difference', fontsize=FONT_SIZE)
+        # ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
+        #              f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs {METHOD_TO_TITLE[method]}',
+                      fontsize=FONT_SIZE)
 
         # Get the limits and means for custom styling
         diff = x - y            # Difference between x and y
@@ -609,14 +610,17 @@ def main():
     print('Reading data files...')
     # Manual
     df_manual = read_file_manual(args.file_manual)
-    # Semi-automatic (GT)
+    # Semi-automatic (manual lesion masks + sct_analyze_lesion)
     df_gt = read_file_sct(args.file_gt, 'gt')
-    # Automatic (SCIsegV2)
+    # Semi-automatic (manual lesion masks + SCIsegV2 segmented spinal cords + sct_analyze_lesion)
+    df_cord_scisegv2 = read_file_sct(args.file_cord_scisegv2, 'cord_scisegv2')
+    # Automatic (SCIsegV2 + sct_analyze_lesion)
     df_scisegv2 = read_file_sct(args.file_scisegv2, 'scisegv2')
 
     # Merge the dataframes
     print('Merging dataframes...')
     df = pd.merge(df_manual, df_gt, on=['participant_id', 'session_id'], how='inner')
+    df = pd.merge(df, df_cord_scisegv2, on=['participant_id', 'session_id'], how='inner')
     df = pd.merge(df, df_scisegv2, on=['participant_id', 'session_id'], how='inner')
     print(f'Total number of subjects after merging: {len(df)}')
 
@@ -631,16 +635,22 @@ def main():
 
     # Generate correlation matrices for each metric
     print('\nGenerating correlation matrices...')
-    for metric in METRIC_TO_TITLE.keys():
-        create_correlation_matrix(df, metric, args.o)
+    create_correlation_matrix(df, args.o)
 
     # ----------------
-    # Create scatter plots and diff plots for manual vs semi-automatic (GT)
+    # Create scatter plots and diff plots for manual vs semi-automatic (manual lesions)
     # ----------------
-    print('\nGenerating plots for Manual vs Semi-automatic (GT)...')
+    print('\nGenerating plots for Manual vs Semi-automatic (manual lesions)...')
     create_scatterplot(df, args.o, 'GT')
     # create_scatterplot_3D_length_width(df, args.o, 'GT')
     create_diff_plot(df, args.o, 'GT')
+
+    # ----------------
+    # Create scatter plots and diff plots for manual vs semi-automatic (manual lesions + SCIsegV2 spinal cord)
+    # ----------------
+    print('\nGenerating plots for Manual vs Semi-automatic (manual lesions + SCIsegV2 spinal cord)...')
+    create_scatterplot(df, args.o, 'cord_SCIsegV2')
+    create_diff_plot(df, args.o, 'cord_SCIsegV2')
 
     # ----------------
     # Create scatter plots and diff plots for manual vs automatic (SCIsegV2)
