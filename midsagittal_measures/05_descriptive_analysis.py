@@ -23,23 +23,12 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import argparse
 import warnings
 warnings.filterwarnings('ignore')
 
-# Import functions from the trajectory plots script
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils import read_file_sct, read_file_manual, read_participants_file, CLINICAL_SCORES_TO_AXES
 
-# Define constants
-CLINICAL_SCORES_TO_AXES = {
-    'uems': 'Upper Extremity Motor Score',
-    'lems': 'Lower Extremity Motor Score',
-    'ms': 'Total Motor Score',
-    'pp': 'Pinprick Score',
-    'lt': 'Light-Touch Score'
-}
 
 CLINICAL_SCORES_MAX = {
     'uems': 50,
@@ -103,99 +92,6 @@ def get_parser():
 
     return parser
 
-
-def read_file_manual(file):
-    """
-    Read the XLSX file with manually measured metrics and clinical scores.
-    (Copied from 04_generate_trajectory_plots.py)
-    """
-    df_manual = pd.read_excel(file)
-    # Drop rows where 'participant_id' is NaN or 'exclude' -- rows with comments
-    df_manual = df_manual.dropna(subset=['participant_id'])
-    df_manual = df_manual[df_manual['participant_id'] != 'exclude']
-    # If session_id is nan in the manual file, set it to 'ses-01'
-    df_manual['session_id'] = df_manual['session_id'].fillna('ses-01')
-
-    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
-    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
-    # Rename columns to distinguish manual metrics from SCT metrics
-    df_manual.rename(columns={'midsagittal_length': 'midsagittal_length_manual',
-                              'midsagittal_width': 'midsagittal_width_manual',
-                              'ventral_tissue_bridge': 'ventral_tissue_bridge_manual',
-                              'dorsal_tissue_bridge': 'dorsal_tissue_bridge_manual',
-                              'total_tissue_bridge': 'total_tissue_bridge_manual'},
-                     inplace=True)
-
-    # Compute tissue bridge ratios
-    df_manual['dorsal_bridge_ratio_manual'] = df_manual.apply(
-        lambda row: (row['dorsal_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
-        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
-    df_manual['ventral_bridge_ratio_manual'] = df_manual.apply(
-        lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
-        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
-
-    # Remove any strings from the 'mri_time_since_injury' column
-    if 'mri_time_since_injury' in df_manual.columns:
-        df_manual['mri_time_since_injury'] = df_manual['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
-
-    # Convert any string clinical score columns to numeric
-    for col in df_manual.columns:
-        if col.startswith(tuple(CLINICAL_SCORES_TO_AXES.keys())):
-            df_manual[col] = pd.to_numeric(df_manual[col], errors='coerce')
-
-    # Drop 'comment' column and unnamed columns
-    df_manual = df_manual.drop(columns=['comment'], errors='ignore')
-    unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
-    df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
-
-    # Reorder the columns
-    cols = ['participant_id', 'session_id', 'mri_time_since_injury'] + \
-           [col for col in df_manual.columns if col.endswith('_manual')] + \
-           [col for col in df_manual.columns if not col.endswith('_manual') and col not in ['participant_id', 'session_id', 'mri_time_since_injury']]
-    df_manual = df_manual[cols]
-
-    print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
-    return df_manual
-
-
-def read_file_sct(file_sct):
-    """
-    Read CSV file with SCT-computed lesion metrics.
-    (Copied from 04_generate_trajectory_plots.py)
-    """
-    df_sct = pd.read_csv(file_sct)
-    # Rename columns to match the manual metrics
-    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
-                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
-                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
-                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
-                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
-                  inplace=True)
-    # Add suffix to all columns except participant_id and session_id
-    df_sct = df_sct.add_suffix('_sct')
-    df_sct.rename(columns={'participant_id_sct': 'participant_id', 'session_id_sct': 'session_id'}, inplace=True)
-
-    print(f'Read {len(df_sct)} rows from the SCT metrics file: {file_sct}')
-    return df_sct
-
-
-def read_participants_file(file):
-    """
-    Read the participants.tsv file with demographic information.
-    :param file: str: path to the TSV file
-    :return df_participants: pandas DataFrame: dataframe with demographic information
-    """
-    df_participants = pd.read_csv(file, sep='\t')
-
-    # Convert columns to appropriate types
-    if 'age' in df_participants.columns:
-        df_participants['age'] = pd.to_numeric(df_participants['age'], errors='coerce')
-
-    if 'MagneticFieldStrength' in df_participants.columns:
-        df_participants['MagneticFieldStrength'] = pd.to_numeric(df_participants['MagneticFieldStrength'], errors='coerce')
-
-    print(f'Read {len(df_participants)} participants from the demographics file: {file}')
-    return df_participants
 
 
 def create_descriptive_table(df, output_dir):
