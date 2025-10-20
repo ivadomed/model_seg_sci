@@ -128,7 +128,7 @@ sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0.5 -o ${file_t2}_lesion-manua
 #sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
 ## If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
 #if [ $status -ne 0 ]; then
-#    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_GT_analysis.log
+#    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_manual_cord.log
 #    exit 0
 #else
 #  # If sct_analyze_lesion finished successfully, the outputs are:
@@ -139,8 +139,8 @@ sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0.5 -o ${file_t2}_lesion-manua
 #  rm ${file_t2}_lesion-manual_bin_analysis.pkl
 #
 #  # Copy the XLSX file to the results folder
-#  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}
-#  echo "✅ ${file_t2}_lesion-manual_bin_analysis.xlsx created" >> ${PATH_LOG}/manual_GT_analysis.log
+#  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_manual_lesion_manual_cord.xlsx
+#  echo "✅ ${file_t2}_manual_lesion_manual_cord.xlsx created" >> ${PATH_LOG}/manual_lesion_manual_cord.log
 #fi
 
 # ----------------------------
@@ -164,7 +164,7 @@ status=0
 sct_analyze_lesion -m ${file_t2}_lesion_seg.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
 # If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
 if [ $status -ne 0 ]; then
-    echo "❌ No lesion segmented by SCIsegV2 for ${file_t2}" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+    echo "❌ No lesion segmented by SCIsegV2 for ${file_t2}" >> ${PATH_LOG}/scisegv2_lesion_scisegv2_cord.log
     exit 0
 else
   # If sct_analyze_lesion finished successfully, the outputs are:
@@ -175,11 +175,11 @@ else
   rm ${file_t2}_lesion_seg_analysis.pkl
 
   # Rename the files to make clear they come from the SCIsegV2 model
-  mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_lesion_seg_label_SCIsegV2.nii.gz
-  mv ${file_t2}_lesion_seg_analysis.xlsx ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx
+  mv ${file_t2}_lesion_seg_label.nii.gz ${file_t2}_scisegv2_lesion_scisegv2_cord.nii.gz
+  mv ${file_t2}_lesion_seg_analysis.xlsx ${file_t2}_scisegv2_lesion_scisegv2_cord.xlsx
   # Copy the XLSX file to the results folder
-  cp ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx ${PATH_RESULTS}
-  echo "✅ ${file_t2}_lesion_seg_analysis_SCIsegV2.xlsx created" >> ${PATH_LOG}/SCIsegV2_predictions_analysis.log
+  cp ${file_t2}_scisegv2_lesion_scisegv2_cord.xlsx ${PATH_RESULTS}
+  echo "✅ ${file_t2}_scisegv2_lesion_scisegv2_cord.xlsx created" >> ${PATH_LOG}/scisegv2_lesion_scisegv2_cord.log
 fi
 
 # ----------------------------
@@ -194,7 +194,7 @@ status=0
 sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
 # If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
 if [ $status -ne 0 ]; then
-    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_scisegv2_cord_analysis.log
+    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_scisegv2_cord.log
     exit 0
 else
   # If sct_analyze_lesion finished successfully, the outputs are:
@@ -205,8 +205,8 @@ else
   rm ${file_t2}_lesion-manual_bin_analysis.pkl
 
   # Copy the XLSX file to the results folder
-  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_lesion-manual_bin_scisegv2_cord_analysis.xlsx
-  echo "✅ ${file_t2}_lesion-manual_bin_scisegv2_cord_analysis.xlsx created" >> ${PATH_LOG}/manual_lesion_scisegv2_cord_analysis.log
+  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_manual_lesion_scisegv2_cord.xlsx
+  echo "✅ ${file_t2}_manual_lesion_scisegv2_cord.xlsx created" >> ${PATH_LOG}/manual_lesion_scisegv2_cord.log
 fi
 
 # ------------------------------------------------------------------------------
