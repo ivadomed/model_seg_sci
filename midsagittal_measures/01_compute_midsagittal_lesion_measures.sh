@@ -10,8 +10,7 @@
 #   5. Computes midsagittal lesion measures based on the manual lesion and SCIsegV2 spinal cord segmentation
 #
 # NOTE: This script requires SCT v7.0 or higher (due to the new sct_deepseg syntax).
-
-# NOTE: The script is meant to be run on GPU (see `CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg ...` below).
+# NOTE: The script is meant to be run on GPU (see `CUDA_VISIBLE_DEVICES=X SCT_USE_GPU=X sct_deepseg ...` below).
 #
 # Usage:
 #     sct_run_batch -config config-01_compute_midsagittal_lesion_length_and_width.json
@@ -99,7 +98,7 @@ cd ${SUBJECT}/anat
 # ------------------------------------------------------------------------------
 # T2w
 # ------------------------------------------------------------------------------
-# sci-zurich
+# sci-zurich and nisci-trial
 # We do a substitution '/' --> '_' in case there is a subfolder 'ses-0X/'
 file_t2="${SUBJECT//[\/]/_}"_acq-sag_T2w
 
@@ -147,8 +146,8 @@ fi
 # Automatic method (SCIsegV2 + sct_analyze_lesion)
 # ----------------------------
 # Segment the spinal cord and lesions using SCIsegV2
-#CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
-sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
+CUDA_VISIBLE_DEVICES=1 SCT_USE_GPU=1 sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
+#sct_deepseg lesion_sci_t2 -i ${file_t2}.nii.gz -largest 1 -qc ${PATH_QC} -qc-subject ${SUBJECT}
 # The outputs are:
 #   - ${file_t2}_sc_seg.nii.gz:  3D binary mask of the segmented spinal cord
 #   - ${file_t2}_lesion_seg.nii.gz: 3D binary mask of the segmented lesion
