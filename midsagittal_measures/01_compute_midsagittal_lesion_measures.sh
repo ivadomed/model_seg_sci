@@ -116,8 +116,9 @@ fi
 #copy_gt "${file_t2}" "seg"
 copy_gt "${file_t2}" "lesion"
 
-# Binarize GT lesion segmentation (sct_analyze_lesion requires binary mask until https://github.com/spinalcordtoolbox/spinalcordtoolbox/issues/4120 is fixed)
-sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0 -o ${file_t2}_lesion-manual_bin.nii.gz
+# Binarize GT lesion segmentation
+# We use threshold 0.5 to binarize because we used 0.5 to train the SCIseg models
+sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0.5 -o ${file_t2}_lesion-manual_bin.nii.gz
 
 ## Generate sagittal lesion QC report
 #sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject "lesion_manual"
