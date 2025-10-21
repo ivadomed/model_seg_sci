@@ -9,8 +9,9 @@ Namely, the script:
  - aggregates the metrics across subjects into a single dataframe and save the dataframe to a CSV file
 
 Example usage:
-    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type GT
-    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type SCIsegV2
+    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type manual_lesion_manual_cord
+    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type manual_lesion_scisegv2_cord
+    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type scisegv2_lesion_scisegv2_cord
 
 Note: to read XLSX files, you might need to install the following packages:
     pip install openpyxl
@@ -50,9 +51,12 @@ def get_parser():
         '-pred-type',
         required=True,
         type=str,
-        choices=['GT', 'SCIsegV2'],
-        help='Type of the predicted lesion. GT: ground truth lesion,  SCIsegV2: lesion predicted by our 3D SCIseg '
-             'nnUNet model. This information will be included in the output CSV filename.'
+        choices=['manual_lesion_manual_cord', 'manual_lesion_scisegv2_cord', 'scisegv2_lesion_scisegv2_cord'],
+        help='Type of the predicted lesion:'
+             'manual_lesion_manual_cord: manual lesion, manual cord, '
+             'manual_lesion_scisegv2_cord: manual lesion, SCIsegV2 cord, '
+             'scisegv2_lesion_scisegv2_cord: SCIsegV2 lesion, SCIsegV2 cord, '
+             'This information will be included in the output CSV filename.'
     )
     parser.add_argument(
         '-o',
@@ -94,15 +98,17 @@ def get_fnames(dir_path, pred_type):
     """
     Get list of XLSX files with lesion metrics
     :param dir_path: list of paths to XLSX files with lesion metrics
-    :param pred_type: GT or SCIsegV2
+    :param pred_type: manual_lesion_manual_cord or manual_lesion_scisegv2_cord or scisegv2_lesion_scisegv2_cord
     :return: pandas dataframe with the paths to the XLSX files
     """
 
     # Get XLSX files with lesion metrics
-    if pred_type == 'GT':
-        fname_files = glob.glob(os.path.join(dir_path, '*lesion-manual_bin_analysis.xlsx'))
-    elif pred_type == 'SCIsegV2':
-        fname_files = glob.glob(os.path.join(dir_path, '*lesion_seg_analysis_SCIsegV2.xlsx'))
+    if pred_type == 'manual_lesion_manual_cord':
+        fname_files = glob.glob(os.path.join(dir_path, '*manual_lesion_manual_cord.xlsx'))
+    elif pred_type == 'manual_lesion_scisegv2_cord':
+        fname_files = glob.glob(os.path.join(dir_path, '*manual_lesion_scisegv2_cord.xlsx'))
+    elif pred_type == 'scisegv2_lesion_scisegv2_cord':
+        fname_files = glob.glob(os.path.join(dir_path, '*scisegv2_lesion_scisegv2_cord.xlsx'))
 
     # remove hidden files starting with '~'
     fname_files = [f for f in fname_files if not os.path.basename(f).startswith('~')]
