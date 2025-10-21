@@ -21,9 +21,9 @@ CLINICAL_SCORES_TO_AXES = {
     'lt': 'Light-Touch Score'
 }
 
-def read_file_manual(file):
+def read_file_manual_sci_zurich(file):
     """
-    Read the XLSX file with manually measured metrics and clinical scores.
+    Read the XLSX file with manually measured metrics and clinical scores for sci-zurich dataset.
     :param file: str: path to the XLSX file
     :return df_manual: pandas DataFrame: dataframe with manually measured lesion metrics and clinical scores
     """
@@ -71,6 +71,61 @@ def read_file_manual(file):
     cols = ['participant_id', 'session_id', 'mri_time_since_injury'] + \
            [col for col in df_manual.columns if col.endswith('_manual')] + \
            [col for col in df_manual.columns if not col.endswith('_manual') and col not in ['participant_id', 'session_id', 'mri_time_since_injury']]
+    df_manual = df_manual[cols]
+
+    print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
+    return df_manual
+
+
+def read_file_manual_nisci_trial(file):
+    """
+    Read the XLSX file with manually measured metrics and clinical scores for nisci-trial dataset.
+    :param file: str: path to the XLSX file
+    :return df_manual: pandas DataFrame: dataframe with manually measured lesion metrics and clinical scores
+    """
+    df_manual = pd.read_excel(file)
+    # Renate 'Patient' column to 'participant_id'
+    df_manual.rename(columns={'Patient': 'participant_id'}, inplace=True)
+    # Rename rows in 'participant_id' from 'sub-zh001' to 'sub-001'
+    df_manual['participant_id'] = df_manual['participant_id'].str.replace('sub-zh', 'sub-')
+
+    # Rename columns to distinguish manual metrics from SCT metrics
+    df_manual.rename(columns={'lesion_length': 'midsagittal_length_manual',
+                              'lesion_width': 'midsagittal_width_manual',
+                              'ventral_bridges': 'ventral_tissue_bridge_manual',
+                              'dorsal_bridges': 'dorsal_tissue_bridge_manual',
+                              'total_bridges': 'total_tissue_bridge_manual'},
+                     inplace=True)
+
+    # Rename clinal columns, e.g., 'UEMS_01' to 'uems_01', 'UEMS_02' to 'uems_02', etc.
+    for col in df_manual.columns:
+        if 'UEMS' in col:
+            df_manual.rename(columns={col: col.lower().replace('uems', 'uems')}, inplace=True)
+        elif 'LEMS' in col:
+            df_manual.rename(columns={col: col.lower().replace('lems', 'lems')}, inplace=True)
+        elif 'TMS' in col:
+            df_manual.rename(columns={col: col.lower().replace('tms', 'ms')}, inplace=True)
+        elif 'TPP' in col:
+            df_manual.rename(columns={col: col.lower().replace('tpp', 'pp')}, inplace=True)
+        elif 'TLT' in col:
+            df_manual.rename(columns={col: col.lower().replace('tlt', 'lt')}, inplace=True)
+
+    # Compute tissue bridge ratios
+    df_manual['dorsal_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['dorsal_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+    df_manual['ventral_bridge_ratio_manual'] = df_manual.apply(
+        lambda row: (row['ventral_tissue_bridge_manual'] / row['total_tissue_bridge_manual'] * 100)
+        if row['total_tissue_bridge_manual'] > 0 else 0, axis=1)
+
+    # Calculate 'mri_time_since_injury' from 'DOI' and 'MRI_time' columns
+    df_manual['mri_time_since_injury'] = (df_manual['MRI_time'] - df_manual['DOI']).dt.days
+
+    # Reorder the columns to have participant_id and mri_time_since_injury first, followed by manual
+    # metrics (_manual suffix)
+    cols = ['participant_id', 'mri_time_since_injury'] + \
+           [col for col in df_manual.columns if col.endswith('_manual')] + \
+           [col for col in df_manual.columns if not col.endswith('_manual') and col not in ['participant_id', 'mri_time_since_injury']]
     df_manual = df_manual[cols]
 
     print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
@@ -128,7 +183,7 @@ def format_pvalue(p_value, alpha=0.05):
         return f'p = {p_value:.3f}'
 
 
-def normalize_sensorimotor_scores(df):
+def normalize_sensorimotor_scores(df, time_points):
     """
     Compute normalized recovery rates by calculating the change from baseline (or the first available measurement) to
     follow-up and dividing them by the maximal score improvable.
@@ -146,13 +201,12 @@ def normalize_sensorimotor_scores(df):
 
     :param df: pandas DataFrame with baseline lesion metrics and clinical scores across
     multiple time points
+    : time_points list: list of time points in order (e.g., ['bl', '1m', '3m', '6m', '12m'] or
+    ['01', '02', '03', '04', '05', '06'])
     :return df: pandas DataFrame with min-max scaled normalized clinical scores
     """
     # Get unique participant IDs
     participants = df['participant_id'].unique()
-
-    # Time points in order
-    time_points = ['bl', '1m', '3m', '6m', '12m']
 
     # First pass: compute normalized recovery rates by calculating the change from baseline (i.e., first available
     # measurement) to follow-up and dividing them by the maximal score improvable

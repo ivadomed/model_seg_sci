@@ -28,7 +28,7 @@ import subprocess
 
 from sklearn.cluster import KMeans
 
-from utils import read_file_sct, read_file_manual, normalize_sensorimotor_scores
+from utils import read_file_sct, read_file_manual_sci_zurich, normalize_sensorimotor_scores
 
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
@@ -969,7 +969,7 @@ def main():
     #----------------
     # XLSX file with manually measured lesion metrics and clinical scores
     #----------------
-    df_manual = read_file_manual(file_manual)
+    df_manual = read_file_manual_sci_zurich(file_manual)
 
     #----------------
     # Merge the dataframes
@@ -980,7 +980,9 @@ def main():
     # Normalize sensorimotor scores
     #----------------
     print(f'Number of subjects: {df.shape[0]}')
-    df = normalize_sensorimotor_scores(df)
+    df = normalize_sensorimotor_scores(df, time_points=['bl', '1m', '3m', '6m', '12m'])
+    #
+    # ais_bl_counts = df['ais_bl'].value_counts()
 
     #----------------
     # Filter subjects based on MRI time since injury
