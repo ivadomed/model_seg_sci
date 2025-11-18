@@ -2,19 +2,14 @@
 Generate correlation matrices between three methods for each lesion metric.
 
 The script:
-- reads XLSX file with manually measured lesion metrics
-- reads CSV files with lesion metrics computed using sct_analyze_lesion for both GT and SCIsegV2 methods
-- merges the dataframes
-- creates correlation matrices for each metric showing correlations between manual, semi-automatic (GT), and automatic (SCIsegV2) methods
-- computes both Pearson and Spearman correlations with statistical significance
+- reads CSV file with lesion metrics with _sct and _manual suffixes.
+- computes both Spearman correlations with statistical significance
 - creates scatter plots with linear regression lines for each metric
 - creates Bland-Altman Mean Difference plot for each metric
 
 Example usage:
     python 03_generate_lesion_metric_plots.py
-        -file-gt <PATH_TO_GT_CSV_FILE>
-        -file-scisegv2 <PATH_TO_SCISEGV2_CSV_FILE>
-        -file-manual <PATH_TO_XLSX_FILE>
+        -i <PATH_TO_CSV_FILE>
         -o <OUTPUT_DIR>
 
 Note: to read XLS files, you might need to install the following packages:
@@ -38,26 +33,24 @@ import statsmodels.api as sm
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
-    'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
-    'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
+    # 'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
+    # 'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
     'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]',
-    'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
-    'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
+    # 'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
+    # 'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
 }
 
 METHOD_TO_TITLE = {
-    'GT': 'Manual lesion + sct_analyze_lesion',
-    'cord_SCIsegV2': 'Semi-automatic',  # (Manual lesions + SCIsegV2 cord + sct_analyze_lesion)
+    'GT': 'Manual',
     'SCIsegV2': 'Automatic' # (SCIsegV2 lesion and cord + sct_analyze_lesion)
 }
 
 METHOD_TO_FNAME = {
-    'GT': 'semiautomatic',
-    'cord_SCIsegV2': 'semiautomatic_cord',
+    'GT': 'manual',
     'SCIsegV2': 'automatic'
 }
 
-FONT_SIZE = 16
+FONT_SIZE = 19
 
 
 def get_parser():
@@ -65,33 +58,14 @@ def get_parser():
     parser function
     """
     parser = argparse.ArgumentParser(
-        description='Generate correlation matrices between manual, semi-automatic (manual lesions), and automatic (SCIsegV2) methods for each lesion metric.',
+        description='Generate plots for manual vs automatic (SCIsegV2) lesion metric.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
-        '-file-gt',
+        '-i',
         required=True,
         type=str,
-        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on manual lesion masks.'
-    )
-    parser.add_argument(
-        '-file-cord-scisegv2',
-        required=True,
-        type=str,
-        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on manual lesion masks '
-             'and SCIsegV2 segmented spinal cords.'
-    )
-    parser.add_argument(
-        '-file-scisegv2',
-        required=True,
-        type=str,
-        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion on SCIsegV2 (automatic) lesion masks.'
-    )
-    parser.add_argument(
-        '-file-manual',
-        required=True,
-        type=str,
-        help='Absolute path to an XLSX file with manually measured lesion metrics.'
+        help='Absolute path to a CSV file with lesion metrics with _sct and _manual suffixes.'
     )
     parser.add_argument(
         '-o',
@@ -103,86 +77,20 @@ def get_parser():
     return parser
 
 
-def read_file_manual(file):
+def read_file(file_sct):
     """
-    Read the XLSX file with manually measured metrics.
-    :param file: str: path to the XLSX file
-    :return df_manual: pandas DataFrame: dataframe with manually measured lesion metrics
+    Read CSV file with lesion metrics with _sct and _manual suffixes.
+    :param file_sct: str: path to the CSV file
+    :return df_sct: pandas DataFrame: dataframe with lesion metrics
     """
-    df_manual = pd.read_excel(file)
-    # Drop rows where 'participant_id' is NaN or 'exclude' -- rows with comments
-    df_manual = df_manual.dropna(subset=['participant_id'])
-    df_manual = df_manual[df_manual['participant_id'] != 'exclude']
-    # If session_id is nan in the manual file, set it to 'ses-01'
-    df_manual['session_id'] = df_manual['session_id'].fillna('ses-01')
-
-    # Sum up ventral and dorsal tissue bridges to get total tissue bridge
-    df_manual['total_tissue_bridge'] = df_manual['ventral_tissue_bridge'] + df_manual['dorsal_tissue_bridge']
-
-    # Compute tissue bridge ratios
-    df_manual['dorsal_bridge_ratio'] = df_manual.apply(
-        lambda row: (row['dorsal_tissue_bridge'] / row['total_tissue_bridge'] * 100)
-        if row['total_tissue_bridge'] > 0 else 0, axis=1)
-    df_manual['ventral_bridge_ratio'] = df_manual.apply(
-        lambda row: (row['ventral_tissue_bridge'] / row['total_tissue_bridge'] * 100)
-        if row['total_tissue_bridge'] > 0 else 0, axis=1)
-
-    # Drop 'comment' column and unnamed columns
-    df_manual = df_manual.drop(columns=['comment'], errors='ignore')
-    unnamed_cols = [col for col in df_manual.columns if 'Unnamed' in col]
-    df_manual = df_manual.drop(columns=unnamed_cols, errors='ignore')
+    df = pd.read_csv(file_sct)
 
     # Remove any strings from the 'mri_time_since_injury' column
-    if 'mri_time_since_injury' in df_manual.columns:
-        df_manual['mri_time_since_injury'] = df_manual['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
+    if 'mri_time_since_injury' in df.columns:
+        df['mri_time_since_injury'] = df['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
 
-    # Add suffix to distinguish from other methods
-    metric_cols = list(METRIC_TO_TITLE.keys())
-    for col in metric_cols:
-        if col in df_manual.columns:
-            df_manual.rename(columns={col: f'{col}_manual'}, inplace=True)
-
-    print(f'Read {len(df_manual)} rows from the manual metrics file: {file}')
-    print(f'Number of unique participants in the manual metrics file: {df_manual['participant_id'].nunique()}')
-    return df_manual
-
-
-def read_file_sct(file_sct, method_suffix):
-    """
-    Read CSV file with lesion metrics computed using sct_analyze_lesion.
-    :param file_sct: str: path to the CSV file
-    :param method_suffix: str: suffix to add to metric columns (e.g., 'gt' or 'scisegv2')
-    :return df_sct: pandas DataFrame: dataframe with SCT-computed lesion metrics
-    """
-    df_sct = pd.read_csv(file_sct)
-
-    # Drop 'number_of_lesions', 'volume', 'length', and 'width' columns
-    df_sct = df_sct.drop(columns=['number_of_lesions', 'volume', 'length', 'width'], errors='ignore')
-
-    # Rename columns to match the manual metrics
-    df_sct.rename(columns={'length_interpolated_midsagittal_slice': 'midsagittal_length',
-                           'width_interpolated_midsagittal_slice': 'midsagittal_width',
-                           'interpolated_dorsal_bridge_width': 'dorsal_tissue_bridge',
-                           'interpolated_ventral_bridge_width': 'ventral_tissue_bridge',
-                           'interpolated_total_bridge_width': 'total_tissue_bridge'},
-                  inplace=True)
-
-    # Compute tissue bridge ratios
-    df_sct['dorsal_bridge_ratio'] = df_sct.apply(
-        lambda row: (row['dorsal_tissue_bridge'] / row['total_tissue_bridge'] * 100)
-        if row['total_tissue_bridge'] > 0 else 0, axis=1)
-    df_sct['ventral_bridge_ratio'] = df_sct.apply(
-        lambda row: (row['ventral_tissue_bridge'] / row['total_tissue_bridge'] * 100)
-        if row['total_tissue_bridge'] > 0 else 0, axis=1)
-
-    # Add suffix to metric columns except participant_id and session_id
-    metric_cols = list(METRIC_TO_TITLE.keys())
-    for col in metric_cols:
-        if col in df_sct.columns:
-            df_sct.rename(columns={col: f'{col}_{method_suffix}'}, inplace=True)
-
-    print(f'Read {len(df_sct)} rows from the {method_suffix.upper()} metrics file: {file_sct}')
-    return df_sct
+    print(f'Read {len(df)} rows from the metrics file: {file_sct}')
+    return df
 
 
 def compute_regression(x, y):
@@ -243,113 +151,12 @@ def format_pvalue(p_value, alpha=0.05):
         return f'p = {p_value:.3f}'
 
 
-def create_correlation_matrix(df, output_dir):
-    """
-    Create correlation matrix for a specific metric across the three methods.
-    :param df: pandas DataFrame with all three methods' data
-    :param output_dir: str: output directory
-    """
-    # Set font to Arial
-    plt.rcParams['font.sans-serif'] = 'Arial'
-
-    # Loop over metrics (length, width, ...)
-    for metric in METRIC_TO_TITLE.keys():
-        # Define method columns for this metric
-        method_cols = [f'{metric}_manual',
-                       # f'{metric}_gt',
-                       f'{metric}_cord_scisegv2',
-                       f'{metric}_scisegv2']
-        method_labels_x = ['Manual',
-                           # 'Semi-automatic',      # \n(manual lesion)
-                           'Semi-automatic']        # \n(manual lesion + SCIsegV2 cord)
-        method_labels_y = [#'Semi-automatic\n(manual lesion)',
-                           'Semi-automatic',    # \n(manual lesion + SCIsegV2 cord)
-                           'Automatic']         # \n(SCIsegV2 + SCT)
-
-        # Extract data for this metric, dropping rows with any NaN values
-        df_metric = df[['participant_id', 'session_id'] + method_cols].dropna()
-
-        if len(df_metric) == 0:
-            print(f'No valid data for {metric}, skipping...')
-            return
-
-        # Create correlation data
-        corr_data = df_metric[method_cols]
-
-        # Check normality using Shapiro-Wilk test
-        for col in method_cols:
-            stat, p = stats.shapiro(corr_data[col])
-            if p > 0.05:
-                print(f'{col} looks Gaussian (fail to reject H0) with p={p:.3f}')
-            else:
-                print(f'{col} does not look Gaussian (reject H0) with p={p:.3f}')
-
-        # Compute correlations
-        spearman_corr = corr_data.corr(method='spearman')
-
-        # Compute p-values for correlations
-        n_methods = len(method_cols)
-        spearman_pvals = np.full((n_methods, n_methods), np.nan)
-
-        for i in range(n_methods):
-            for j in range(n_methods):
-                if i != j:
-                    # Spearman p-value
-                    _, p_spearman = stats.spearmanr(corr_data.iloc[:, i], corr_data.iloc[:, j])
-                    spearman_pvals[i, j] = p_spearman
-
-        # Remove the first row and the last column from pearson_corr to remove the diagonal
-        spearman_corr = spearman_corr.iloc[1:, :-1]
-        spearman_pvals = spearman_pvals[1:, :-1]
-
-        # Create figure with two subplots side by side
-        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-        # Spearman correlation matrix
-        mask_spearman = np.array([[False, True], [False, False]], dtype=bool)    # 2x2   # [[False, True, True], [False, False, True], [False, False, False]] for 3x3
-        sns.heatmap(spearman_corr, mask=mask_spearman, annot=True, cmap='RdBu_r', center=0,
-                    square=True, linewidths=.5, cbar_kws={"shrink": .5},
-                    xticklabels=method_labels_x, yticklabels=method_labels_y,
-                    vmin=-1, vmax=1, fmt='.3f', ax=ax, annot_kws={'size': FONT_SIZE},
-                    cbar=False)
-        ax.set_title(f'{METRIC_TO_TITLE[metric].replace(' [mm]', '')}', fontsize=FONT_SIZE)      # Spearman Correlation\n
-
-        # # Add p-values as text annotations
-        # for i in range(n_methods-1):    # remove the diagonal
-        #     for j in range(n_methods-1):    # remove the diagonal
-        #         p_val = spearman_pvals[i, j]
-        #         if not np.isnan(p_val):
-        #             ax.text(j + 0.5, i + 0.75, format_pvalue(p_val),
-        #                     ha='center', va='center', fontsize=FONT_SIZE, color='black')
-
-        # Increase font size of axis labels
-        ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
-
-        # Save the plot
-        plt.tight_layout()
-        num_subjects = len(df_metric)
-        figure_fname = os.path.join(output_dir, f'correlation_matrix_{metric}_{num_subjects}subjects.png')
-        plt.savefig(figure_fname, dpi=300, bbox_inches='tight')
-        print(f'Correlation matrix for {metric} saved as {figure_fname}')
-        plt.close()
-
-        # # Print correlation summary to console
-        # print(f'\n--- {METRIC_TO_TITLE[metric]} ({num_subjects} subjects) ---')
-        # print('Spearman correlations:')
-        # for i in range(n_methods):
-        #     for j in range(i + 1, n_methods):
-        #         corr_val = spearman_corr.iloc[i, j]
-        #         p_val = spearman_pvals[i, j]
-        #         print(f'  {method_labels[i]} vs {method_labels[j]}: ρ = {corr_val:.3f}, {format_pvalue(p_val)}')
-
-    combine_plot('correlation_matrix', num_subjects, output_dir)
-
-
-def combine_plot(figure_type, num_subjects, output_dir):
+def combine_plot(figure_type, figure_fname_list, output_dir):
     """
     Combine all the plots into a single figure using bash convert command
     This requires ImageMagick to be installed
     :param figure_type: str: type of the figure to combine (e.g., 'scatterplot', or 'diffplot')
-    :param num_subjects: int: number of subjects in the dataframe
+    :param figure_fname_list
     :param output_dir: str: output directory where the combined figure will be saved
     """
 
@@ -359,93 +166,69 @@ def combine_plot(figure_type, num_subjects, output_dir):
         os.makedirs(combined_dir)
 
     print(f"Combining {figure_type}s into a single figure...")
+    fname_out = os.path.join(combined_dir, f'combined_{figure_type}_subjects.png')
     # 1 row, 3 columns:
-    cmd_combine = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
-          f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
-          f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
-          f"+append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}"
-    # 3 rows, 3 columns:
-    # # First row: midsagittal_length and midsagittal_width
-    # cmd_row1 = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
-    # # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
-    # cmd_row2 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
-    # # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
-    # cmd_row3 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_bridge_ratio_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_bridge_ratio_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # # Combine all rows
-    # cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} " \
-    #               f"-append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}; " \
-    #               f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # # Execute the commands
-    # subprocess.run(cmd_row1, shell=True)
-    # subprocess.run(cmd_row2, shell=True)
-    # subprocess.run(cmd_row3, shell=True)
+    cmd_combine = f"convert {figure_fname_list[0]} {figure_fname_list[1]} {figure_fname_list[2]} +append {fname_out}"
     subprocess.run(cmd_combine, shell=True)
-    print(
-        f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
+    print(f"Combined {figure_type} saved as {fname_out}")
+
+    return fname_out
 
 
-def create_scatterplot(df, output_dir, method):
+def create_scatterplot(df, output_dir):
     """
     Create scatter plots with linear regression lines for each metric
     :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
-    :param method: str: method ('GT' or 'SCIsegV2')
     """
 
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    for metric in METRIC_TO_TITLE.keys():
-        df_plot = df[[f'{metric}_manual', f'{metric}_{method.lower()}']]
-        # # Drop rows with NaN values
-        # df_plot = df_plot.dropna()
+    figure_fname_list = []
 
-        fig, axes = plt.subplots(figsize=(6, 6))
+    for metric in METRIC_TO_TITLE.keys():
+        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
+        # Drop rows with NaN values
+        df_plot = df_plot.dropna()
+
+        fig, ax = plt.subplots(figsize=(6, 6))
 
         max_val = df_plot.max().max()
         min_val = df_plot.min().min()
 
-        ax = axes
         x = df_plot[f'{metric}_manual']
-        y = df_plot[f'{metric}_{method.lower()}']
+        y = df_plot[f'{metric}_sct']
 
-        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
+        ax.scatter(x, y, s=40, alpha=0.7, color='black', edgecolor='black')
         ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
         ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
 
         # Add regression line
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '-', color='red')
+        ax.plot(x_vals, y_vals, '-', color='black', linewidth=2)
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}',
+        # Compute paired test
+        stat, p_paired = stats.ttest_rel(x, y)
+        ax.text(0.05, 0.95,
+                f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}\nPaired test\n{format_pvalue(p_paired)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
-        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
+        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray', linewidth=2, alpha=0.7)
 
         # Change axes labels
         ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'{METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Automatic', fontsize=FONT_SIZE)
 
         if metric == 'midsagittal_length':
             # Tweak axes ticks
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
-            ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
+        ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
 
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
@@ -454,105 +237,54 @@ def create_scatterplot(df, output_dir, method):
 
         # Save the plot
         num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'{METHOD_TO_FNAME[method]}_scatterplot_{metric}_{num_subjects}subjects.png')
+        figure_fname = os.path.join(output_dir, f'scatterplot_{metric}_{num_subjects}subjects.png')
+        figure_fname_list.append(figure_fname)
         plt.savefig(figure_fname, dpi=300)
-        print(f'Pairplot for {metric} saved as {figure_fname}')
+        print(f'Scatter for {metric} saved as {figure_fname}')
         plt.close()
 
-    combine_plot(f'{METHOD_TO_FNAME[method]}_scatterplot', num_subjects, output_dir)
+    fname_out = combine_plot('scatterplot', figure_fname_list, output_dir)
+    return fname_out
 
 
-def create_scatterplot_3D_length_width(df, output_dir, method):
-    """
-    Create scatter plots with linear regression lines for each metric
-        - between 3D length and manual midsagittal length
-        - between 3D width and manual midsagittal width
-    :param df: pandas dataframe with lesion metrics
-    :param output_dir: output directory
-    :param method: str: method ('GT' or 'SCIsegV2')
-    """
-
-    # Set font to Arial
-    plt.rcParams['font.sans-serif'] = 'Arial'
-
-    for metric in ['length', 'width']:
-        df_plot = df[[f'midsagittal_{metric}_manual', f'{metric}_sct']]
-
-        fig, axes = plt.subplots(figsize=(5, 5))
-
-        max_val = df_plot.max().max()
-        min_val = df_plot.min().min()
-
-        ax = axes
-        x = df_plot[f'midsagittal_{metric}_manual']
-        y = df_plot[f'{metric}_sct']
-
-        ax.scatter(x, y, s=20, alpha=1, color='black', edgecolor='black')
-        ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
-        ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
-
-        # Add regression line
-        intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '-', color='red')
-
-        # Compute Spearman correlation
-        spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        ax.text(0.05, 0.95, f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}',
-                transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
-
-        # Add diagonal line
-        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray')
-
-        # Change axes labels
-        ax.set_xlabel(f'Manual midsagittal {metric} [mm]', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'{METHOD_TO_TITLE[method]} 3D {metric} [mm]', fontsize=FONT_SIZE)
-
-        if metric == 'length':
-            # Tweak axes ticks
-            ax.set_xticks([0, 50, 75, 100, 150, 200])
-            ax.set_yticks([0, 50, 75, 100, 150, 200])
-            ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
-
-        # Remove the top and right spines
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        plt.tight_layout()
-
-        # Save the plot
-        figure_fname = os.path.join(output_dir, f'{method}_{metric}_manual_sct3D_scatterplot_{len(df_plot)}subjects.png')
-        plt.savefig(figure_fname, dpi=200)
-        print(f'Pairplot for 3D {metric} saved as {figure_fname}')
-        plt.close()
-
-
-def create_diff_plot(df, output_dir, method):
+def create_diff_plot(df, output_dir):
     """
     Create a Bland-Altman Mean Difference Plot for each metric
     https://www.statsmodels.org/devel/generated/statsmodels.graphics.agreement.mean_diff_plot.html
     :param df: pandas dataframe with lesion metrics
     :param output_dir: output directory
-    :method: str: method ('GT' or 'SCIsegV2')
     """
 
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
+    figure_fname_list = []
+
     for metric in METRIC_TO_TITLE.keys():
-        df_plot = df[[f'{metric}_manual', f'{metric}_{method.lower()}']]
+        df_plot = df[[f'{metric}_manual', f'{metric}_sct']]
 
-        fig, axes = plt.subplots(figsize=(6, 6))
+        # Control all font sizes for this plot in one place
+        with plt.rc_context({
+            'font.sans-serif': 'Arial',
+            'font.size': FONT_SIZE,  # base font size
+            'axes.labelsize': FONT_SIZE,  # x/y label size
+            'axes.titlesize': FONT_SIZE,
+            'xtick.labelsize': FONT_SIZE,
+            'ytick.labelsize': FONT_SIZE,
+            'legend.fontsize': FONT_SIZE
+        }):
+            fig, ax = plt.subplots(figsize=(6, 6))
 
-        ax = axes
         x = df_plot[f'{metric}_manual']
-        y = df_plot[f'{metric}_{method.lower()}']
+        y = df_plot[f'{metric}_sct']
 
         sm.graphics.mean_diff_plot(
             x, y,
             sd_limit=1.96,  # The default of 1.96 will produce 95% confidence intervals for the means of the differences
             ax=ax,
             scatter_kwds={
-                's': 20,
-                'alpha': 1,
+                's': 40,
+                'alpha': 0.7,
                 'color': 'black',
                 'edgecolor': 'black',
 
@@ -561,13 +293,13 @@ def create_diff_plot(df, output_dir, method):
                 'color': 'black',
                 'linestyle': '-',
                 'alpha': 0.5,
-                'linewidth': 1
+                'linewidth': 2
             },
             limit_lines_kwds={
                 'color': 'black',
                 'linestyle': '--',
                 'alpha': 0.5,
-                'linewidth': 1
+                'linewidth': 2
             }
         )
 
@@ -575,7 +307,9 @@ def create_diff_plot(df, output_dir, method):
         # ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
         #              f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs {METHOD_TO_TITLE[method]}',
+        # ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs Automatic',
+        #               fontsize=FONT_SIZE)
+        ax.set_ylabel(f'Difference Manual vs Automatic',
                       fontsize=FONT_SIZE)
 
         # Get the limits and means for custom styling
@@ -584,83 +318,64 @@ def create_diff_plot(df, output_dir, method):
         # Adjust y-lim
         ax.set_ylim(-1.96 * sd * 1.5, 1.96 * sd * 1.5)
 
+        # If any text was added by the function, resize it
+        for t in ax.texts:
+            t.set_fontsize(FONT_SIZE)
+
+        # Optional: legend font size if present
+        leg = ax.get_legend()
+        if leg:
+            for text in leg.get_texts():
+                text.set_fontsize(FONT_SIZE)
+
         # Remove the top and right spines
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         # Draw dashed gray horizontal line at y=0
         ax.axhline(y=0, color='gray', linestyle=':', alpha=0.5)
+        ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
         plt.tight_layout()
 
         # Save the plot
         num_subjects = len(df_plot)
-        figure_fname = os.path.join(output_dir, f'{METHOD_TO_FNAME[method]}_diffplot_{metric}_{num_subjects}subjects.png')
+        figure_fname = os.path.join(output_dir, f'diffplot_{metric}_{num_subjects}subjects.png')
+        figure_fname_list.append(figure_fname)
         plt.savefig(figure_fname, dpi=300)
         print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
 
-    combine_plot(f'{METHOD_TO_FNAME[method]}_diffplot', num_subjects, output_dir)
-
+    fname_out = combine_plot(f'diffplot', figure_fname_list, output_dir)
+    return fname_out
 
 def main():
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
 
-    # Read the data files
-    print('Reading data files...')
-    # Manual
-    df_manual = read_file_manual(args.file_manual)
-    # Semi-automatic (manual lesion masks + sct_analyze_lesion)
-    df_gt = read_file_sct(args.file_gt, 'gt')
-    # Semi-automatic (manual lesion masks + SCIsegV2 segmented spinal cords + sct_analyze_lesion)
-    df_cord_scisegv2 = read_file_sct(args.file_cord_scisegv2, 'cord_scisegv2')
-    # Automatic (SCIsegV2 + sct_analyze_lesion)
-    df_scisegv2 = read_file_sct(args.file_scisegv2, 'scisegv2')
-
-    # Merge the dataframes
-    print('Merging dataframes...')
-    df = pd.merge(df_manual, df_gt, on=['participant_id', 'session_id'], how='inner')
-    df = pd.merge(df, df_cord_scisegv2, on=['participant_id', 'session_id'], how='inner')
-    df = pd.merge(df, df_scisegv2, on=['participant_id', 'session_id'], how='inner')
+    print('Reading data file...')
+    df = read_file(args.i)
     print(f'Total number of subjects after merging: {len(df)}')
 
-    # Drop subjects with NaN values in any of the lesion metrics
-    df = df.dropna(subset=[f'{metric}_manual' for metric in METRIC_TO_TITLE.keys()] +
-                   [f'{metric}_gt' for metric in METRIC_TO_TITLE.keys()] +
-                   [f'{metric}_scisegv2' for metric in METRIC_TO_TITLE.keys()])
-    print(f'Number of subjects after dropping NaN values: {len(df)}')
+    # # Drop subjects with NaN values in any of the lesion metrics
+    # df = df.dropna()
+    # print(f'Number of subjects after dropping NaN values: {len(df)}')
 
     # Create output directory
     os.makedirs(args.o, exist_ok=True)
 
-    # Generate correlation matrices for each metric
-    print('\nGenerating correlation matrices...')
-    create_correlation_matrix(df, args.o)
-
     # ----------------
     # Create scatter plots and diff plots for manual vs semi-automatic (manual lesions)
     # ----------------
-    print('\nGenerating plots for Manual vs Semi-automatic (manual lesions)...')
-    create_scatterplot(df, args.o, 'GT')
-    # create_scatterplot_3D_length_width(df, args.o, 'GT')
-    create_diff_plot(df, args.o, 'GT')
+    print('\nGenerating plots for Manual vs Automatic...')
+    fname_combined_scatter = create_scatterplot(df, args.o)
+    fname_combined_diff = create_diff_plot(df, args.o)
 
-    # ----------------
-    # Create scatter plots and diff plots for manual vs semi-automatic (manual lesions + SCIsegV2 spinal cord)
-    # ----------------
-    print('\nGenerating plots for Manual vs Semi-automatic (manual lesions + SCIsegV2 spinal cord)...')
-    create_scatterplot(df, args.o, 'cord_SCIsegV2')
-    create_diff_plot(df, args.o, 'cord_SCIsegV2')
-
-    # ----------------
-    # Create scatter plots and diff plots for manual vs automatic (SCIsegV2)
-    # ----------------
-    print('\nGenerating plots for Manual vs Automatic (SCIsegV2)...')
-    create_scatterplot(df, args.o, 'SCIsegV2')
-    # create_scatterplot_3D_length_width(df, args.o, 'SCIsegV2')
-    create_diff_plot(df, args.o, 'SCIsegV2')
-
-    print(f'\nAll plots and correlation matrices saved to: {args.o}')
+    print(f"Combining scatter and diff plots into a single figure...")
+    fname_out = os.path.join(args.o, 'combined', f'combined_scatter_and_diff.png')
+    # 1 row, 3 columns:
+    cmd_combine = f"convert {fname_combined_scatter} {fname_combined_diff} -append {fname_out}"
+    subprocess.run(cmd_combine, shell=True)
+    print(f"Combined scatter and diff plots saved as {fname_out}")
 
 if __name__ == '__main__':
     main()
