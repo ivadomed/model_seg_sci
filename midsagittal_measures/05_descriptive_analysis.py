@@ -211,6 +211,31 @@ def create_descriptive_table(df, output_dir):
     return results_df
 
 
+def report_MagneticFieldStrength(df):
+    if 'MagneticFieldStrength' in df.columns:
+        mfs_data = df['MagneticFieldStrength'].dropna()
+
+        # Merge similar field strengths
+        def standardize_field_strength(field):
+            if pd.isna(field):
+                return 'Unknown'
+            elif 1.4 <= field <= 1.6:  # Merge 1.494T with 1.5T
+                return '1.5T'
+            elif 2.9 <= field <= 3.1:  # Handle 3T variations
+                return '3.0T'
+            elif 6.9 <= field <= 7.1:  # Handle 7T variations
+                return '7.0T'
+            else:
+                return f'{field:.1f}T'
+
+        standardized_mfs = mfs_data.apply(standardize_field_strength)
+        mfs_counts = standardized_mfs.value_counts().sort_index()
+        print("\nMagnetic Field Strength distribution:")
+        for field, count in mfs_counts.items():
+            pct = (count / len(standardized_mfs)) * 100
+            print(f"- {field}: {count} ({pct:.1f}%)")
+
+
 def create_comprehensive_figure(df, output_dir):
     """
     Create a comprehensive publication-ready figure with multiple subplots for descriptive analysis.
@@ -280,7 +305,7 @@ def create_comprehensive_figure(df, output_dir):
         sorted_decades = [decade for decade in decade_order if decade in age_counts.index]
         sorted_counts = [age_counts[decade] for decade in sorted_decades]
 
-        wedges, texts, autotexts = ax2.pie(sorted_counts, labels=sorted_decades, autopct='%1.1f%%',
+        wedges, texts, autotexts = ax2.pie(sorted_counts, labels=sorted_decades, autopct=_make_autopct(sorted_counts),
                                           colors=PIE_COLORS[:len(sorted_decades)], startangle=90,
                                           textprops={'fontsize': TICK_SIZE})
         ax2.set_title('Age', fontsize=TITLE_SIZE, fontweight='bold')
@@ -291,7 +316,7 @@ def create_comprehensive_figure(df, output_dir):
                 transform=ax2.transAxes)
 
     # Subplot 3: AIS grade distribution across time (stacked bar chart)
-    ax3 = plt.subplot(3, 4, 3)
+    ax3 = plt.subplot(2, 2, 3)
 
     # Define time points for AIS grades
     ais_time_points = ['bl', '1m', '3m', '6m', '12m']
@@ -627,15 +652,62 @@ def main():
         df['mri_time_since_injury'] = pd.to_numeric(df['mri_time_since_injury'])
         print(f'Number of subjects before filtering by MRI time since injury: {df.shape[0]}')
         # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months (133 days)
-        df = df[(df['mri_time_since_injury'] >= 12) & (df['mri_time_since_injury'] <= 133)]
+        df = df[(df['mri_time_since_injury'] >= 11) & (df['mri_time_since_injury'] <= 133)]
         print(f'Number of subjects after filtering by MRI time since injury: {df.shape[0]}')
 
-    # Drop rows with NaN values in key lesion metrics
-    lesion_metrics = ['midsagittal_length_sct', 'midsagittal_width_sct', 'total_tissue_bridge_sct']
-    available_metrics = [metric for metric in lesion_metrics if metric in df.columns]
-    if available_metrics:
-        df = df.dropna(subset=available_metrics)
-        print(f'Number of subjects after dropping NaN values in lesion metrics: {df.shape[0]}')
+    # Print participant_id for subjects with missing sex
+    if 'sex' in df.columns:
+        missing_sex_ids = df[df['sex'].isna()]['participant_id'].tolist()
+        if missing_sex_ids:
+            print(f'Participants with missing sex: {missing_sex_ids}')
+
+    # Print participant_id for subjects with missing sex
+    if 'age' in df.columns:
+        missing_sex_ids = df[df['age'].isna()]['participant_id'].tolist()
+        if missing_sex_ids:
+            print(f'Participants with missing age: {missing_sex_ids}')
+
+    # Print meadian and IQR for mri_time_since_injury
+    median_mri_time = df['mri_time_since_injury'].median()
+    q1_mri_time = df['mri_time_since_injury'].quantile(0.25)
+    q3_mri_time = df['mri_time_since_injury'].quantile(0.75)
+    print(f'MRI time since injury: median = {median_mri_time} days, IQR = [{q1_mri_time}, {q3_mri_time}] days')
+
+    report_MagneticFieldStrength(df)
+
+    # Print number of subjects cervical and thoracic injuries
+    if 'nli_bl' in df.columns:
+        col = df['nli_bl']
+        missing_like = (
+                col.isna()
+                | col.eq(None)
+                | col.astype(str).str.fullmatch(r'\s*', na=False)  # empty/whitespace
+                | col.astype(str).str.fullmatch(r'(?i)nan|none|nt', na=False)
+        )
+        # Clean column: convert all missing-like values to np.nan
+        nli_data = col.mask(missing_like, np.nan).astype('string')
+        # Injury level counts
+        cervical_mask = nli_data.str.startswith('C', na=False)
+        thoracic_mask = (
+                nli_data.str.startswith('T', na=False)
+                | nli_data.str.startswith('L', na=False)
+        )
+        cervical_count = cervical_mask.sum()
+        thoracic_count = thoracic_mask.sum()
+        print(f'\nNumber of subjects with cervical injuries: {cervical_count}')
+        print(f'Number of subjects with thoracic injuries: {thoracic_count}')
+        # List participants with missing nli_bl
+        missing_nli_ids = df.loc[missing_like, 'participant_id'].tolist()
+        if missing_nli_ids:
+            print(f'Participants with missing nli_bl after merge: {missing_nli_ids}')
+            print(f'Total missing nli_bl: {len(missing_nli_ids)}')
+
+    # # Drop rows with NaN values in key lesion metrics
+    # lesion_metrics = ['midsagittal_length_sct', 'midsagittal_width_sct', 'total_tissue_bridge_sct']
+    # available_metrics = [metric for metric in lesion_metrics if metric in df.columns]
+    # if available_metrics:
+    #     df = df.dropna(subset=available_metrics)
+    #     print(f'Number of subjects after dropping NaN values in lesion metrics: {df.shape[0]}')
 
     # Create descriptive statistics table
     print("\nCreating descriptive statistics table...")
@@ -649,7 +721,7 @@ def main():
     print(f"\nSummary:")
     print(f"- Total subjects analyzed: {len(df)}")
     print(f"- Descriptive table saved as CSV")
-    print(f"- Comprehensive figure with {12} subplots created")
+    print(f"- Comprehensive figure created")
     print(f"- All outputs saved to: {output_dir}")
 
     print("\nDescriptive analysis completed successfully!")
