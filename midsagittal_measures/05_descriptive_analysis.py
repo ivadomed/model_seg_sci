@@ -27,7 +27,7 @@ import argparse
 import warnings
 warnings.filterwarnings('ignore')
 
-from utils import read_file_sct, read_file_manual, read_participants_file, CLINICAL_SCORES_TO_AXES
+from utils import read_csv_file_with_lesion_metrics, read_participants_file, CLINICAL_SCORES_TO_AXES
 
 
 CLINICAL_SCORES_MAX = {
@@ -66,22 +66,22 @@ def get_parser():
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
-        '-file-sct',
+        '-i',
         required=True,
         type=str,
-        help='Absolute path to a CSV file with lesion metrics computed using sct_analyze_lesion.'
+        help='Absolute path to a CSV file with lesion metrics with _sct and _manual suffixes.'
     )
     parser.add_argument(
-        '-file-manual',
+        '-file-participants-zurich',
         required=True,
         type=str,
-        help='Absolute path to an XLSX file with manually measured lesion metrics and clinical scores.'
+        help='Absolute path to a TSV file with participant demographics for Zurich (participants.tsv).'
     )
     parser.add_argument(
-        '-file-participants',
+        '-file-participants-nisci',
         required=True,
         type=str,
-        help='Absolute path to a TSV file with participant demographics (participants.tsv).'
+        help='Absolute path to a TSV file with participant demographics for NISCI (participants.tsv).'
     )
     parser.add_argument(
         '-o',
@@ -591,15 +591,19 @@ def main():
 
     # Read the data files
     print("\nReading data files...")
-    df_sct = read_file_sct(args.file_sct)
-    df_manual = read_file_manual(args.file_manual)
-    df_participants = read_participants_file(args.file_participants)
+    df = read_csv_file_with_lesion_metrics(args.i)
+    df_participants_zurich = read_participants_file(args.file_participants_zurich)
+    df_participants_nisci = read_participants_file(args.file_participants_nisci)
+
+    # Combine participant demographics from both datasets (add rows to a single dataframe)
+    df_participants_zurich['source'] = 'sci-zurich'
+    df_participants_zurich['Site'] = 'Zurich'
+    df_participants_nisci['source'] = 'nisci'
+    df_participants_merged = pd.concat([df_participants_zurich, df_participants_nisci], ignore_index=True)
 
     # Merge the dataframes
     print("\nMerging dataframes...")
-    df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
-    df = pd.merge(df, df_participants, on='participant_id', how='left')
-    print(f"Merged dataframe contains {len(df)} subjects")
+    df = pd.merge(df, df_participants_merged, on='participant_id', how='left')
 
     # Apply any necessary filtering (following the trajectory script logic)
     print("\nApplying data filters...")
