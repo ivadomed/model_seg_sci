@@ -236,6 +236,17 @@ def report_MagneticFieldStrength(df):
             print(f"- {field}: {count} ({pct:.1f}%)")
 
 
+def _make_autopct(values: list[int]):
+    """Return a formatter for pie-chart labels with percent and counts."""
+
+    def autopct(pct: float):
+        total = sum(values)
+        count = int(round(pct * total / 100.0))
+        return f"{pct:.1f}%\n({count})"
+
+    return autopct
+
+
 def create_comprehensive_figure(df, output_dir):
     """
     Create a comprehensive publication-ready figure with multiple subplots for descriptive analysis.
@@ -249,10 +260,10 @@ def create_comprehensive_figure(df, output_dir):
     plt.rcParams['ytick.labelsize'] = TICK_SIZE
 
     # Create figure with larger size and tighter spacing
-    fig = plt.figure(figsize=(24, 20))
+    fig = plt.figure(figsize=(16, 12))
 
     # Subplot 1: Sex distribution (pie chart)
-    ax1 = plt.subplot(3, 4, 1)
+    ax1 = plt.subplot(2, 2, 1)
     if 'sex' in df.columns:
         sex_counts = df['sex'].value_counts()
         # Handle different sex encodings
@@ -261,13 +272,13 @@ def create_comprehensive_figure(df, output_dir):
         else:
             labels = ['Male' if 'male' in str(x).lower() else 'Female' for x in sex_counts.index]
 
-        wedges, texts, autotexts = ax1.pie(sex_counts.values, labels=labels, autopct='%1.1f%%',
+        wedges, texts, autotexts = ax1.pie(sex_counts.values, labels=labels, autopct=_make_autopct(sex_counts),
                                           colors=PIE_COLORS[:len(sex_counts)], startangle=90,
                                           textprops={'fontsize': TICK_SIZE})
         ax1.set_title('Sex', fontsize=TITLE_SIZE, fontweight='bold')
 
     # Subplot 2: Age distribution (pie chart by decades)
-    ax2 = plt.subplot(3, 4, 2)
+    ax2 = plt.subplot(2, 2, 2)
     if 'age' in df.columns:
         age_data = df['age'].dropna()
 
@@ -419,181 +430,132 @@ def create_comprehensive_figure(df, output_dir):
                                               textprops={'fontsize': TICK_SIZE})
             ax3.set_title('AIS Grade (Baseline Only)', fontsize=TITLE_SIZE, fontweight='bold')
 
-    # Subplot 4: Tetraplegia/Paraplegia distribution (pie chart)
-    ax4 = plt.subplot(3, 4, 4)
-    if 'tetrapara_bl' in df.columns:
-        tetra_counts = df['tetrapara_bl'].value_counts().sort_index()
-        labels = [TETRAPARA_LABELS.get(x, f'Level {x}') for x in tetra_counts.index]
-        wedges, texts, autotexts = ax4.pie(tetra_counts.values, labels=labels, autopct='%1.1f%%',
-                                          colors=PIE_COLORS[:len(tetra_counts)], startangle=90,
-                                          textprops={'fontsize': TICK_SIZE})
-        ax4.set_title('Injury Level', fontsize=TITLE_SIZE, fontweight='bold')
-
-    # Subplot 5: MagneticFieldStrength distribution (pie chart with merged values)
-    ax5 = plt.subplot(3, 4, 5)
-    if 'MagneticFieldStrength' in df.columns:
-        mfs_data = df['MagneticFieldStrength'].dropna()
-
-        # Merge similar field strengths
-        def standardize_field_strength(field):
-            if pd.isna(field):
-                return 'Unknown'
-            elif 1.4 <= field <= 1.6:  # Merge 1.494T with 1.5T
-                return '1.5T'
-            elif 2.9 <= field <= 3.1:  # Handle 3T variations
-                return '3.0T'
-            elif 6.9 <= field <= 7.1:  # Handle 7T variations
-                return '7.0T'
-            else:
-                return f'{field:.1f}T'
-
-        standardized_mfs = mfs_data.apply(standardize_field_strength)
-        mfs_counts = standardized_mfs.value_counts().sort_index()
-
-        # Create pie chart
-        labels = list(mfs_counts.index)
-        wedges, texts, autotexts = ax5.pie(mfs_counts.values, labels=labels, autopct='%1.1f%%',
-                                          colors=PIE_COLORS[:len(mfs_counts)], startangle=90,
-                                          textprops={'fontsize': TICK_SIZE})
-        ax5.set_title('MRI Field Strength', fontsize=TITLE_SIZE, fontweight='bold')
-
-    # Subplot 6: Time since injury histogram
-    ax6 = plt.subplot(3, 4, 6)
-    if 'mri_time_since_injury' in df.columns:
-        tsi_data = df['mri_time_since_injury'].dropna()
-        ax6.hist(tsi_data, bins=20, color=PIE_COLORS[0], alpha=0.8, edgecolor='white', linewidth=0.5)
-        # ax6.axvline(tsi_data.median(), color='#D62728', linestyle='--', linewidth=3,
-        #            label=f'Median: {tsi_data.median():.1f} (IQR: {tsi_data.quantile(0.25):.1f}-{tsi_data.quantile(0.75):.1f})')
-        ax6.set_xlabel('Days', fontsize=LABEL_SIZE)
-        ax6.set_ylabel('Frequency', fontsize=LABEL_SIZE)
-        ax6.set_title('Time from injury to MRI', fontsize=TITLE_SIZE, fontweight='bold')
-
-        # Add min and max age text annotations
-        ax6.text(0.95, 0.95,
-                 f'Min: {tsi_data.min():.1f} days\nMax: {tsi_data.max():.1f} days\n'
-                 f'Mean: {tsi_data.mean():.1f} days\nSD: {tsi_data.std():.1f} days',
-                ha='right', va='top', fontsize=TICK_SIZE, transform=ax6.transAxes,
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='gray'))
-
-        # ax6.legend(fontsize=TICK_SIZE)
-        ax6.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
-        # Remove right and top spines
-        ax6.spines['right'].set_visible(False)
-        ax6.spines['top'].set_visible(False)
-
-    # Subplot 7: Neurological level of injury
-    ax7 = plt.subplot(3, 4, 7)
+    # Subplot 4: Neurological level of injury
+    ax4 = plt.subplot(2, 2, 4)
     if 'nli_bl' in df.columns:
-        # Replace 'NT' with 'Unknown' in the data
-        nli_data = df['nli_bl'].replace('NT', 'Unknown')
+        col = df['nli_bl']
+
+        # Missing-like values
+        missing_like = (
+                col.isna()
+                | col.eq(None)
+                | col.astype(str).str.fullmatch(r'\s*', na=False)
+                | col.astype(str).str.fullmatch(r'(?i)nan|none|nt', na=False)
+        )
+        # Convert missing-like values to the label "Unknown"
+        nli_data = col.astype('string').mask(missing_like, 'Unknown')
+        # Count values
         nli_counts = nli_data.value_counts()
 
-        # Custom sorting function for anatomical order
-        def sort_nli(level):
-            """Sort neurological levels anatomically: C1-C8, T1-T12, L1-L5, S1-S5, Unknown"""
+        def sort_nli(level: str) -> tuple[int, int]:
+            """Sort neurological levels anatomically: C1-C8, T1-T12, L1-L5, S1-S5, Unknown.
+            Args:
+                level: NLI string like 'C5'.
+            Returns:
+                A tuple for anatomical sorting.
+            """
             if level == 'Unknown':
-                return (999, 0)  # Put Unknown at the end
-
-            # Extract letter and number
-            if len(level) >= 2 and level[0].isalpha():
+                return (999, 999)
+            if len(level) >= 2 and level[0].isalpha() and level[1:].isdigit():
                 letter = level[0].upper()
-                try:
-                    number = int(level[1:])
-                except (ValueError, IndexError):
-                    return (999, 0)  # Invalid format goes to end
-
-                # Assign order: C=1, T=2, L=3, S=4
+                number = int(level[1:])
                 letter_order = {'C': 1, 'T': 2, 'L': 3, 'S': 4}
-                return (letter_order.get(letter, 999), number)
-            else:
-                return (999, 0)  # Invalid format goes to end
+                return (letter_order.get(letter, 998), number)
+            return (999, 999)
 
-        # Sort the counts anatomically
         sorted_levels = sorted(nli_counts.index, key=sort_nli)
         sorted_counts = [nli_counts[level] for level in sorted_levels]
 
-        # Create the bar plot
-        bars = ax7.bar(range(len(sorted_levels)), sorted_counts, color=PIE_COLORS[1], alpha=0.8,
-                      edgecolor='white', linewidth=0.5)
-        ax7.set_xticks(range(len(sorted_levels)))
-        ax7.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
-        ax7.set_xlabel('Neurological Level', fontsize=LABEL_SIZE)
-        ax7.set_ylabel('Frequency', fontsize=LABEL_SIZE)
-        ax7.set_title('Injury Neurological Level', fontsize=TITLE_SIZE, fontweight='bold')
-        ax7.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
-        # Remove right and top spines
-        ax7.spines['right'].set_visible(False)
-        ax7.spines['top'].set_visible(False)
+        bars = ax4.bar(
+            range(len(sorted_levels)),
+            sorted_counts,
+            color=PIE_COLORS[1],
+            alpha=0.8,
+            edgecolor='white',
+            linewidth=0.5,
+        )
+        ax4.set_xticks(range(len(sorted_levels)))
+        ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
+        ax4.set_xlabel('Neurological Level', fontsize=LABEL_SIZE)
+        ax4.set_ylabel('Frequency', fontsize=LABEL_SIZE)
+        ax4.set_title('Neurological Level of Injury at BL', fontsize=TITLE_SIZE, fontweight='bold')
+        ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+        ax4.spines['right'].set_visible(False)
+        ax4.spines['top'].set_visible(False)
 
-        # Add value labels on bars (only if not too many bars to avoid clutter)
         if len(sorted_levels) <= 20:
             for bar, value in zip(bars, sorted_counts):
-                ax7.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                        str(value), ha='center', va='bottom', fontsize=TICK_SIZE)
+                ax4.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.1,
+                    str(value),
+                    ha='center',
+                    va='bottom',
+                    fontsize=TICK_SIZE,
+                )
 
-        # Adjust layout for better visibility of labels
-        plt.setp(ax7.get_xticklabels(), rotation=45, ha='right')
+        plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
 
-    # Subplots 8-12: Clinical scores baseline vs follow-up (trajectory plots)
-    clinical_scores = ['ms', 'uems', 'lems', 'pp', 'lt']
-    time_points = ['bl', '1m', '3m', '6m', '12m']
-
-    for i, score in enumerate(clinical_scores):
-        ax = plt.subplot(3, 4, 8 + i)
-
-        # Filter for appropriate subjects (tetraplegic only for UEMS)
-        if score == 'uems':
-            df_plot = df[df['tetrapara_bl'] == 0] if 'tetrapara_bl' in df.columns else df
-        else:
-            df_plot = df
-
-        # Collect mean and std for each time point
-        means = []
-        stds = []
-        ns = []
-        valid_timepoints = []
-
-        for tp in time_points:
-            col_name = f'{score}_{tp}'
-            if col_name in df_plot.columns:
-                data = df_plot[col_name].dropna()
-                if len(data) > 0:
-                    means.append(data.mean())
-                    stds.append(data.std())
-                    ns.append(len(data))
-                    valid_timepoints.append(tp)
-
-        if means:
-            # Convert timepoint labels
-            tp_labels = [tp.upper() if tp != 'bl' else 'BL' for tp in valid_timepoints]
-
-            # Create trajectory plot with error bars
-            x_pos = range(len(valid_timepoints))
-            ax.errorbar(x_pos, means, yerr=stds, marker='o', linewidth=3, markersize=8,
-                       color=TRAJECTORY_COLORS[i], capsize=5, capthick=2,
-                       markerfacecolor='white', markeredgewidth=2, markeredgecolor=TRAJECTORY_COLORS[i])
-
-            # Add sample size annotations
-            for j, (x, n) in enumerate(zip(x_pos, ns)):
-                ax.text(x, means[j] + stds[j] + (max(means) * 0.05), f'n={n}',
-                       ha='center', va='bottom', fontsize=TICK_SIZE, alpha=0.8)
-
-            ax.set_xticks(x_pos)
-            ax.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
-            ax.set_ylabel(CLINICAL_SCORES_TO_AXES[score], fontsize=LABEL_SIZE)
-            ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=TITLE_SIZE, fontweight='bold')
-            ax.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
-            # Remove right and top spines
-            ax.spines['right'].set_visible(False)
-            ax.spines['top'].set_visible(False)
-
-            # Add horizontal line at maximum score
-            max_score = CLINICAL_SCORES_MAX[score]
-            ax.axhline(y=max_score, color='#D62728', linestyle=':', alpha=0.6, linewidth=2)
-
-            # Set y-axis limits
-            y_max = max(max_score, max([m + s for m, s in zip(means, stds)]) * 1.1)
-            ax.set_ylim(0, y_max)
+    # # Subplots 8-12: Clinical scores baseline vs follow-up (trajectory plots)
+    # clinical_scores = ['ms', 'uems', 'lems', 'pp', 'lt']
+    # time_points = ['bl', '1m', '3m', '6m', '12m']
+    #
+    # for i, score in enumerate(clinical_scores):
+    #     ax = plt.subplot(3, 4, 8 + i)
+    #
+    #     # Filter for appropriate subjects (tetraplegic only for UEMS)
+    #     if score == 'uems':
+    #         df_plot = df[df['tetrapara_bl'] == 0] if 'tetrapara_bl' in df.columns else df
+    #     else:
+    #         df_plot = df
+    #
+    #     # Collect mean and std for each time point
+    #     means = []
+    #     stds = []
+    #     ns = []
+    #     valid_timepoints = []
+    #
+    #     for tp in time_points:
+    #         col_name = f'{score}_{tp}'
+    #         if col_name in df_plot.columns:
+    #             data = df_plot[col_name].dropna()
+    #             if len(data) > 0:
+    #                 means.append(data.mean())
+    #                 stds.append(data.std())
+    #                 ns.append(len(data))
+    #                 valid_timepoints.append(tp)
+    #
+    #     if means:
+    #         # Convert timepoint labels
+    #         tp_labels = [tp.upper() if tp != 'bl' else 'BL' for tp in valid_timepoints]
+    #
+    #         # Create trajectory plot with error bars
+    #         x_pos = range(len(valid_timepoints))
+    #         ax.errorbar(x_pos, means, yerr=stds, marker='o', linewidth=3, markersize=8,
+    #                    color=TRAJECTORY_COLORS[i], capsize=5, capthick=2,
+    #                    markerfacecolor='white', markeredgewidth=2, markeredgecolor=TRAJECTORY_COLORS[i])
+    #
+    #         # Add sample size annotations
+    #         for j, (x, n) in enumerate(zip(x_pos, ns)):
+    #             ax.text(x, means[j] + stds[j] + (max(means) * 0.05), f'n={n}',
+    #                    ha='center', va='bottom', fontsize=TICK_SIZE, alpha=0.8)
+    #
+    #         ax.set_xticks(x_pos)
+    #         ax.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
+    #         ax.set_ylabel(CLINICAL_SCORES_TO_AXES[score], fontsize=LABEL_SIZE)
+    #         ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=TITLE_SIZE, fontweight='bold')
+    #         ax.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+    #         # Remove right and top spines
+    #         ax.spines['right'].set_visible(False)
+    #         ax.spines['top'].set_visible(False)
+    #
+    #         # Add horizontal line at maximum score
+    #         max_score = CLINICAL_SCORES_MAX[score]
+    #         ax.axhline(y=max_score, color='#D62728', linestyle=':', alpha=0.6, linewidth=2)
+    #
+    #         # Set y-axis limits
+    #         y_max = max(max_score, max([m + s for m, s in zip(means, stds)]) * 1.1)
+    #         ax.set_ylim(0, y_max)
 
     # Use tighter layout with minimal padding
     plt.tight_layout(pad=1.5, h_pad=1.0, w_pad=1.0)
