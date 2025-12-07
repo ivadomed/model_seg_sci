@@ -84,6 +84,12 @@ def get_parser():
         help='Absolute path to a TSV file with participant demographics for NISCI (participants.tsv).'
     )
     parser.add_argument(
+        '-file-clinical-nisci',
+        required=True,
+        type=str,
+        help='Absolute path to a XLSX file with participant clinical data for NISCI (clinical_scores.xlsx).'
+    )
+    parser.add_argument(
         '-o',
         required=True,
         type=str,
@@ -595,6 +601,9 @@ def main():
     df_participants_zurich = read_participants_file(args.file_participants_zurich)
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
 
+    df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl', usecols=['Patient', 'NLI_01'])
+    df_clinical_nisci = df_clinical_nisci.rename(columns={'Patient': 'participant_id', 'NLI_01': 'nli_bl'})
+
     # Combine participant demographics from both datasets (add rows to a single dataframe)
     df_participants_zurich['source'] = 'sci-zurich'
     df_participants_zurich['Site'] = 'Zurich'
@@ -604,6 +613,11 @@ def main():
     # Merge the dataframes
     print("\nMerging dataframes...")
     df = pd.merge(df, df_participants_merged, on='participant_id', how='left')
+    # Merge nli_bl, note that this column already exists in df from sci-zurich, so we only add missing values from nisci
+    df = pd.merge(df, df_clinical_nisci, on='participant_id', how='left', suffixes=('', '_nisci'))
+    # Fill missing nli_bl values from nisci
+    df['nli_bl'] = df['nli_bl'].combine_first(df['nli_bl_nisci'])
+    df = df.drop(columns=['nli_bl_nisci'])
 
     # Apply any necessary filtering (following the trajectory script logic)
     print("\nApplying data filters...")
