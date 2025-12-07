@@ -29,6 +29,7 @@ from scipy import stats
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 
+from utils import read_csv_file_with_lesion_metrics
 
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
@@ -75,22 +76,6 @@ def get_parser():
     )
 
     return parser
-
-
-def read_file(file_sct):
-    """
-    Read CSV file with lesion metrics with _sct and _manual suffixes.
-    :param file_sct: str: path to the CSV file
-    :return df_sct: pandas DataFrame: dataframe with lesion metrics
-    """
-    df = pd.read_csv(file_sct)
-
-    # Remove any strings from the 'mri_time_since_injury' column
-    if 'mri_time_since_injury' in df.columns:
-        df['mri_time_since_injury'] = df['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
-
-    print(f'Read {len(df)} rows from the metrics file: {file_sct}')
-    return df
 
 
 def compute_regression(x, y):
@@ -352,9 +337,7 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    print('Reading data file...')
-    df = read_file(args.i)
-    print(f'Total number of subjects after merging: {len(df)}')
+    df = read_csv_file_with_lesion_metrics(args.i)
 
     # # Drop subjects with NaN values in any of the lesion metrics
     # df = df.dropna()

@@ -152,6 +152,24 @@ def read_file_sct(file_sct):
     return df_sct
 
 
+def read_csv_file_with_lesion_metrics(file_sct):
+    """
+    Read CSV file with lesion metrics with _sct and _manual suffixes.
+    :param file_sct: str: path to the CSV file
+    :return df_sct: pandas DataFrame: dataframe with lesion metrics
+    """
+    print('Reading data file...')
+
+    df = pd.read_csv(file_sct)
+
+    # Remove any strings from the 'mri_time_since_injury' column
+    if 'mri_time_since_injury' in df.columns:
+        df['mri_time_since_injury'] = df['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(int)
+
+    print(f'Read {len(df)} rows from the metrics file: {file_sct}')
+    return df
+
+
 def read_participants_file(file):
     """
     Read the participants.tsv file with demographic information.
