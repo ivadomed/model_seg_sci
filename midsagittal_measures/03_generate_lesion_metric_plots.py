@@ -195,10 +195,11 @@ def create_scatterplot(df, output_dir):
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
-        # Compute paired test
-        stat, p_paired = stats.ttest_rel(x, y)
+        # # Compute paired test
+        # stat, p_paired = stats.ttest_rel(x, y)
         ax.text(0.05, 0.95,
-                f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}\nPaired test\n{format_pvalue(p_paired)}',
+                # f'Spearman\nρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}\nPaired test\n{format_pvalue(p_paired)}',
+                f'ρ = {spearman_corr:.3f}\n{format_pvalue(p_value)}',
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
