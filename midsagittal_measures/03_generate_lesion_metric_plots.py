@@ -242,6 +242,12 @@ def create_scatterplot(df, output_dir):
             # Tweak axes ticks
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
+        elif metric == 'midsagittal_width':
+            ax.set_xticks([0, 2, 4, 6, 8, 10])
+            ax.set_yticks([0, 2, 4, 6, 8, 10])
+        elif metric == 'total_tissue_bridge':
+            ax.set_xticks([0, 2, 4, 6, 8])
+            ax.set_yticks([0, 2, 4, 6, 8])
         ax.tick_params(axis='both', which='major', labelsize=FONT_SIZE)
 
         # Remove the top and right spines
