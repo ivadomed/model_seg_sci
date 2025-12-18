@@ -323,7 +323,7 @@ def create_diff_plot(df, output_dir):
         ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
         # ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs Automatic',
         #               fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Difference Manual vs Automatic',
+        ax.set_ylabel(f'Difference Manual − Automatic',
                       fontsize=FONT_SIZE)
 
         # Get the limits and means for custom styling
