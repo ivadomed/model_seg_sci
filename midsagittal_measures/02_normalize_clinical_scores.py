@@ -97,6 +97,12 @@ def main():
 
     if 'nisci' in file_manual.lower():
         time_points = ['01', '02', '03', '04', '05', '06']
+        # '01' -- Day 0 (Screening)
+        # '02' -- Day 1 (Baseline)
+        # '03' -- 2 Weeks (14 days)
+        # '04' -- 1 month (30 days)
+        # '05' -- 3 months (84 days)
+        # '06' -- 6 months (168 days)
     elif 'sci-zurich' in file_manual.lower():
         time_points = ['bl', '1m', '3m', '6m', '12m']
 
