@@ -154,13 +154,14 @@ def format_pvalue(p_value, alpha=0.05):
         return f'p = {p_value:.3f}'
 
 
-def combine_plot(figure_type, figure_fname_list, output_dir):
+def combine_plot(figure_type, figure_fname_list, output_dir, panel_label=None):
     """
     Combine all the plots into a single figure using bash convert command
     This requires ImageMagick to be installed
     :param figure_type: str: type of the figure to combine (e.g., 'scatterplot', or 'diffplot')
     :param figure_fname_list
     :param output_dir: str: output directory where the combined figure will be saved
+    :param panel_label: str: optional panel label (e.g., "A)", "B)") to add to the combined figure
     """
 
     # Create 'combined' directory if it does not exist
@@ -170,8 +171,15 @@ def combine_plot(figure_type, figure_fname_list, output_dir):
 
     print(f"Combining {figure_type}s into a single figure...")
     fname_out = os.path.join(combined_dir, f'combined_{figure_type}_subjects.png')
+
     # 1 row, 3 columns:
-    cmd_combine = f"convert {figure_fname_list[0]} {figure_fname_list[1]} {figure_fname_list[2]} +append {fname_out}"
+    cmd_combine = f"convert {figure_fname_list[0]} {figure_fname_list[1]} {figure_fname_list[2]} +append"
+
+    # Add panel label if provided
+    if panel_label:
+        cmd_combine += f" -pointsize 80 -fill black -gravity NorthWest -annotate +20+20 '{panel_label}'"
+
+    cmd_combine += f" {fname_out}"
     subprocess.run(cmd_combine, shell=True)
     print(f"Combined {figure_type} saved as {fname_out}")
 
@@ -249,7 +257,7 @@ def create_scatterplot(df, output_dir):
         print(f'Scatter for {metric} saved as {figure_fname}')
         plt.close()
 
-    fname_out = combine_plot('scatterplot', figure_fname_list, output_dir)
+    fname_out = combine_plot('scatterplot', figure_fname_list, output_dir, panel_label="A)")
     return fname_out
 
 
@@ -354,7 +362,7 @@ def create_diff_plot(df, output_dir):
         print(f'Diffplot for {metric} saved as {figure_fname}')
         plt.close()
 
-    fname_out = combine_plot(f'diffplot', figure_fname_list, output_dir)
+    fname_out = combine_plot(f'diffplot', figure_fname_list, output_dir, panel_label="B)")
     return fname_out
 
 def main():
