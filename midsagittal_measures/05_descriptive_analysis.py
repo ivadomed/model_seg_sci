@@ -477,7 +477,7 @@ def create_comprehensive_figure(df, output_dir):
         ax4.set_xticks(range(len(sorted_levels)))
         ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
         ax4.set_xlabel('Neurological Level', fontsize=LABEL_SIZE)
-        ax4.set_ylabel('Frequency', fontsize=LABEL_SIZE)
+        ax4.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
         ax4.set_title('Neurological Level of Injury at BL', fontsize=TITLE_SIZE, fontweight='bold')
         ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
         ax4.spines['right'].set_visible(False)
