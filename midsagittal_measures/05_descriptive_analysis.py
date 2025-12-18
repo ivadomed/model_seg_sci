@@ -330,7 +330,7 @@ def create_comprehensive_figure(df, output_dir):
     ax3 = plt.subplot(2, 2, 3)
 
     # Define time points for AIS grades
-    ais_time_points = ['bl', '1m', '3m', '6m', '12m']
+    ais_time_points = ['bl', '1m', '3m', '6m']#, '12m']
 
     # Check which AIS time points have data
     available_ais_timepoints = []
