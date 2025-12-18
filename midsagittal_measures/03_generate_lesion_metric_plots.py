@@ -34,13 +34,13 @@ from utils import read_csv_file_with_lesion_metrics
 METRICS_AXIS_LIM_SCATTER = {
     'midsagittal_length': (-5, 200),
     'midsagittal_width': (-0.5, 11),
-    'total_tissue_bridge': (-0.5, 11)
+    'total_tissue_bridge': (-0.5, 8)
 }
 
 METRICS_AXIS_XLIM_DIFF = {
     'midsagittal_length': (-3, 100),
     'midsagittal_width': (-0.5, 11),
-    'total_tissue_bridge': (-0.5, 11)
+    'total_tissue_bridge': (-0.5, 8)
 }
 
 METRICS_AXIS_YLIM_DIFF = {
