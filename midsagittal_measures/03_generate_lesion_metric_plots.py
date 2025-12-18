@@ -217,7 +217,7 @@ def create_scatterplot(df, output_dir):
 
         # Add regression line
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
-        ax.plot(x_vals, y_vals, '-', color='black', linewidth=2)
+        ax.plot(x_vals, y_vals, '-', color='black', linewidth=3)
 
         # Compute Spearman correlation
         spearman_corr, p_value = stats.spearmanr(x, y, nan_policy='omit')
@@ -307,13 +307,13 @@ def create_diff_plot(df, output_dir):
                 'color': 'black',
                 'linestyle': '-',
                 'alpha': 0.5,
-                'linewidth': 2
+                'linewidth': 3
             },
             limit_lines_kwds={
                 'color': 'black',
                 'linestyle': '--',
                 'alpha': 0.5,
-                'linewidth': 2
+                'linewidth': 3
             }
         )
 
