@@ -329,6 +329,12 @@ def create_diff_plot(df, output_dir):
         # Get the limits and means for custom styling
         diff = x - y            # Difference between x and y
         sd = np.std(diff)       # Standard deviation of the difference
+        mean_diff = np.mean(diff)
+
+        # Calculate the actual limit values
+        upper_limit = mean_diff + 1.96 * sd
+        lower_limit = mean_diff - 1.96 * sd
+
         # Adjust y-lim
         # ax.set_ylim(-1.96 * sd * 1.5, 1.96 * sd * 1.5)
         ax.set_ylim(METRICS_AXIS_YLIM_DIFF[metric][0], METRICS_AXIS_YLIM_DIFF[metric][1])
@@ -338,7 +344,26 @@ def create_diff_plot(df, output_dir):
 
         # Remove the default text labels that overlap with lines
         for t in ax.texts:
-            t.set_fontsize(FONT_SIZE)
+            t.remove()
+
+        # Add custom positioned labels
+        x_pos_right = ax.get_xlim()[1] * 0.95  # Position labels at 95% of x-axis
+
+        # Add custom labels positioned away from the lines
+        ax.text(x_pos_right, upper_limit + (ax.get_ylim()[1] - ax.get_ylim()[0]) * 0.03,
+                f'+1.96 SD: {upper_limit:.1f}',
+                horizontalalignment='right', verticalalignment='bottom',
+                fontsize=FONT_SIZE, color='black')
+
+        ax.text(x_pos_right, mean_diff + (ax.get_ylim()[1] - ax.get_ylim()[0]) * 0.03,
+                f'mean diff: {mean_diff:.2f}',
+                horizontalalignment='right', verticalalignment='bottom',
+                fontsize=FONT_SIZE, color='black')
+
+        ax.text(x_pos_right, lower_limit - (ax.get_ylim()[1] - ax.get_ylim()[0]) * 0.03,
+                f'-1.96 SD: {lower_limit:.1f}',
+                horizontalalignment='right', verticalalignment='top',
+                fontsize=FONT_SIZE, color='black')
 
         # Optional: legend font size if present
         leg = ax.get_legend()
