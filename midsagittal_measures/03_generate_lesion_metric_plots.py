@@ -31,6 +31,24 @@ import statsmodels.api as sm
 
 from utils import read_csv_file_with_lesion_metrics
 
+METRICS_AXIS_LIM_SCATTER = {
+    'midsagittal_length': (-5, 200),
+    'midsagittal_width': (-0.5, 11),
+    'total_tissue_bridge': (-0.5, 11)
+}
+
+METRICS_AXIS_XLIM_DIFF = {
+    'midsagittal_length': (-3, 100),
+    'midsagittal_width': (-0.5, 11),
+    'total_tissue_bridge': (-0.5, 11)
+}
+
+METRICS_AXIS_YLIM_DIFF = {
+    'midsagittal_length': (-45, 45),
+    'midsagittal_width': (-4.5, 4.5),
+    'total_tissue_bridge': (-4.5, 4.5)
+}
+
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
@@ -186,8 +204,8 @@ def create_scatterplot(df, output_dir):
         y = df_plot[f'{metric}_sct']
 
         ax.scatter(x, y, s=40, alpha=0.7, color='black', edgecolor='black')
-        ax.set_xlim(-0.1 * max_val, 1.1 * max_val)
-        ax.set_ylim(-0.1 * max_val, 1.1 * max_val)
+        ax.set_xlim(METRICS_AXIS_LIM_SCATTER[metric][0], METRICS_AXIS_LIM_SCATTER[metric][1])
+        ax.set_ylim(METRICS_AXIS_LIM_SCATTER[metric][0], METRICS_AXIS_LIM_SCATTER[metric][1])
 
         # Add regression line
         intercept, slope, _, r2_sc, x_vals, y_vals = compute_regression(x, y)
@@ -203,7 +221,9 @@ def create_scatterplot(df, output_dir):
                 transform=ax.transAxes, verticalalignment='top', fontsize=FONT_SIZE, color='black')
 
         # Add diagonal line
-        ax.plot([min_val, max_val], [min_val, max_val], ls='--', c='gray', linewidth=2, alpha=0.7)
+        ax.plot([METRICS_AXIS_LIM_SCATTER[metric][0], METRICS_AXIS_LIM_SCATTER[metric][1]],
+                [METRICS_AXIS_LIM_SCATTER[metric][0], METRICS_AXIS_LIM_SCATTER[metric][1]],
+                ls='--', c='gray', linewidth=2, alpha=0.7)
 
         # Change axes labels
         ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
@@ -302,9 +322,13 @@ def create_diff_plot(df, output_dir):
         diff = x - y            # Difference between x and y
         sd = np.std(diff)       # Standard deviation of the difference
         # Adjust y-lim
-        ax.set_ylim(-1.96 * sd * 1.5, 1.96 * sd * 1.5)
+        # ax.set_ylim(-1.96 * sd * 1.5, 1.96 * sd * 1.5)
+        ax.set_ylim(METRICS_AXIS_YLIM_DIFF[metric][0], METRICS_AXIS_YLIM_DIFF[metric][1])
 
-        # If any text was added by the function, resize it
+        # Adjust x-lim
+        ax.set_xlim(METRICS_AXIS_XLIM_DIFF[metric][0], METRICS_AXIS_XLIM_DIFF[metric][1])
+
+        # Remove the default text labels that overlap with lines
         for t in ax.texts:
             t.set_fontsize(FONT_SIZE)
 
