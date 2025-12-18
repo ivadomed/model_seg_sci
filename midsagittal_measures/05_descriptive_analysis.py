@@ -588,8 +588,20 @@ def main():
     df_participants_zurich = read_participants_file(args.file_participants_zurich)
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
 
-    df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl', usecols=['Patient', 'NLI_01'])
-    df_clinical_nisci = df_clinical_nisci.rename(columns={'Patient': 'participant_id', 'NLI_01': 'nli_bl'})
+    df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl',
+                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_04', 'AIS_05', 'AIS_06',])
+    # '01' -- Day 0 (Screening)
+    # '02' -- Day 1 (Baseline)
+    # '03' -- 2 Weeks (14 days)
+    # '04' -- 1 month (30 days)
+    # '05' -- 3 months (84 days)
+    # '06' -- 6 months (168 days)
+    df_clinical_nisci = df_clinical_nisci.rename(columns={'Patient': 'participant_id',
+                                                          'NLI_01': 'nli_bl',
+                                                          'AIS_01': 'ais_bl',
+                                                          'AIS_04': 'ais_1m',
+                                                          'AIS_05': 'ais_3m',
+                                                          'AIS_06': 'ais_6m'})
 
     # Combine participant demographics from both datasets (add rows to a single dataframe)
     df_participants_zurich['source'] = 'sci-zurich'
@@ -600,11 +612,17 @@ def main():
     # Merge the dataframes
     print("\nMerging dataframes...")
     df = pd.merge(df, df_participants_merged, on='participant_id', how='left')
-    # Merge nli_bl, note that this column already exists in df from sci-zurich, so we only add missing values from nisci
+    # Merge nli_bl and ais columns
+    # NOTE: these columns already exist in df from sci-zurich, so we only add missing values from nisci
     df = pd.merge(df, df_clinical_nisci, on='participant_id', how='left', suffixes=('', '_nisci'))
     # Fill missing nli_bl values from nisci
     df['nli_bl'] = df['nli_bl'].combine_first(df['nli_bl_nisci'])
-    df = df.drop(columns=['nli_bl_nisci'])
+    df['ais_bl'] = df['ais_bl'].combine_first(df['ais_bl_nisci'])
+    df['ais_1m'] = df['ais_1m'].combine_first(df['ais_1m_nisci'])
+    df['ais_3m'] = df['ais_3m'].combine_first(df['ais_3m_nisci'])
+    df['ais_6m'] = df['ais_6m'].combine_first(df['ais_6m_nisci'])
+    # Drop the extra columns
+    df = df.drop(columns=['nli_bl_nisci', 'ais_bl_nisci', 'ais_1m_nisci', 'ais_3m_nisci', 'ais_6m_nisci'])
 
     # Apply any necessary filtering (following the trajectory script logic)
     print("\nApplying data filters...")
