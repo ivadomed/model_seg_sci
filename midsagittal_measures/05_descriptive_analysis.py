@@ -598,7 +598,7 @@ def main():
     # '06' -- 6 months (168 days)
     df_clinical_nisci = df_clinical_nisci.rename(columns={'Patient': 'participant_id',
                                                           'NLI_01': 'nli_bl',
-                                                          'AIS_01': 'ais_bl',
+                                                          'AIS_01': 'ais_bl',       # using '01' as baseline as there's some missing data in '02'
                                                           'AIS_04': 'ais_1m',
                                                           'AIS_05': 'ais_3m',
                                                           'AIS_06': 'ais_6m'})
