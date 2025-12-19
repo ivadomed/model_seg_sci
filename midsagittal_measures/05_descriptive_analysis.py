@@ -589,7 +589,7 @@ def main():
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
 
     df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl',
-                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_04', 'AIS_05', 'AIS_06',])
+                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05', 'AIS_06',])
     # '01' -- Day 0 (Screening)
     # '02' -- Day 1 (Baseline)
     # '03' -- 2 Weeks (14 days)
@@ -599,7 +599,7 @@ def main():
     df_clinical_nisci = df_clinical_nisci.rename(columns={'Patient': 'participant_id',
                                                           'NLI_01': 'nli_bl',
                                                           'AIS_01': 'ais_bl',       # using '01' as baseline as there's some missing data in '02'
-                                                          'AIS_04': 'ais_1m',
+                                                          'AIS_03': 'ais_1m',       # for details see nisci-trial/README.md
                                                           'AIS_05': 'ais_3m',
                                                           'AIS_06': 'ais_6m'})
 
