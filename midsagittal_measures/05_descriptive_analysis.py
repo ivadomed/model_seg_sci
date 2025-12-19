@@ -148,25 +148,35 @@ def create_descriptive_table(df, output_dir):
             ais_descriptions.append(f"{grade} ({grade_label}): {count} ({pct:.1f}%)")
         results['AIS Grade at BL'] = "; ".join(ais_descriptions)
 
-    # Tetraplegia/Paraplegia distribution
-    if 'tetrapara_bl' in df.columns:
-        tetra_counts = df['tetrapara_bl'].value_counts()
-        tetra_n = tetra_counts.get(0, 0)  # 0: tetraplegic
-        para_n = tetra_counts.get(1, 0)   # 1: paraplegic
-        tetra_pct = (tetra_n / n_total) * 100
-        para_pct = (para_n / n_total) * 100
-        results['Injury level'] = f"Tetraplegia: {tetra_n} ({tetra_pct:.1f}%); Paraplegia: {para_n} ({para_pct:.1f}%)"
+    # Cervical/ThoracoLumbar distribution
+    if 'nli_bl' in df.columns:
+        nli_counts = df['nli_bl'].value_counts()
+        cervical_n = sum(nli_counts.get(level, 0) for level in ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8'])
+        thoracolumbar_n = sum(nli_counts.get(level, 0) for level in ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12', 'L1', 'L2', 'L3', 'L4', 'L5'])
+        cervical_pct = (cervical_n / n_total) * 100
+        thoracolumbar_pct = (thoracolumbar_n / n_total) * 100
+        results['Injury region'] = (f"Cervical: {cervical_n} ({cervical_pct:.1f}%); "
+                                    f"Thoracolumbar: {thoracolumbar_n} ({thoracolumbar_pct:.1f}%)")
 
-    # Neurological level of injury
-    if 'nli' in df.columns:
-        nli_counts = df['nli'].value_counts().sort_index()
-        # Show most common levels
-        top_nli = nli_counts.head(5)
-        nli_descriptions = []
-        for level, count in top_nli.items():
-            pct = (count / n_total) * 100
-            nli_descriptions.append(f"{level}: {count} ({pct:.1f}%)")
-        results['Neurological level (top 5)'] = "; ".join(nli_descriptions)
+    # # Tetraplegia/Paraplegia distribution
+    # if 'tetrapara_bl' in df.columns:
+    #     tetra_counts = df['tetrapara_bl'].value_counts()
+    #     tetra_n = tetra_counts.get(0, 0)  # 0: tetraplegic
+    #     para_n = tetra_counts.get(1, 0)   # 1: paraplegic
+    #     tetra_pct = (tetra_n / n_total) * 100
+    #     para_pct = (para_n / n_total) * 100
+    #     results['Injury level'] = f"Tetraplegia: {tetra_n} ({tetra_pct:.1f}%); Paraplegia: {para_n} ({para_pct:.1f}%)"
+    #
+    # # Neurological level of injury
+    # if 'nli' in df.columns:
+    #     nli_counts = df['nli'].value_counts().sort_index()
+    #     # Show most common levels
+    #     top_nli = nli_counts.head(5)
+    #     nli_descriptions = []
+    #     for level, count in top_nli.items():
+    #         pct = (count / n_total) * 100
+    #         nli_descriptions.append(f"{level}: {count} ({pct:.1f}%)")
+    #     results['Neurological level (top 5)'] = "; ".join(nli_descriptions)
 
     # Clinical scores at baseline
     for score_key, score_name in CLINICAL_SCORES_TO_AXES.items():
