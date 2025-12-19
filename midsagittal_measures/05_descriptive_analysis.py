@@ -146,7 +146,7 @@ def create_descriptive_table(df, output_dir):
             pct = (count / n_total) * 100
             grade_label = AIS_LABELS.get(grade, grade)
             ais_descriptions.append(f"{grade} ({grade_label}): {count} ({pct:.1f}%)")
-        results['AIS Grade'] = "; ".join(ais_descriptions)
+        results['AIS Grade at BL'] = "; ".join(ais_descriptions)
 
     # Tetraplegia/Paraplegia distribution
     if 'tetrapara_bl' in df.columns:
