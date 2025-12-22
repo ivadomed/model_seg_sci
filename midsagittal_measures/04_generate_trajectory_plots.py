@@ -25,14 +25,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import subprocess
+
+from matplotlib.lines import Line2D
+
 from utils import read_csv_file_with_lesion_metrics
 
 METRIC_TO_TITLE = {
-    'midsagittal_length': 'Midsagittal Lesion Length [mm]',
-    'midsagittal_width': 'Midsagittal Lesion Width [mm]',
+    'midsagittal_length': 'Lesion Length',
+    'midsagittal_width': 'Lesion Width',
     # 'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
     # 'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
-    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]',
+    'total_tissue_bridge': 'Total Tissue Bridges',
     # 'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
     # 'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
 }
@@ -45,7 +48,7 @@ METHOD_TO_FNAME = {
 
 CLINICAL_SCORES_TO_AXES = {
     'uems': 'UEMS',
-    'lems': 'LEMS',
+    'lems': 'Lower Extremity Motor Score',
     'ms': 'Total Motor Score',
     'pp': 'Pinprick Score',
     'lt': 'Light-Touch Score'
@@ -390,6 +393,8 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
     time_points_months = [time_point_mapping[tp]['months'] for tp in time_points]
     # Find the last time point with data for counting subjects in legend
     last_time_point = time_points[-1]  # Use the last time point in the list
+    # For custom legend
+    group_labels = [""] * num_groups
 
     # Calculate and plot mean ± confidence interval (CI) trajectories for each group
     for tp in time_points:
@@ -415,9 +420,9 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
                     unit = '%' if 'ratio' in metric else 'mm'
                     last_tp_count = len(group_data[group_idx][last_time_point])
                     if group_idx == 0:
-                        label = f'{METRIC_TO_TITLE[metric].split("[")[0]} ≤{threshold:.2f} {unit} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} ≤{threshold:.2f} {unit} (n={last_tp_count})'
                     else:
-                        label = f'{METRIC_TO_TITLE[metric].split("[")[0]} >{threshold:.2f} {unit} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} >{threshold:.2f} {unit} (n={last_tp_count})'
                 else:
                     # Hierarchical case (two metrics: lesion width --> total tissue bridge)
                     metric1, metric2 = metrics[0], metrics[1]
@@ -427,20 +432,21 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
                     last_tp_count = len(group_data[group_idx][last_time_point])
 
                     if group_idx == 0:
-                        label = f'{METRIC_TO_TITLE[metric1].split("[")[0]} ≤{threshold1:.2f} {unit1} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} ≤{threshold1:.2f} {unit1} (n={last_tp_count})'
                     elif group_idx == 1:
-                        label = f'{METRIC_TO_TITLE[metric1].split("[")[0]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2].split("[")[0]} ≤{threshold2:.2f} {unit2} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} ≤{threshold2:.2f} {unit2} (n={last_tp_count})'
                     else:
-                        label = f'{METRIC_TO_TITLE[metric1].split("[")[0]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2].split("[")[0]} >{threshold2:.2f} {unit2} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} >{threshold2:.2f} {unit2} (n={last_tp_count})'
 
-                print(f'{score}, {metrics}, {label}, Time Point {tp} ({tp_month}m): Mean {score}={group_mean:.2f}, N={len(group_values)}')
+                print(f'{score}, {metrics}, Time Point {tp} ({tp_month}m): Mean {score}={group_mean:.2f}, N={len(group_values)}')
 
                 # Only show label in legend for the first actual time point that has data
-                show_label = tp == time_points[1] if len(time_points) > 1 else tp == time_points[0]
                 ax.errorbar(tp_month, group_mean, yerr=group_ci,
                             fmt='o', color=group_colors[group_idx], ecolor=group_colors[group_idx],
                             markersize=8, capsize=8,
-                            label=label if show_label else "")
+                            capthick=2.5,       # linewidth of the caps only
+                            elinewidth=2.5,     # linewidth of the vertical errorbar line
+                            label=None)
 
     # Connect mean points with lines for each group
     for group_idx in range(num_groups):
@@ -462,9 +468,9 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
 
     # # Set labels and title
     # if single_metric:
-    #     title_metric = METRIC_TO_TITLE[metrics].split("[")[0]
+    #     title_metric = METRIC_TO_TITLE[metrics]
     # else:
-    #     title_metric = f'{METRIC_TO_TITLE[metrics[0]].split("[")[0]} & {METRIC_TO_TITLE[metrics[1]].split("[")[0]}'
+    #     title_metric = f'{METRIC_TO_TITLE[metrics[0]]} & {METRIC_TO_TITLE[metrics[1]]}'
     #
     # ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by {title_metric}', fontsize=FONT_SIZE)
     ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
@@ -478,11 +484,20 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
     ax.tick_params(axis='x', which='minor', bottom=True, length=4)
     # Place minor ticks at the same positions as the major ticks
     ax.set_xticks(time_points_months, minor=True)
+    # Set x and y-tick font size
+    ax.tick_params(axis='y', labelsize=FONT_SIZE)
+    ax.tick_params(axis='x', labelsize=FONT_SIZE)
 
-    # Add legend
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), loc='upper left', fontsize=FONT_SIZE - 6, framealpha=0.9)
+    # Custom legend handles: horizontal line + circle marker
+    legend_handles = [
+        Line2D([0], [0], color=group_colors[i], marker='o', linestyle='-',
+               linewidth=2.5, markersize=8)
+        for i in range(num_groups)
+        if group_labels[i]
+    ]
+    legend_labels = [group_labels[i] for i in range(num_groups) if group_labels[i]]
+    ax.legend(legend_handles, legend_labels, loc='upper left',
+              fontsize=FONT_SIZE - 6, framealpha=0.9)
 
     # Remove the top and right spines
     ax.spines['top'].set_visible(False)
