@@ -27,6 +27,8 @@ import argparse
 import subprocess
 
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from utils import read_file_sct, read_file_manual_sci_zurich, normalize_sensorimotor_scores
 
@@ -143,7 +145,7 @@ def combine_plot(figure_type, num_subjects, output_dir):
     print(f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
 
 
-def create_trajectory_plots(df, output_dir, method, stratification_method='kmeans', n_groups=3):
+def create_trajectory_plots(df, output_dir, method, stratification_method='fixed', n_groups=3):
     """
     Create an individual trajectory plot showing clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -153,32 +155,56 @@ def create_trajectory_plots(df, output_dir, method, stratification_method='kmean
     multiple time points
     :param output_dir: output directory
     :param method: str: method ('GT' or 'SCIsegV2')
-    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans')
+    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans', 'multidimensional_kmeans')
     :param n_groups: int: number of groups to create (default: 3)
     """
     # Set font to Arial
     plt.rcParams['font.sans-serif'] = 'Arial'
 
-    # Compute metric thresholds based on the chosen stratification method
+    # Specify the three metrics of interest
+    target_metrics = ['midsagittal_length', 'midsagittal_width', 'total_tissue_bridge']
+
+    # Compute metric thresholds/groups based on the chosen stratification method
     if stratification_method == 'fixed':
         # Use predefined thresholds
         metric_thresholds = {
             'midsagittal_length': [0, 10, 20],
             'midsagittal_width': [0, 3, 6],
-            'ventral_tissue_bridge': [0, 1],
-            'dorsal_tissue_bridge': [0, 1],
             'total_tissue_bridge': [0, 1, 2],
-            'dorsal_bridge_ratio': [0, 50],
-            'ventral_bridge_ratio': [0, 50]
         }
-    else:
-        # Compute thresholds using K-means clustering
-        metric_thresholds = {}
-        for metric in METRIC_TO_TITLE.keys():
-            thresholds = compute_kmeans_thresholds(df, metric, n_groups, visualize=True, output_dir=output_dir)
+        # Filter to only include target metrics
+        metric_thresholds = {k: v for k, v in metric_thresholds.items() if k in target_metrics}
 
+    elif stratification_method == 'multidimensional_kmeans':
+        # Use multi-dimensional K-means clustering for consistent grouping
+        clustering_result = compute_multidimensional_kmeans_groups(
+            df, metrics=target_metrics, n_groups=n_groups, visualize=True, output_dir=output_dir
+        )
+
+        if clustering_result is None:
+            print("Falling back to individual K-means for each metric")
+            stratification_method = 'kmeans'
+        else:
+            # Convert group assignments to thresholds for consistency with existing plotting code
+            participant_groups = clustering_result['participant_groups']
+            group_stats = clustering_result['group_stats']
+
+            # For each metric, create pseudo-thresholds based on group assignments
+            metric_thresholds = {}
+            for metric in target_metrics:
+                # Since we have consistent grouping, we'll use the participant group assignments
+                # We'll store the group assignments directly rather than thresholds
+                metric_thresholds[metric] = participant_groups
+
+            print(f"Multi-dimensional K-means grouping completed for {target_metrics}")
+
+    elif stratification_method == 'kmeans':
+        # Compute thresholds using individual K-means clustering for each metric
+        metric_thresholds = {}
+        for metric in target_metrics:
+            thresholds = compute_kmeans_thresholds(df, metric, n_groups=2, visualize=True, output_dir=output_dir)
             metric_thresholds[metric] = thresholds
-            print(f"K-means thresholds for {metric} ({stratification_method}): {[f'{t:.2f}' for t in thresholds]}")
+            print(f"K-means thresholds for {metric}: {[f'{t:.2f}' for t in thresholds]}")
 
     # Define colors for each group (adjust based on number of groups)
     if n_groups <= 3:
@@ -201,19 +227,19 @@ def create_trajectory_plots(df, output_dir, method, stratification_method='kmean
 
     # PART 1: Raw trajectory plots
     create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
-                                time_point_mapping,  time_points)
+                                time_point_mapping, time_points, stratification_method)
 
-    # PART 2: Normalized improvement scores trajectory plots
-    create_normalized_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
-                                       time_point_mapping, time_points)
-
-    # PART 3: Normalized and scaled improvement scores trajectory plots
-    create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
-                                              time_point_mapping, time_points)
+    # # PART 2: Normalized improvement scores trajectory plots
+    # create_normalized_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
+    #                                    time_point_mapping, time_points, stratification_method)
+    #
+    # # PART 3: Normalized and scaled improvement scores trajectory plots
+    # create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
+    #                                           time_point_mapping, time_points, stratification_method)
 
 
 def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir, time_point_mapping,
-                                time_points):
+                                time_points, stratification_method):
     """
     Create trajectory plots for raw (i.e., non-normalized) clinical scores across time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -226,6 +252,7 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
     :param output_dir: output directory
     :param time_point_mapping: dict: mapping of time points to their actual time values in months from baseline
     :param time_points: list of time points in logical order
+    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans', 'multidimensional_kmeans')
     """
 
     # Get the actual month values for x-axis positioning
@@ -243,8 +270,11 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
         else:
             df_plot = df
 
-        # Loop over each lesion metric
-        for metric in METRIC_TO_TITLE.keys():
+        # Loop over each lesion metric - only process target metrics for multi-dimensional clustering
+        target_metrics = ['midsagittal_length', 'midsagittal_width', 'total_tissue_bridge']
+        #metrics_to_process = target_metrics if stratification_method == 'multidimensional_kmeans' else METRIC_TO_TITLE.keys()
+
+        for metric in target_metrics:
             # Create a figure for all participants
             fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -252,7 +282,7 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
             # Note: there are still two possible options controlled by the `method` variable:
             #   1. 'GT' - manual lesion masks + sct_analyze_lesion --> '_manual' suffix
             #   2. 'SCIsegV2' - SCIsegV2 lesion masks + sct_analyze_lesion --> '_sct' suffix
-            metric_name = f'{metric}_sct'
+            metric_name = f'{metric}_sct'    # '_manual' for GT
 
             # Get the thresholds for this metric
             thresholds = metric_thresholds[metric]
@@ -278,13 +308,18 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
                 metric_value = participant_data[metric_name].values[0]
 
                 # Determine which group this participant belongs to
-                group_idx = 0
-                for i in range(len(thresholds) - 1):
-                    if thresholds[i] <= metric_value < thresholds[i + 1]:
-                        group_idx = i
-                        break
-                if metric_value >= thresholds[-1]:
-                    group_idx = len(thresholds) - 1
+                if stratification_method == 'multidimensional_kmeans' and isinstance(thresholds, dict):
+                    # For multi-dimensional clustering, use direct group assignments
+                    group_idx = thresholds.get(participant_id, 0)  # Default to group 0 if not found
+                else:
+                    # For threshold-based methods, determine group by metric value
+                    group_idx = 0
+                    for i in range(len(thresholds) - 1):
+                        if thresholds[i] <= metric_value < thresholds[i + 1]:
+                            group_idx = i
+                            break
+                    if metric_value >= thresholds[-1]:
+                        group_idx = len(thresholds) - 1
 
                 # Add participant to the group
                 group_ids[group_idx].append(participant_id)
@@ -336,17 +371,23 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
                         group_ci = 1.96 * np.std(group_values) / np.sqrt(len(group_values)) if len(
                             group_values) > 1 else 0
 
-                        # Create group label based on the threshold range
-                        unit = '%' if 'ratio' in metric else 'mm'
-                        if group_idx == 0:
-                            # First group
-                            label = f'<{thresholds[1]} {unit} (n={len(group_ids[group_idx])})'
-                        elif group_idx == len(thresholds) - 1:
-                            # Intermediate groups
-                            label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
+                        # Create group label based on the stratification method
+                        if stratification_method == 'multidimensional_kmeans' and isinstance(thresholds, dict):
+                            # For multi-dimensional clustering, use simple group labels
+                            label = f'Group {group_idx + 1} (n={len(group_ids[group_idx])})'
                         else:
-                            # Last group
-                            label = f'{thresholds[group_idx]}-{thresholds[group_idx + 1]} {unit} (n={len(group_ids[group_idx])})'
+                            unit = '%' if 'ratio' in metric else 'mm'
+                            if group_idx == 0:
+                                # First group
+                                label = f'<{thresholds[1]:.2f} {unit} (n={len(group_ids[group_idx])})'
+                            elif group_idx == len(thresholds) - 1:  # - 2
+                                # Last group
+                                label = f'≥{thresholds[group_idx]:.2f} {unit} (n={len(group_ids[group_idx])})'
+                            else:
+                                # Intermediate groups
+                                label = f'{thresholds[group_idx]:.2f}-{thresholds[group_idx + 1]:.2f} {unit} (n={len(group_ids[group_idx])})'
+
+                        print(f'{score}, {metric}, {label}, Time Point {tp} ({tp_month}m): Mean {group_mean:.2f}, N={len(group_values)}')
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
@@ -390,8 +431,8 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
             # Add legend
             handles, labels = ax.get_legend_handles_labels()
             by_label = dict(zip(labels, handles))
-            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE - 2, framealpha=0.9,
-                      title=f'{METRIC_TO_TITLE[metric].split("[")[0]}\nmean ± CI', title_fontsize=FONT_SIZE - 2)
+            ax.legend(by_label.values(), by_label.keys(), loc='lower right', fontsize=FONT_SIZE - 2, framealpha=0.9),
+                      # title=f'{METRIC_TO_TITLE[metric].split("[")[0]}\nmean ± CI', title_fontsize=FONT_SIZE - 2)
 
             # Remove the top and right spines
             ax.spines['top'].set_visible(False)
@@ -410,7 +451,7 @@ def create_raw_trajectory_plots(df, group_colors, method, metric_thresholds, out
 
 
 def create_normalized_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
-                                       time_point_mapping, time_points):
+                                       time_point_mapping, time_points, stratification_method):
     """
     Create trajectory plots for normalized clinical scores across follow-up time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -424,6 +465,7 @@ def create_normalized_trajectory_plots(df, group_colors, method, metric_threshol
     :param output_dir: output directory
     :param time_point_mapping: dict: mapping of time points to their actual time values in months from baseline
     :param time_points: list of time points in logical order
+    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans', 'multidimensional_kmeans')
     """
     # Loop over each clinical score
     for score in CLINICAL_SCORES_TO_AXES.keys():
@@ -476,13 +518,18 @@ def create_normalized_trajectory_plots(df, group_colors, method, metric_threshol
                 metric_value = participant_data[metric_name].values[0]
 
                 # Determine which group this participant belongs to
-                group_idx = 0
-                for i in range(len(thresholds) - 1):
-                    if thresholds[i] <= metric_value < thresholds[i + 1]:
-                        group_idx = i
-                        break
-                if metric_value >= thresholds[-1]:
-                    group_idx = len(thresholds) - 1
+                if stratification_method == 'multidimensional_kmeans' and isinstance(thresholds, dict):
+                    # For multi-dimensional clustering, use direct group assignments
+                    group_idx = thresholds.get(participant_id, 0)  # Default to group 0 if not found
+                else:
+                    # For threshold-based methods, determine group by metric value
+                    group_idx = 0
+                    for i in range(len(thresholds) - 1):
+                        if thresholds[i] <= metric_value < thresholds[i + 1]:
+                            group_idx = i
+                            break
+                    if metric_value >= thresholds[-1]:
+                        group_idx = len(thresholds) - 1
 
                 # Add participant to the group
                 group_ids[group_idx].append(participant_id)
@@ -534,13 +581,13 @@ def create_normalized_trajectory_plots(df, group_colors, method, metric_threshol
                         unit = '%' if 'ratio' in metric else 'mm'
                         if group_idx == 0:
                             # First group
-                            label = f'<{thresholds[1]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'<{thresholds[1]:.2f} {unit} (n={len(group_ids[group_idx])})'
                         elif group_idx == len(thresholds) - 1:
                             # Intermediate groups
-                            label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'≥{thresholds[group_idx]:.2f} {unit} (n={len(group_ids[group_idx])})'
                         else:
                             # Last group
-                            label = f'{thresholds[group_idx]}-{thresholds[group_idx + 1]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'{thresholds[group_idx]:.2f}-{thresholds[group_idx + 1]:.2f} {unit} (n={len(group_ids[group_idx])})'
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
@@ -614,7 +661,7 @@ def create_normalized_trajectory_plots(df, group_colors, method, metric_threshol
 
 
 def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_thresholds, output_dir,
-                                       time_point_mapping, time_points):
+                                       time_point_mapping, time_points, stratification_method):
     """
     Create trajectory plots for normalized and scaled clinical scores across follow-up time points for each participant,
     with lines colored by baseline lesion metrics.
@@ -628,6 +675,7 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
     :param output_dir: output directory
     :param time_point_mapping: dict: mapping of time points to their actual time values in months from baseline
     :param time_points: list of time points in logical order
+    :param stratification_method: str: method for computing thresholds ('fixed', 'kmeans', 'multidimensional_kmeans')
     """
     # Loop over each clinical score
     for score in CLINICAL_SCORES_TO_AXES.keys():
@@ -670,7 +718,7 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
                 participant_data = df[df['participant_id'] == participant_id]
                 # Check if participant has clinical data and the metric
                 if (participant_id not in df_plot['participant_id'].values or
-                        metric_name not in participant_data.columns or
+                        metric_name not in participant_data.columns and
                         pd.isna(participant_data[metric_name].values[0])):
                     continue
 
@@ -680,13 +728,18 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
                 metric_value = participant_data[metric_name].values[0]
 
                 # Determine which group this participant belongs to
-                group_idx = 0
-                for i in range(len(thresholds) - 1):
-                    if thresholds[i] <= metric_value < thresholds[i + 1]:
-                        group_idx = i
-                        break
-                if metric_value >= thresholds[-1]:
-                    group_idx = len(thresholds) - 1
+                if stratification_method == 'multidimensional_kmeans' and isinstance(thresholds, dict):
+                    # For multi-dimensional clustering, use direct group assignments
+                    group_idx = thresholds.get(participant_id, 0)  # Default to group 0 if not found
+                else:
+                    # For threshold-based methods, determine group by metric value
+                    group_idx = 0
+                    for i in range(len(thresholds) - 1):
+                        if thresholds[i] <= metric_value < thresholds[i + 1]:
+                            group_idx = i
+                            break
+                    if metric_value >= thresholds[-1]:
+                        group_idx = len(thresholds) - 1
 
                 # Add participant to the group
                 group_ids[group_idx].append(participant_id)
@@ -698,8 +751,7 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
                 for tp in follow_up_time_points:
                     normalized_col = f"{score}_{tp}_improvement_normalized_scaled"
 
-                    if normalized_col in participant_clinical.columns and not pd.isna(
-                            participant_clinical[normalized_col].values[0]):
+                    if normalized_col in participant_clinical.columns and not pd.isna(participant_clinical[normalized_col].values[0]):
                         val = float(participant_clinical[normalized_col].values[0])
                         # Use actual month values for x-axis
                         time_values.append(time_point_mapping[tp]['months'])
@@ -738,13 +790,13 @@ def create_normalized_scaled_trajectory_plots(df, group_colors, method, metric_t
                         unit = '%' if 'ratio' in metric else 'mm'
                         if group_idx == 0:
                             # First group
-                            label = f'<{thresholds[1]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'<{thresholds[1]:.2f} {unit} (n={len(group_ids[group_idx])})'
                         elif group_idx == len(thresholds) - 1:
                             # Intermediate groups
-                            label = f'≥{thresholds[group_idx]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'≥{thresholds[group_idx]:.2f} {unit} (n={len(group_ids[group_idx])})'
                         else:
                             # Last group
-                            label = f'{thresholds[group_idx]}-{thresholds[group_idx + 1]} {unit} (n={len(group_ids[group_idx])})'
+                            label = f'{thresholds[group_idx]:.2f}-{thresholds[group_idx + 1]:.2f} {unit} (n={len(group_ids[group_idx])})'
 
                         # Only show label in legend for the first time point (to avoid duplicates)
                         ax.errorbar(tp_month, group_mean, yerr=group_ci,
@@ -949,6 +1001,193 @@ def compute_kmeans_thresholds(df, metric, n_groups=3, visualize=True, output_dir
     return thresholds
 
 
+def compute_multidimensional_kmeans_groups(df, metrics=['midsagittal_length', 'midsagittal_width', 'total_tissue_bridge'],
+                                          n_groups=3, visualize=True, output_dir=None):
+    """
+    Use multi-dimensional K-means clustering to determine consistent groups across multiple metrics.
+    This ensures subjects are grouped based on their overall lesion profile rather than individual metrics.
+
+    :param df: pandas DataFrame with lesion metrics
+    :param metrics: list of metric names to include in clustering
+    :param n_groups: int: number of groups to create
+    :param visualize: bool: whether to create visualization plots
+    :param output_dir: str: directory to save visualization plots
+    :return: dict with participant assignments and group information
+    """
+
+    # Prepare data matrix with the specified metrics
+    metric_columns = [f'{metric}_sct' for metric in metrics]
+
+    # Remove rows with NaN values in any of the metrics
+    df_clean = df.dropna(subset=metric_columns)
+
+    # Extract feature matrix (i.e., only the specified MRI metrics)
+    X = df_clean[metric_columns].values
+    participant_ids = df_clean['participant_id'].values
+
+    # Standardize features (important since metrics are on different scales)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Fit K-means clustering
+    kmeans = KMeans(n_clusters=n_groups, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X_scaled)
+
+    # Get cluster centers in original scale for interpretation
+    centers_scaled = kmeans.cluster_centers_
+    centers_original = scaler.inverse_transform(centers_scaled)
+
+    # Create participant-to-group mapping
+    participant_groups = {}
+    for i, participant_id in enumerate(participant_ids):
+        participant_groups[participant_id] = labels[i]
+
+    # Print clustering results
+    print(f"\nMulti-dimensional K-means clustering results:")
+    print(f"Metrics used: {metrics}")
+    print(f"Number of subjects: {len(df_clean)}")
+    print(f"Number of groups: {n_groups}")
+
+    # Group statistics
+    group_stats = {}
+    for group_id in range(n_groups):
+        group_mask = labels == group_id
+        group_subjects = np.sum(group_mask)
+        group_center = centers_original[group_id]
+
+        group_stats[group_id] = {
+            'n_subjects': group_subjects,
+            'center': group_center,
+            'subjects': participant_ids[group_mask].tolist()
+        }
+
+        print(f"\nGroup {group_id + 1} (n={group_subjects}):")
+        for j, metric in enumerate(metrics):
+            print(f"  {metric}: {group_center[j]:.2f} mm (center)")
+
+        # Calculate actual ranges for each metric within this group
+        group_data = X[group_mask]
+        print(f"  Actual ranges within group:")
+        for j, metric in enumerate(metrics):
+            metric_values = group_data[:, j]
+            print(f"    {metric}: {np.min(metric_values):.2f} - {np.max(metric_values):.2f} mm")
+
+    # Create visualization if requested
+    if visualize and output_dir:
+        create_multidimensional_visualization(X, X_scaled, labels, centers_original, centers_scaled,
+                                            metrics, n_groups, output_dir)
+
+    return {
+        'participant_groups': participant_groups,
+        'group_stats': group_stats,
+        'scaler': scaler,
+        'centers_original': centers_original,
+        'centers_scaled': centers_scaled,
+        'metrics': metrics
+    }
+
+
+def create_multidimensional_visualization(X, X_scaled, labels, centers_original, centers_scaled,
+                                        metrics, n_groups, output_dir):
+    """
+    Create comprehensive visualization for multi-dimensional K-means clustering.
+    """
+    colors = ['blue', 'green', 'red', 'orange', 'purple', 'brown', 'pink', 'gray'][:n_groups]
+
+    # Create figure with multiple subplots
+    fig = plt.figure(figsize=(20, 15))
+
+    # 1. Pairwise scatter plots in original scale
+    n_metrics = len(metrics)
+    subplot_idx = 1
+
+    for i in range(n_metrics):
+        for j in range(i + 1, n_metrics):
+            ax = plt.subplot(3, 3, subplot_idx)
+
+            for group_id in range(n_groups):
+                group_mask = labels == group_id
+                ax.scatter(X[group_mask, i], X[group_mask, j],
+                          c=colors[group_id], alpha=0.6, s=50,
+                          label=f'Group {group_id + 1} (n={np.sum(group_mask)})')
+
+                # Add group center
+                ax.scatter(centers_original[group_id, i], centers_original[group_id, j],
+                          c=colors[group_id], s=200, marker='x', linewidths=3)
+
+            ax.set_xlabel(f'{METRIC_TO_TITLE[metrics[i]]}', fontsize=10)
+            ax.set_ylabel(f'{METRIC_TO_TITLE[metrics[j]]}', fontsize=10)
+            ax.set_title(f'{metrics[i]} vs {metrics[j]}', fontsize=12)
+            ax.legend(fontsize=8)
+            ax.grid(True, alpha=0.3)
+
+            subplot_idx += 1
+
+    # 2. PCA visualization of the scaled data
+    subplot_idx = 5     # second row, second column
+    if n_metrics > 2:
+        ax_pca = plt.subplot(3, 3, subplot_idx)
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X_scaled)
+        centers_pca = pca.transform(centers_scaled)
+
+        for group_id in range(n_groups):
+            group_mask = labels == group_id
+            ax_pca.scatter(X_pca[group_mask, 0], X_pca[group_mask, 1],
+                          c=colors[group_id], alpha=0.6, s=50,
+                          label=f'Group {group_id + 1} (n={np.sum(group_mask)})')
+
+            # Add group center
+            ax_pca.scatter(centers_pca[group_id, 0], centers_pca[group_id, 1],
+                          c=colors[group_id], s=200, marker='x', linewidths=3)
+
+        ax_pca.set_xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.2%} variance)', fontsize=10)
+        ax_pca.set_ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.2%} variance)', fontsize=10)
+        ax_pca.set_title('PCA', fontsize=12)
+        ax_pca.legend(fontsize=8)
+        ax_pca.grid(True, alpha=0.3)
+
+        subplot_idx += 1
+
+    # 3. Box plots for each metric by group
+    subplot_idx = 7  # starting from the third row, first column
+    remaining_subplots = 9 - subplot_idx + 1
+    for metric_idx, metric in enumerate(metrics):
+        if metric_idx < remaining_subplots:
+            ax_box = plt.subplot(3, 3, subplot_idx + metric_idx)
+
+            # Prepare data for box plot
+            group_data = []
+            group_labels = []
+            for group_id in range(n_groups):
+                group_mask = labels == group_id
+                metric_values = X[group_mask, metric_idx]
+                group_data.append(metric_values)
+                group_labels.append(f'Group {group_id + 1}\n(n={np.sum(group_mask)})')
+
+            bp = ax_box.boxplot(group_data, labels=group_labels, patch_artist=True)
+
+            # Color the boxes
+            for patch, color in zip(bp['boxes'], colors[:n_groups]):
+                patch.set_facecolor(color)
+                patch.set_alpha(0.6)
+
+            ax_box.set_ylabel(f'{METRIC_TO_TITLE[metric]}', fontsize=10)
+            ax_box.set_title(f'{metric} by Group', fontsize=12)
+            ax_box.grid(True, alpha=0.3)
+
+    plt.suptitle(f'Multi-dimensional K-means Clustering (n_groups={n_groups})', fontsize=16)
+    plt.tight_layout()
+
+    # Save the plot
+    os.makedirs(output_dir, exist_ok=True)
+    plot_filename = os.path.join(output_dir, f'multidimensional_kmeans_{n_groups}_groups.png')
+    plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print(f"Multi-dimensional K-means visualization saved as: {plot_filename}")
+
+
 def main():
 
     # Parse the command line arguments
@@ -976,6 +1215,13 @@ def main():
     #----------------
     df = pd.merge(df_sct, df_manual, on=['participant_id', 'session_id'])
 
+    # Save df as CSV
+    output_dir = os.path.dirname(file_sct)
+    os.makedirs(output_dir, exist_ok=True)
+    merged_csv_fname = os.path.join(output_dir, f'merged_lesion_metrics_clinical_{method}.csv')
+    df.to_csv(merged_csv_fname, index=False)
+    print(f'Merged dataframe saved as {merged_csv_fname}')
+
     #----------------
     # Normalize sensorimotor scores
     #----------------
@@ -990,7 +1236,7 @@ def main():
     # Convert mri_time_since_injury to numeric (in days)
     df['mri_time_since_injury'] = pd.to_numeric(df['mri_time_since_injury'])
     print(f'Number of subjects before filtering by MRI time since injury: {df.shape[0]}')
-    # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months
+    # Keep only subjects with mri_time_since_injury (in days) from 12 days to 133 days (approx. 4.5 months)
     df = df[(df['mri_time_since_injury'] >= 12) & (df['mri_time_since_injury'] <= 133)]
     print(f'Number of subjects after filtering by MRI time since injury: {df.shape[0]}')
 
