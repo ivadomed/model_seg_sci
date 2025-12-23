@@ -129,6 +129,11 @@ def create_descriptive_table(df, output_dir):
         age_q75 = df['age'].quantile(0.75)
         results['Age (years)'] = f"{age_mean:.1f} ± {age_std:.1f} (median: {age_median:.1f}, IQR: {age_q25:.1f}-{age_q75:.1f})"
 
+        # # Save 'participant_id' and 'age' to a separate CSV
+        # age_table_path = os.path.join(output_dir, 'participants_age_sex.csv')
+        # df[['participant_id', 'age', 'sex']].to_csv(age_table_path, index=False)
+        # print(f"Participant ages saved to: {age_table_path}")
+
     # Time since injury
     if 'mri_time_since_injury' in df.columns:
         tsi_mean = df['mri_time_since_injury'].mean()
