@@ -328,6 +328,8 @@ def create_comprehensive_figure(df, output_dir):
 
         # Sort age groups logically
         decade_order = [f'{age_min}-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+']
+        # Swap the order for clockwise ordering in pie chart
+        decade_order = decade_order[::-1]
         sorted_decades = [decade for decade in decade_order if decade in age_counts.index]
         sorted_counts = [age_counts[decade] for decade in sorted_decades]
 
