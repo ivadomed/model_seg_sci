@@ -333,9 +333,36 @@ def create_comprehensive_figure(df, output_dir):
         sorted_decades = [decade for decade in decade_order if decade in age_counts.index]
         sorted_counts = [age_counts[decade] for decade in sorted_decades]
 
-        wedges, texts, autotexts = ax2.pie(sorted_counts, labels=sorted_decades, autopct=_make_autopct(sorted_counts),
-                                          colors=PIE_COLORS[:len(sorted_decades)], startangle=90,
-                                          textprops={'fontsize': TICK_SIZE})
+        # Create pie chart without autopct labels first
+        wedges, texts = ax2.pie(sorted_counts, labels=sorted_decades,
+                               colors=PIE_COLORS[:len(sorted_decades)], startangle=90,
+                               textprops={'fontsize': TICK_SIZE}, labeldistance=1.15)
+
+        # Manually add percentage labels with alternating positions to prevent overlap
+        total = sum(sorted_counts)
+        for i, (wedge, count) in enumerate(zip(wedges, sorted_counts)):
+            # Calculate angle for label placement
+            angle = (wedge.theta1 + wedge.theta2) / 2
+            # Alternate the distance for every second label to prevent overlap
+            if i == 0:
+                distance = 0.8  # Further from center
+            else:
+                distance = 0.6  # Closer to center
+
+            # Convert angle to radians
+            angle_rad = np.radians(angle)
+            # Calculate position
+            x = distance * np.cos(angle_rad)
+            y = distance * np.sin(angle_rad)
+            # Calculate percentage
+            percentage = (count / total) * 100
+
+            # Add text with background for better visibility
+            ax2.text(x, y, f'{percentage:.1f}%\n({count})',
+                    ha='center', va='center', fontsize=TICK_SIZE)
+                    # bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                    #          edgecolor="gray", alpha=0.8))
+
         ax2.set_title('Age', fontsize=TITLE_SIZE, fontweight='bold')
 
         # Add mean (SD) age below the pie chart
