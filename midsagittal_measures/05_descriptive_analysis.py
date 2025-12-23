@@ -604,7 +604,7 @@ def main():
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
 
     df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl',
-                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05', 'AIS_06',])
+                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05', 'AIS_06'])
     # '01' -- Day 0 (Screening)
     # '02' -- Day 1 (Baseline)
     # '03' -- 2 Weeks (14 days)
