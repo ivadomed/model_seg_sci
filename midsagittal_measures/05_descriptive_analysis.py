@@ -57,6 +57,14 @@ TICK_SIZE = TITLE_SIZE - 6
 # Based on cm.Pastel1
 PIE_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6', '#FFFFCC', '#E5D8BD', '#FDDAEC', '#F2F2F2']
 TRAJECTORY_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6']
+# AIS A–E: warm → neutral → greenish, same pastel tones as PIE_COLORS
+AIS_COLORS = [
+    '#FBB4AE',  # A – pastel red/pink
+    '#FED9A6',  # B – pastel orange
+    '#FFFFCC',  # C – pastel yellow
+    '#CCEBC5',  # D – pastel green
+    '#B3CDE3',  # E – cool green-blue
+]
 
 
 def get_parser():
@@ -421,10 +429,10 @@ def create_comprehensive_figure(df, output_dir):
         bars = []
         for i, grade in enumerate(sorted_grades):
             # Use the same colormap as other subplots
-            color = PIE_COLORS[i % len(PIE_COLORS)]
+            color = AIS_COLORS[i % len(AIS_COLORS)]
             label = f"AIS {grade}" if grade in AIS_LABELS else f"AIS {grade}"
             bar = ax3.bar(x_pos, grade_counts[grade], bottom=bottom,
-                         color=color, alpha=0.8, label=label,
+                         color=color, alpha=1, label=label,
                          edgecolor='white', linewidth=0.5)
             bars.append(bar)
 
