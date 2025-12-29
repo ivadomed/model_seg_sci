@@ -1,16 +1,26 @@
 """
-Plot the lesion metrics obtained using different methods (manual vs automatic).
+Figure 5.
+
+Generate trajectory plots of clinical scores over time. Participants are grouped based on cutoffs of baseline lesion
+metrics obtained from URP-CTREE analysis.
+
+Generate 2x2 figure showing trajectory plots for:
+- LEMS
+- Total Motor Score
+- Pinprick Score
+- Light-Touch Score
 
 The script:
-- reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
-- reads XLSX file with manually measured lesion metrics (including clinical scores)
-- merges the dataframes
-- creates trajectory plots of clinical scores over time for each participant with baseline metrics
+- reads CSV file with lesion metrics (Note: we don't use the lesion metrics but need participant_id column)
+- reads XLSX files with clinical scores for both datasets
+- merges the data into a single dataframe
+- creates trajectory plots of clinical scores over time
 
 Example usage:
     python 04_generate_trajectory_plots.py
-        -file-sct <PATH_TO_CSV_FILE>
-        -file-manual <PATH_TO_XLSX_FILE>
+        -i <PATH_TO_CSV_FILE>
+        -file-clinical-nisci <PATH_TO_CLINICAL_SCORES_XLSX_NISCI>
+        -file-clinical-sci-zurich <PATH_TO_CLINICAL_SCORES_XLSX_SCI_ZURICH>
         -o <OUTPUT_DIR>
 
 Note: to read XLS files, you might need to install the following packages:
@@ -33,17 +43,7 @@ from utils import read_csv_file_with_lesion_metrics
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Lesion Length',
     'midsagittal_width': 'Lesion Width',
-    # 'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
-    # 'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
-    'total_tissue_bridge': 'Total Tissue Bridges',
-    # 'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
-    # 'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
-}
-
-
-METHOD_TO_FNAME = {
-    'GT': 'semiautomatic',
-    'SCIsegV2': 'automatic'
+    'total_tissue_bridge': 'Total Tissue Bridges'
 }
 
 CLINICAL_SCORES_TO_AXES = {
@@ -54,8 +54,16 @@ CLINICAL_SCORES_TO_AXES = {
     'lt': 'Light-Touch Score'
 }
 
+SCORE_TO_YLIM = {
+    'uems': (0, 50),
+    'lems': (-3, 60),
+    'ms': (5, 105),
+    'pp': (8, 80),
+    'lt': (15, 100)
+}
 
-FONT_SIZE = 16
+
+FONT_SIZE = 20
 
 
 def get_parser():
@@ -64,8 +72,7 @@ def get_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='Read CSV files with lesion metrics computed using sct_analyze_lesion and XLSX file with manually'
-                    'measured metrics and create figures.',
+        description='Generate trajectory plots of clinical scores over time.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
@@ -97,12 +104,11 @@ def get_parser():
 
 
 
-def combine_plot(figure_type, num_subjects, output_dir):
+def combine_plots(figure_fnames, output_dir):
     """
     Combine all the plots into a single figure using bash convert command
     This requires ImageMagick to be installed
-    :param figure_type: str: type of the figure to combine (e.g., 'scatterplot', or 'diffplot')
-    :param num_subjects: int: number of subjects in the dataframe
+    :param figure_fnames: list of figure filenames
     :param output_dir: str: output directory where the combined figure will be saved
     """
 
@@ -111,40 +117,52 @@ def combine_plot(figure_type, num_subjects, output_dir):
     if not os.path.exists(combined_dir):
         os.makedirs(combined_dir)
 
-    print(f"Combining {figure_type}s into a single figure...")
-    # 1 row, 3 columns:
-    cmd_combine = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
-          f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
-          f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
-          f"+append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}"
-    # 3 rows, 3 columns:
-    # # First row: midsagittal_length and midsagittal_width
-    # cmd_row1 = f"convert {os.path.join(output_dir, f'{figure_type}_midsagittal_length_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_midsagittal_width_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')}"
-    # # Second row: ventral_tissue_bridge, dorsal_tissue_bridge, and total_tissue_bridge
-    # cmd_row2 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_total_tissue_bridge_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')}"
-    # # Third row: ventral_bridge_ratio and dorsal_bridge_ratio
-    # cmd_row3 = f"convert {os.path.join(output_dir, f'{figure_type}_ventral_bridge_ratio_{num_subjects}subjects.png')} " \
-    #            f"{os.path.join(output_dir, f'{figure_type}_dorsal_bridge_ratio_{num_subjects}subjects.png')} " \
-    #            f"+append {os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # # Combine all rows
-    # cmd_combine = f"convert {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')} " \
-    #               f"-append {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}; " \
-    #               f"rm {os.path.join(output_dir, f'temp1_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp2_{num_subjects}subjects.png')} " \
-    #               f"{os.path.join(output_dir, f'temp3_{num_subjects}subjects.png')}"
-    # # Execute the commands
-    # subprocess.run(cmd_row1, shell=True)
-    # subprocess.run(cmd_row2, shell=True)
-    # subprocess.run(cmd_row3, shell=True)
-    subprocess.run(cmd_combine, shell=True)
-    print(f"Combined {figure_type} saved as {os.path.join(combined_dir, f'{figure_type}_combined_{num_subjects}subjects.png')}")
+    # 2 x 2:
+    # lems x ms
+    # pp x lt
+    figure_types = ['lems', 'ms', 'pp', 'lt']
+
+    # Create a dictionary to map figure types to their file paths
+    figure_dict = {}
+    for fname in figure_fnames:
+        for fig_type in figure_types:
+            if fig_type in fname:
+                figure_dict[fig_type] = fname
+                break
+
+    # Create labeled copies with panel labels
+    labeled_files = []
+    panel_labels = ['A)', '', 'B)', '']  # A for first row first figure (lems), B for second row first figure (pp)
+
+    for i, fig_type in enumerate(figure_types):
+        if fig_type in figure_dict:
+            input_file = figure_dict[fig_type]
+            labeled_file = os.path.join(combined_dir, f'{fig_type}_labeled.png')
+            panel_label = panel_labels[i]
+
+            # Add panel label using ImageMagick convert (only if label is not empty)
+            if panel_label:
+                # Add white space above figure and then add label
+                cmd = f"convert '{input_file}' -bordercolor white -border 0x80+0+0 -pointsize {FONT_SIZE*5} -fill black -gravity NorthWest -annotate +20+20 '{panel_label}' '{labeled_file}'"
+            else:
+                # Add same white space above figure without label for consistency
+                cmd = f"convert '{input_file}' -bordercolor white -border 0x80+0+0 '{labeled_file}'"
+            subprocess.run(cmd, shell=True, check=True)
+            labeled_files.append(labeled_file)
+
+    if len(labeled_files) == 4:
+        # Combine into 2x2 grid
+        output_combined = os.path.join(combined_dir, 'Fig5_trajectory_plots_combined.png')
+        cmd = f"convert '{labeled_files[0]}' '{labeled_files[1]}' +append temp_row1.png && " \
+              f"convert '{labeled_files[2]}' '{labeled_files[3]}' +append temp_row2.png && " \
+              f"convert temp_row1.png temp_row2.png -append '{output_combined}' && " \
+              f"rm temp_row1.png temp_row2.png"
+
+        subprocess.run(cmd, shell=True, check=True)
+        print(f"Combined trajectory plots saved as: {output_combined}")
+    else:
+        print(f"Warning: Expected 4 figures but found {len(labeled_files)}. Cannot create 2x2 grid.")
+
 
 
 def create_trajectory_plots(df, output_dir):
@@ -175,7 +193,12 @@ def create_trajectory_plots(df, output_dir):
         }
     }
 
-    group_colors = ['blue', 'green', 'red']
+    # group_colors = ['green', 'red', 'blue']
+    group_colors = [
+        '#009E73',  # green
+        '#E34A33',  # red
+        '#E69F00',  # orange
+    ]
 
     # Define time points with their actual time values in months from baseline
     time_point_mapping = {
@@ -185,7 +208,7 @@ def create_trajectory_plots(df, output_dir):
         '6m': {'order': 3, 'months': 6},     # 6 months
     }
     # Sort time points in a logical order
-    time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order', 99))
+    time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order'))
 
     # PART 1: Raw trajectory plots
     create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir, time_point_mapping, time_points)
@@ -204,6 +227,7 @@ def create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir,
     :param time_points: list of time points in logical order
     """
 
+    figure_fnames = []
     # Loop over clinical scores (e.g., 'lems', 'ms', ...)
     for score, metrics in metric_thresholds.items():
         # Create groups based on thresholds
@@ -368,8 +392,11 @@ def create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir,
             figure_fname = os.path.join(output_dir,
                                         f'trajectory_plot_{score}_{metric_names[0]}_{metric_names[1]}_{num_subjects}subjects.png')
             print(f'Trajectory plot for {score} by {metric_names[0]} and {metric_names[1]} saved as {figure_fname}')
+        figure_fnames.append(figure_fname)
         plt.savefig(figure_fname, dpi=300)
         plt.close()
+
+    combine_plots(figure_fnames, output_dir)
 
 
 def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
@@ -420,9 +447,9 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
                     unit = '%' if 'ratio' in metric else 'mm'
                     last_tp_count = len(group_data[group_idx][last_time_point])
                     if group_idx == 0:
-                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} ≤{threshold:.2f} {unit} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} ≤{threshold:.2f} {unit} (n = {last_tp_count})'
                     else:
-                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} >{threshold:.2f} {unit} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} >{threshold:.2f} {unit} (n = {last_tp_count})'
                 else:
                     # Hierarchical case (two metrics: lesion width --> total tissue bridge)
                     metric1, metric2 = metrics[0], metrics[1]
@@ -432,17 +459,17 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
                     last_tp_count = len(group_data[group_idx][last_time_point])
 
                     if group_idx == 0:
-                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} ≤{threshold1:.2f} {unit1} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} ≤{threshold1:.2f} {unit1} (n = {last_tp_count})'
                     elif group_idx == 1:
-                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} ≤{threshold2:.2f} {unit2} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} ≤{threshold2:.2f} {unit2} (n = {last_tp_count})'
                     else:
-                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} >{threshold2:.2f} {unit2} (n={last_tp_count})'
+                        group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} >{threshold2:.2f} {unit2} (n = {last_tp_count})'
 
                 print(f'{score}, {metrics}, Time Point {tp} ({tp_month}m): Mean {score}={group_mean:.2f}, N={len(group_values)}')
 
                 # Only show label in legend for the first actual time point that has data
                 ax.errorbar(tp_month, group_mean, yerr=group_ci,
-                            fmt='o', color=group_colors[group_idx], ecolor=group_colors[group_idx],
+                            fmt='o', color=group_colors[group_idx], ecolor=group_colors[group_idx], alpha=1,
                             markersize=8, capsize=8,
                             capthick=2.5,       # linewidth of the caps only
                             elinewidth=2.5,     # linewidth of the vertical errorbar line
@@ -489,19 +516,24 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
     ax.tick_params(axis='x', labelsize=FONT_SIZE)
 
     # Custom legend handles: horizontal line + circle marker
+    # Reorder legend to show green, blue, red
+    legend_order = [0, 2, 1] if num_groups == 3 else [0, 1]  # green, blue, red for 3 groups; green, red for 2 groups
     legend_handles = [
         Line2D([0], [0], color=group_colors[i], marker='o', linestyle='-',
                linewidth=2.5, markersize=8)
-        for i in range(num_groups)
-        if group_labels[i]
+        for i in legend_order
+        if i < num_groups and group_labels[i]
     ]
-    legend_labels = [group_labels[i] for i in range(num_groups) if group_labels[i]]
+    legend_labels = [group_labels[i] for i in legend_order if i < num_groups and group_labels[i]]
     ax.legend(legend_handles, legend_labels, loc='upper left',
-              fontsize=FONT_SIZE - 6, framealpha=0.9)
+              fontsize=FONT_SIZE - 4, framealpha=0.9)
 
     # Remove the top and right spines
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+
+    # Set ylim to 110% of the maximum possible score to better fit the legend
+    ax.set_ylim(SCORE_TO_YLIM[score][0], SCORE_TO_YLIM[score][1])
 
 
 
@@ -515,7 +547,9 @@ def main():
     output_dir = args.o
     os.makedirs(output_dir, exist_ok=True)
 
-    # Read the data files
+    # -----------
+    # CSV file with lesion metrics
+    # -----------
     print("\nReading data files...")
     df = read_csv_file_with_lesion_metrics(args.i)
     # Keep only relevant columns: participant_id, midsagittal_length_sct, midsagittal_width_sct, total_tissue_bridge_sct
