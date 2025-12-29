@@ -8,8 +8,8 @@ Generate 2x2 figure showing demographic data:
 - bar chart for injury levels
 
 This script:
-- reads CSV file with lesion metrics and clinical scores for sci-zurich (Note: we don't use the lesion metrics but need participant_id column and clinical scores for sci-zurich)
-- reads XLSX file with clinical scores for nisci trial
+- reads CSV file with lesion metrics (Note: we don't use the lesion metrics but need participant_id column)
+- reads XLSX files with clinical scores for both datasets
 - reads TSV files with participant demographics (age, sex, MRI field strength) for both datasets
 - merges the data into a single dataframe
 - generates a comprehensive figure with multiple subplots (2x2) for descriptive analysis
@@ -21,6 +21,7 @@ Example usage:
         -file-participants-zurich <PATH_TO_PARTICIPANTS_TSV_ZURICH>
         -file-participants-nisci <PATH_TO_PARTICIPANTS_TSV_NISCI>
         -file-clinical-nisci <PATH_TO_CLINICAL_SCORES_XLSX_NISCI>
+        -file-clinical-sci-zurich <PATH_TO_CLINICAL_SCORES_XLSX_SCI_ZURICH>
         -o <OUTPUT_DIR>
 
 Author: Jan Valosek
@@ -103,6 +104,12 @@ def get_parser():
         required=True,
         type=str,
         help='Absolute path to a XLSX file with participant clinical data for NISCI (clinical_scores.xlsx).'
+    )
+    parser.add_argument(
+        '-file-clinical-sci-zurich',
+        required=True,
+        type=str,
+        help='Absolute path to a XLSX file with participant clinical data for sci-zurich.'
     )
     parser.add_argument(
         '-o',
@@ -607,15 +614,34 @@ def main():
     print("\nReading data files...")
     # -----------
     # CSV file with lesion metrics and clinical scores for sci-zurich
-    # Note: we don't use the lesion metrics but need participant_id column and clinical scores for sci-zurich
+    # Note: we don't use the lesion metrics but need participant_id column
     # -----------
     df = read_csv_file_with_lesion_metrics(args.i)
+    # Keep only relevant columns: participant_id, midsagittal_length_sct, midsagittal_width_sct, total_tissue_bridge_sct
+    # NOTE: although this file also contains clinical scores, we will read clinical data from separate files
+    df = df[['participant_id',
+             'session_id',
+             'midsagittal_length_sct',
+             'midsagittal_width_sct',
+             'total_tissue_bridge_sct']]
 
     # -----------
     # participants.tsv files for both datasets with sex, age, MagneticFieldStrength
     # -----------
     df_participants_zurich = read_participants_file(args.file_participants_zurich)
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
+
+    # --------------
+    # sci-zurich clinical data
+    # --------------
+    df_clinical_sci_zurich = pd.read_excel(args.file_clinical_sci_zurich, engine='openpyxl',
+                                         usecols=['participant_id', 'session_id', 'nli_bl',
+                                                  'ais_bl', 'ais_1m', 'ais_3m', 'ais_6m'])
+    # If session_id is empty, fill with 'ses-01'
+    df_clinical_sci_zurich['session_id'] = df_clinical_sci_zurich['session_id'].fillna('ses-01')
+    # Replace 'NT' with NaN
+    df_clinical_sci_zurich = df_clinical_sci_zurich.replace('NT', np.nan)
+    df = pd.merge(df, df_clinical_sci_zurich, on=['participant_id', 'session_id'], how='left')
 
     # -----------
     # XLSX file with clinical scores (NLI, AIS) for NISCI
@@ -659,39 +685,6 @@ def main():
     df['ais_6m'] = df['ais_6m'].combine_first(df['ais_6m_nisci'])
     # Drop the extra columns
     df = df.drop(columns=['nli_bl_nisci', 'ais_bl_nisci', 'ais_1m_nisci', 'ais_3m_nisci', 'ais_6m_nisci'])
-
-    # -----------
-    # Apply any necessary filtering (following the trajectory script logic)
-    # -----------
-    print("\nApplying data filters...")
-
-    # Convert mri_time_since_injury to numeric (in days)
-    if 'mri_time_since_injury' in df.columns:
-        df['mri_time_since_injury'] = pd.to_numeric(df['mri_time_since_injury'])
-        print(f'Number of subjects before filtering by MRI time since injury: {df.shape[0]}')
-        # Keep only subjects with mri_time_since_injury (in days) from 12 days to 2 months (133 days)
-        df = df[(df['mri_time_since_injury'] >= 11) & (df['mri_time_since_injury'] <= 133)]
-        print(f'Number of subjects after filtering by MRI time since injury: {df.shape[0]}')
-
-    # Print participant_id for subjects with missing sex
-    if 'sex' in df.columns:
-        missing_sex_ids = df[df['sex'].isna()]['participant_id'].tolist()
-        if missing_sex_ids:
-            print(f'Participants with missing sex: {missing_sex_ids}')
-
-    # Print participant_id for subjects with missing sex
-    if 'age' in df.columns:
-        missing_sex_ids = df[df['age'].isna()]['participant_id'].tolist()
-        if missing_sex_ids:
-            print(f'Participants with missing age: {missing_sex_ids}')
-
-    # -----------
-    # Print meadian and IQR for mri_time_since_injury
-    # -----------
-    median_mri_time = df['mri_time_since_injury'].median()
-    q1_mri_time = df['mri_time_since_injury'].quantile(0.25)
-    q3_mri_time = df['mri_time_since_injury'].quantile(0.75)
-    print(f'MRI time since injury: median = {median_mri_time} days, IQR = [{q1_mri_time}, {q3_mri_time}] days')
 
     report_MagneticFieldStrength(df)
 
