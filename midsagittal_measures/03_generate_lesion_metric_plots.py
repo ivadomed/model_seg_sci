@@ -52,11 +52,7 @@ METRICS_AXIS_YLIM_DIFF = {
 METRIC_TO_TITLE = {
     'midsagittal_length': 'Midsagittal Lesion Length [mm]',
     'midsagittal_width': 'Midsagittal Lesion Width [mm]',
-    # 'ventral_tissue_bridge': 'Midsagittal Ventral Tissue Bridges [mm]',
-    # 'dorsal_tissue_bridge': 'Midsagittal Dorsal Tissue Bridges [mm]',
-    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]',
-    # 'dorsal_bridge_ratio': 'Midsagittal Dorsal Tissue Bridge Ratio [%]',
-    # 'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
+    'total_tissue_bridge': 'Midsagittal Total Tissue Bridges [mm]'
 }
 
 FONT_SIZE = 19
