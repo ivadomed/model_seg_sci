@@ -249,6 +249,11 @@ def create_scatterplot(df, output_dir):
         print(f'Scatter for {metric} saved as {figure_fname}')
         plt.close()
 
+        # Add white space above figure
+        cmd = f"convert '{figure_fname}' -bordercolor white -border 0x80+0+0 '{figure_fname}'"
+        subprocess.run(cmd, shell=True, check=True)
+
+
     fname_out = combine_plot('scatterplot', figure_fname_list, output_dir, panel_label="A)")
     return fname_out
 
