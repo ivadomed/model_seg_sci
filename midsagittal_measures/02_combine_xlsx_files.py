@@ -9,9 +9,7 @@ Namely, the script:
  - aggregates the metrics across subjects into a single dataframe and save the dataframe to a CSV file
 
 Example usage:
-    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type manual_lesion_manual_cord
-    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type manual_lesion_scisegv2_cord
-    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv -pred-type scisegv2_lesion_scisegv2_cord
+    python 02_combine_xlsx_files.py -input-folder <DIR_NAME>/results -o <DIR_NAME>/results/lesion_metrics_all_subjects.csv
 
 Note: to read XLSX files, you might need to install the following packages:
     pip install openpyxl
@@ -46,17 +44,6 @@ def get_parser():
         help='Absolute path to the \'results\' folder with XLSX files generated using \'sct_analyze_lesion. '
              'The results folders were generated using the \'01_compute_midsagittal_lesion_measures.sh\' '
              'script.'
-    )
-    parser.add_argument(
-        '-pred-type',
-        required=True,
-        type=str,
-        choices=['manual_lesion_manual_cord', 'manual_lesion_scisegv2_cord', 'scisegv2_lesion_scisegv2_cord'],
-        help='Type of the predicted lesion:'
-             'manual_lesion_manual_cord: manual lesion, manual cord, '
-             'manual_lesion_scisegv2_cord: manual lesion, SCIsegV2 cord, '
-             'scisegv2_lesion_scisegv2_cord: SCIsegV2 lesion, SCIsegV2 cord, '
-             'This information will be included in the output CSV filename.'
     )
     parser.add_argument(
         '-o',
@@ -94,21 +81,15 @@ def fetch_subject(filename_path):
     return subjectID, sessionID
 
 
-def get_fnames(dir_path, pred_type):
+def get_fnames(dir_path):
     """
     Get list of XLSX files with lesion metrics
     :param dir_path: list of paths to XLSX files with lesion metrics
-    :param pred_type: manual_lesion_manual_cord or manual_lesion_scisegv2_cord or scisegv2_lesion_scisegv2_cord
     :return: pandas dataframe with the paths to the XLSX files
     """
 
     # Get XLSX files with lesion metrics
-    if pred_type == 'manual_lesion_manual_cord':
-        fname_files = glob.glob(os.path.join(dir_path, '*manual_lesion_manual_cord.xlsx'))
-    elif pred_type == 'manual_lesion_scisegv2_cord':
-        fname_files = glob.glob(os.path.join(dir_path, '*manual_lesion_scisegv2_cord.xlsx'))
-    elif pred_type == 'scisegv2_lesion_scisegv2_cord':
-        fname_files = glob.glob(os.path.join(dir_path, '*scisegv2_lesion_scisegv2_cord.xlsx'))
+    fname_files = glob.glob(os.path.join(dir_path, '*scisegv2_lesion_scisegv2_cord.xlsx'))
 
     # remove hidden files starting with '~'
     fname_files = [f for f in fname_files if not os.path.basename(f).startswith('~')]
@@ -175,15 +156,13 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
 
-    pred_type = args.pred_type
-
     # Check if the input path exists
     path_input = os.path.abspath(os.path.expanduser(args.input_folder))
     if not os.path.exists(path_input):
         raise ValueError(f'ERROR: {path_input} does not exist.')
 
     # For each participant_id, get XLSX files with lesion metrics
-    df = get_fnames(path_input, pred_type)
+    df = get_fnames(path_input)
 
     # Iterate over the rows of the dataframe and read the XLSX files
     for index, row in df.iterrows():
@@ -199,6 +178,7 @@ def main():
     if not os.path.exists(dir_out):
         os.makedirs(dir_out)
         print(f'Created output folder: {dir_out}')
+    pred_type = 'scisegv2_lesion_scisegv2_cord'
     fname_out = os.path.join(dir_out, f'lesion_metrics_all_subjects_{pred_type}.csv')
     df.to_csv(fname_out, index=False)
     print(f'Saved lesion metrics to {fname_out}')
