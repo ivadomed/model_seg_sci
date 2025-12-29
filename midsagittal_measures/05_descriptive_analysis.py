@@ -1,19 +1,26 @@
 """
-Generate descriptive statistical analysis and publication-ready figures for SCI lesion data.
+Figure 2.
+
+Generate 2x2 figure showing demographic data:
+- pie chart for sex
+- pie chart for age
+- bar chart for AIS grades over time
+- bar chart for injury levels
 
 This script:
-- Reads CSV with lesion metrics computed using sct_analyze_lesion and aggregated across subjects
-- Reads XLSX file with manually measured lesion metrics (including clinical scores)
-- Reads TSV file with participant demographics
-- Merges the dataframes
-- Creates publication-ready descriptive statistics table and figures
-- Generates comprehensive demographic and clinical characterization plots
+- reads CSV file with lesion metrics and clinical scores for sci-zurich (Note: we don't use the lesion metrics but need participant_id column and clinical scores for sci-zurich)
+- reads XLSX file with clinical scores for nisci trial
+- reads TSV files with participant demographics (age, sex, MRI field strength) for both datasets
+- merges the data into a single dataframe
+- generates a comprehensive figure with multiple subplots (2x2) for descriptive analysis
+- creates a table with descriptive statistics
 
 Example usage:
     python 05_descriptive_analysis.py
-        -file-sct <PATH_TO_CSV_FILE>
-        -file-manual <PATH_TO_XLSX_FILE>
-        -file-participants <PATH_TO_TSV_FILE>
+        -i <PATH_TO_CSV_FILE>
+        -file-participants-zurich <PATH_TO_PARTICIPANTS_TSV_ZURICH>
+        -file-participants-nisci <PATH_TO_PARTICIPANTS_TSV_NISCI>
+        -file-clinical-nisci <PATH_TO_CLINICAL_SCORES_XLSX_NISCI>
         -o <OUTPUT_DIR>
 
 Author: Jan Valosek
@@ -259,6 +266,34 @@ def report_MagneticFieldStrength(df):
             print(f"- {field}: {count} ({pct:.1f}%)")
 
 
+def report_cervical_and_thoracic_injuries(df):
+    if 'nli_bl' in df.columns:
+        col = df['nli_bl']
+        missing_like = (
+                col.isna()
+                | col.eq(None)
+                | col.astype(str).str.fullmatch(r'\s*', na=False)  # empty/whitespace
+                | col.astype(str).str.fullmatch(r'(?i)nan|none|nt', na=False)
+        )
+        # Clean column: convert all missing-like values to np.nan
+        nli_data = col.mask(missing_like, np.nan).astype('string')
+        # Injury level counts
+        cervical_mask = nli_data.str.startswith('C', na=False)
+        thoracic_mask = (
+                nli_data.str.startswith('T', na=False)
+                | nli_data.str.startswith('L', na=False)
+        )
+        cervical_count = cervical_mask.sum()
+        thoracic_count = thoracic_mask.sum()
+        print(f'\nNumber of subjects with cervical injuries: {cervical_count}')
+        print(f'Number of subjects with thoracic injuries: {thoracic_count}')
+        # List participants with missing nli_bl
+        missing_nli_ids = df.loc[missing_like, 'participant_id'].tolist()
+        if missing_nli_ids:
+            print(f'Participants with missing nli_bl after merge: {missing_nli_ids}')
+            print(f'Total missing nli_bl: {len(missing_nli_ids)}')
+
+
 def _make_autopct(values: list[int]):
     """Return a formatter for pie-chart labels with percent and counts."""
 
@@ -353,7 +388,7 @@ def create_comprehensive_figure(df, output_dir):
             angle = (wedge.theta1 + wedge.theta2) / 2
             # Alternate the distance for every second label to prevent overlap
             if i == 0:
-                distance = 0.8  # Further from center
+                distance = 0.85  # Further from center
             else:
                 distance = 0.6  # Closer to center
 
@@ -382,7 +417,7 @@ def create_comprehensive_figure(df, output_dir):
     ax3 = plt.subplot(2, 2, 3)
 
     # Define time points for AIS grades
-    ais_time_points = ['bl', '1m', '3m', '6m']#, '12m']
+    ais_time_points = ['bl', '1m', '3m', '6m']
 
     # Check which AIS time points have data
     available_ais_timepoints = []
@@ -548,72 +583,11 @@ def create_comprehensive_figure(df, output_dir):
 
         plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
 
-    # # Subplots 8-12: Clinical scores baseline vs follow-up (trajectory plots)
-    # clinical_scores = ['ms', 'uems', 'lems', 'pp', 'lt']
-    # time_points = ['bl', '1m', '3m', '6m', '12m']
-    #
-    # for i, score in enumerate(clinical_scores):
-    #     ax = plt.subplot(3, 4, 8 + i)
-    #
-    #     # Filter for appropriate subjects (tetraplegic only for UEMS)
-    #     if score == 'uems':
-    #         df_plot = df[df['tetrapara_bl'] == 0] if 'tetrapara_bl' in df.columns else df
-    #     else:
-    #         df_plot = df
-    #
-    #     # Collect mean and std for each time point
-    #     means = []
-    #     stds = []
-    #     ns = []
-    #     valid_timepoints = []
-    #
-    #     for tp in time_points:
-    #         col_name = f'{score}_{tp}'
-    #         if col_name in df_plot.columns:
-    #             data = df_plot[col_name].dropna()
-    #             if len(data) > 0:
-    #                 means.append(data.mean())
-    #                 stds.append(data.std())
-    #                 ns.append(len(data))
-    #                 valid_timepoints.append(tp)
-    #
-    #     if means:
-    #         # Convert timepoint labels
-    #         tp_labels = [tp.upper() if tp != 'bl' else 'BL' for tp in valid_timepoints]
-    #
-    #         # Create trajectory plot with error bars
-    #         x_pos = range(len(valid_timepoints))
-    #         ax.errorbar(x_pos, means, yerr=stds, marker='o', linewidth=3, markersize=8,
-    #                    color=TRAJECTORY_COLORS[i], capsize=5, capthick=2,
-    #                    markerfacecolor='white', markeredgewidth=2, markeredgecolor=TRAJECTORY_COLORS[i])
-    #
-    #         # Add sample size annotations
-    #         for j, (x, n) in enumerate(zip(x_pos, ns)):
-    #             ax.text(x, means[j] + stds[j] + (max(means) * 0.05), f'n={n}',
-    #                    ha='center', va='bottom', fontsize=TICK_SIZE, alpha=0.8)
-    #
-    #         ax.set_xticks(x_pos)
-    #         ax.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
-    #         ax.set_ylabel(CLINICAL_SCORES_TO_AXES[score], fontsize=LABEL_SIZE)
-    #         ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=TITLE_SIZE, fontweight='bold')
-    #         ax.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
-    #         # Remove right and top spines
-    #         ax.spines['right'].set_visible(False)
-    #         ax.spines['top'].set_visible(False)
-    #
-    #         # Add horizontal line at maximum score
-    #         max_score = CLINICAL_SCORES_MAX[score]
-    #         ax.axhline(y=max_score, color='#D62728', linestyle=':', alpha=0.6, linewidth=2)
-    #
-    #         # Set y-axis limits
-    #         y_max = max(max_score, max([m + s for m, s in zip(means, stds)]) * 1.1)
-    #         ax.set_ylim(0, y_max)
-
     # Use tighter layout with minimal padding
     plt.tight_layout(pad=1.5, h_pad=1.0, w_pad=1.0)
 
     # Save the figure
-    figure_path = os.path.join(output_dir, 'descriptive_analysis_comprehensive.png')
+    figure_path = os.path.join(output_dir, 'Fig2_descriptive_analysis_comprehensive.png')
     plt.savefig(figure_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.savefig(figure_path.replace('.png', '.pdf'), dpi=300, bbox_inches='tight', facecolor='white')
 
@@ -622,8 +596,6 @@ def create_comprehensive_figure(df, output_dir):
 
 
 def main():
-    """Main function to run the descriptive analysis."""
-
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
@@ -632,14 +604,22 @@ def main():
     output_dir = args.o
     os.makedirs(output_dir, exist_ok=True)
 
-    print("Starting descriptive statistical analysis...")
-
-    # Read the data files
     print("\nReading data files...")
+    # -----------
+    # CSV file with lesion metrics and clinical scores for sci-zurich
+    # Note: we don't use the lesion metrics but need participant_id column and clinical scores for sci-zurich
+    # -----------
     df = read_csv_file_with_lesion_metrics(args.i)
+
+    # -----------
+    # participants.tsv files for both datasets with sex, age, MagneticFieldStrength
+    # -----------
     df_participants_zurich = read_participants_file(args.file_participants_zurich)
     df_participants_nisci = read_participants_file(args.file_participants_nisci)
 
+    # -----------
+    # XLSX file with clinical scores (NLI, AIS) for NISCI
+    # -----------
     df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl',
                                       usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05', 'AIS_06'])
     # '01' -- Day 0 (Screening)
@@ -655,13 +635,17 @@ def main():
                                                           'AIS_05': 'ais_3m',
                                                           'AIS_06': 'ais_6m'})
 
+    # -----------
     # Combine participant demographics from both datasets (add rows to a single dataframe)
+    # -----------
     df_participants_zurich['source'] = 'sci-zurich'
     df_participants_zurich['Site'] = 'Zurich'
     df_participants_nisci['source'] = 'nisci'
     df_participants_merged = pd.concat([df_participants_zurich, df_participants_nisci], ignore_index=True)
 
+    # -----------
     # Merge the dataframes
+    # -----------
     print("\nMerging dataframes...")
     df = pd.merge(df, df_participants_merged, on='participant_id', how='left')
     # Merge nli_bl and ais columns
@@ -676,7 +660,9 @@ def main():
     # Drop the extra columns
     df = df.drop(columns=['nli_bl_nisci', 'ais_bl_nisci', 'ais_1m_nisci', 'ais_3m_nisci', 'ais_6m_nisci'])
 
+    # -----------
     # Apply any necessary filtering (following the trajectory script logic)
+    # -----------
     print("\nApplying data filters...")
 
     # Convert mri_time_since_injury to numeric (in days)
@@ -699,7 +685,9 @@ def main():
         if missing_sex_ids:
             print(f'Participants with missing age: {missing_sex_ids}')
 
+    # -----------
     # Print meadian and IQR for mri_time_since_injury
+    # -----------
     median_mri_time = df['mri_time_since_injury'].median()
     q1_mri_time = df['mri_time_since_injury'].quantile(0.25)
     q3_mri_time = df['mri_time_since_injury'].quantile(0.75)
@@ -708,31 +696,7 @@ def main():
     report_MagneticFieldStrength(df)
 
     # Print number of subjects cervical and thoracic injuries
-    if 'nli_bl' in df.columns:
-        col = df['nli_bl']
-        missing_like = (
-                col.isna()
-                | col.eq(None)
-                | col.astype(str).str.fullmatch(r'\s*', na=False)  # empty/whitespace
-                | col.astype(str).str.fullmatch(r'(?i)nan|none|nt', na=False)
-        )
-        # Clean column: convert all missing-like values to np.nan
-        nli_data = col.mask(missing_like, np.nan).astype('string')
-        # Injury level counts
-        cervical_mask = nli_data.str.startswith('C', na=False)
-        thoracic_mask = (
-                nli_data.str.startswith('T', na=False)
-                | nli_data.str.startswith('L', na=False)
-        )
-        cervical_count = cervical_mask.sum()
-        thoracic_count = thoracic_mask.sum()
-        print(f'\nNumber of subjects with cervical injuries: {cervical_count}')
-        print(f'Number of subjects with thoracic injuries: {thoracic_count}')
-        # List participants with missing nli_bl
-        missing_nli_ids = df.loc[missing_like, 'participant_id'].tolist()
-        if missing_nli_ids:
-            print(f'Participants with missing nli_bl after merge: {missing_nli_ids}')
-            print(f'Total missing nli_bl: {len(missing_nli_ids)}')
+    report_cervical_and_thoracic_injuries(df)
 
     # # Drop rows with NaN values in key lesion metrics
     # lesion_metrics = ['midsagittal_length_sct', 'midsagittal_width_sct', 'total_tissue_bridge_sct']
@@ -743,7 +707,7 @@ def main():
 
     # Create descriptive statistics table
     print("\nCreating descriptive statistics table...")
-    descriptive_table = create_descriptive_table(df, output_dir)
+    create_descriptive_table(df, output_dir)
 
     # Create comprehensive figure
     print("\nCreating comprehensive descriptive figure...")
@@ -757,7 +721,6 @@ def main():
     print(f"- All outputs saved to: {output_dir}")
 
     print("\nDescriptive analysis completed successfully!")
-
 
 if __name__ == '__main__':
     main()
