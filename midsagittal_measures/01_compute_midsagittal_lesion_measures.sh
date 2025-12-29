@@ -3,11 +3,8 @@
 # Compute midsagittal lesion measures (length, width, and tissue bridges) from manual and automated segmentations.
 #
 # The script does the following:
-#   1. Copies manual segmentations of spinal cord and lesions from derivatives/labels
-#   2. Computes midsagittal lesion measures based on the manual segment
-#   3. Segments spinal cord and lesions using SCIsegV2 model
-#   4. Computes midsagittal lesion measures based on the SCIsegV2
-#   5. Computes midsagittal lesion measures based on the manual lesion and SCIsegV2 spinal cord segmentation
+#   1. Segments spinal cord and lesions using SCIsegV2 model
+#   2. Computes midsagittal lesion measures based on the SCIsegV2
 #
 # NOTE: This script requires SCT v7.0 or higher (due to the new sct_deepseg syntax).
 # NOTE: The script is meant to be run on GPU (see `CUDA_VISIBLE_DEVICES=X SCT_USE_GPU=X sct_deepseg ...` below).
@@ -53,28 +50,6 @@ echo "PATH_QC: ${PATH_QC}"
 SUBJECT=$1
 
 # ------------------------------------------------------------------------------
-# CONVENIENCE FUNCTIONS
-# ------------------------------------------------------------------------------
-
-# Copy GT SC or lesion segmentation
-copy_gt(){
-  local file="$1"
-  local type="$2"     # seg or lesion
-  # Construct file name to GT SC or lesion segmentation located under derivatives/labels
-  FILESEGMANUAL="${PATH_DATA}/derivatives/labels/${SUBJECT}/anat/${file}_${type}-manual.nii.gz"
-  echo ""
-  echo "Looking for manual segmentation: $FILESEGMANUAL"
-  if [[ -e $FILESEGMANUAL ]]; then
-      echo "Found! Copying ..."
-      rsync -avzh $FILESEGMANUAL ${file}_${type}-manual.nii.gz
-  else
-      echo "File ${FILESEGMANUAL}.nii.gz does not exist" >> ${PATH_LOG}/missing_files.log
-      echo "ERROR: Manual GT segmentation ${FILESEGMANUAL}.nii.gz does not exist. Exiting."
-      exit 1
-  fi
-}
-
-# ------------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 # ------------------------------------------------------------------------------
 # get starting time:
@@ -108,40 +83,6 @@ if [[ ! -e ${file_t2}.nii.gz ]]; then
     echo "ERROR: File ${file_t2}.nii.gz does not exist. Exiting."
     exit 1
 fi
-
-# ------------------------------------
-# Semi-automatic method (manual lesion + GT cord (from derivatives -- created semi-automatically) + sct_analyze_lesion)
-# ------------------------------------
-# Copy GT SC and lesion segmentations from derivatives/labels
-#copy_gt "${file_t2}" "seg"
-copy_gt "${file_t2}" "lesion"
-
-# Binarize GT lesion segmentation
-# We use threshold 0.5 to binarize because we used 0.5 to train the SCIseg models
-sct_maths -i ${file_t2}_lesion-manual.nii.gz -bin 0.5 -o ${file_t2}_lesion-manual_bin.nii.gz
-
-## Generate sagittal lesion QC report
-#sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject "lesion_manual"
-#
-## Compute the midsagittal lesion length and width based on the spinal cord and lesion segmentations obtained manually
-#status=0
-#sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_seg-manual.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
-## If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
-#if [ $status -ne 0 ]; then
-#    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_manual_cord.log
-#    exit 0
-#else
-#  # If sct_analyze_lesion finished successfully, the outputs are:
-#  #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-#  #   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
-#  #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
-#  # Remove pickle file -- we only need the XLSX file
-#  rm ${file_t2}_lesion-manual_bin_analysis.pkl
-#
-#  # Copy the XLSX file to the results folder
-#  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_manual_lesion_manual_cord.xlsx
-#  echo "✅ ${file_t2}_manual_lesion_manual_cord.xlsx created" >> ${PATH_LOG}/manual_lesion_manual_cord.log
-#fi
 
 # ----------------------------
 # Automatic method (SCIsegV2 + sct_analyze_lesion)
@@ -180,33 +121,6 @@ else
   # Copy the XLSX file to the results folder
   cp ${file_t2}_scisegv2_lesion_scisegv2_cord.xlsx ${PATH_RESULTS}
   echo "✅ ${file_t2}_scisegv2_lesion_scisegv2_cord.xlsx created" >> ${PATH_LOG}/scisegv2_lesion_scisegv2_cord.log
-fi
-
-# ----------------------------
-# Semi-automatic method II (manual lesion + SCIsegV2 spinal cord + sct_analyze_lesion)
-# ----------------------------
-
-# Generate sagittal lesion QC report (manual lesion + SCIsegV2 spinal cord)
-sct_qc -i ${file_t2}.nii.gz -d ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -p sct_deepseg_lesion -plane sagittal -qc ${PATH_QC} -qc-subject "lesion_manual_scisegv2_cord"
-
-# Compute the midsagittal lesion length and width (manual lesion + SCIsegV2 spinal cord)
-status=0
-sct_analyze_lesion -m ${file_t2}_lesion-manual_bin.nii.gz -s ${file_t2}_sc_seg_SCIsegV2.nii.gz -qc ${PATH_QC} -qc-subject ${SUBJECT} || status=$?
-# If status is not zero, sct_analyze_lesion failed (e.g., because there is no lesion in the GT segmentation)
-if [ $status -ne 0 ]; then
-    echo "❌ No lesion found in manual GT segmentation for ${file_t2}" >> ${PATH_LOG}/manual_lesion_scisegv2_cord.log
-    exit 0
-else
-  # If sct_analyze_lesion finished successfully, the outputs are:
-  #   - ${file_t2}_lesion-manual_bin_label.nii.gz: 3D mask of the segmented lesion with lesion IDs (1, 2, 3, etc.)
-  #   - ${file_t2}_lesion-manual_bin_analysis.xlsx: XLSX file containing the morphometric measures
-  #   - ${file_t2}_lesion-manual_bin_analysis.pkl: Python Pickle file containing the morphometric measures
-  # Remove pickle file -- we only need the XLSX file
-  rm ${file_t2}_lesion-manual_bin_analysis.pkl
-
-  # Copy the XLSX file to the results folder
-  cp ${file_t2}_lesion-manual_bin_analysis.xlsx ${PATH_RESULTS}/${file_t2}_manual_lesion_scisegv2_cord.xlsx
-  echo "✅ ${file_t2}_manual_lesion_scisegv2_cord.xlsx created" >> ${PATH_LOG}/manual_lesion_scisegv2_cord.log
 fi
 
 # ------------------------------------------------------------------------------
