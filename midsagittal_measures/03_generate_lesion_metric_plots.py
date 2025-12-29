@@ -38,13 +38,13 @@ METRICS_AXIS_LIM_SCATTER = {
 }
 
 METRICS_AXIS_XLIM_DIFF = {
-    'midsagittal_length': (-3, 100),
+    'midsagittal_length': (-3, 75),
     'midsagittal_width': (-0.5, 11),
-    'total_tissue_bridge': (-0.5, 8)
+    'total_tissue_bridge': (-0.5, 6)
 }
 
 METRICS_AXIS_YLIM_DIFF = {
-    'midsagittal_length': (-45, 45),
+    'midsagittal_length': (-46, 46),
     'midsagittal_width': (-4.5, 4.5),
     'total_tissue_bridge': (-4.5, 4.5)
 }
