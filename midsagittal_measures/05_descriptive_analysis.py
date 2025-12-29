@@ -78,7 +78,7 @@ AIS_COLORS = [
 def get_parser():
     """Parser function for command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Generate descriptive statistical analysis for SCI lesion data.',
+        description='Generate 2x2 figure showing demographic data.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
