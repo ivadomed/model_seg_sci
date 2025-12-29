@@ -59,16 +59,6 @@ METRIC_TO_TITLE = {
     # 'ventral_bridge_ratio': 'Midsagittal Ventral Tissue Bridge Ratio [%]',
 }
 
-METHOD_TO_TITLE = {
-    'GT': 'Manual',
-    'SCIsegV2': 'Automatic' # (SCIsegV2 lesion and cord + sct_analyze_lesion)
-}
-
-METHOD_TO_FNAME = {
-    'GT': 'manual',
-    'SCIsegV2': 'automatic'
-}
-
 FONT_SIZE = 19
 
 
@@ -323,10 +313,7 @@ def create_diff_plot(df, output_dir):
             }
         )
 
-        # Set plot title and labels
-        # ax.set_title(f'{METRIC_TO_TITLE[metric].split("[")[0]}\n'
-        #              f'Manual vs {METHOD_TO_TITLE[method]}', fontsize=FONT_SIZE)
-        ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
+        ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
         # ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs Automatic',
         #               fontsize=FONT_SIZE)
         ax.set_ylabel(f'Difference Manual − Automatic',
