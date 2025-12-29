@@ -63,7 +63,7 @@ def get_parser():
     parser function
     """
     parser = argparse.ArgumentParser(
-        description='Generate plots for manual vs automatic (SCIsegV2) lesion metric.',
+        description='Generate scatter plots and Bland-Altman plots between manual and automatic lesion metrics.',
         prog=os.path.basename(__file__).strip('.py')
     )
     parser.add_argument(
