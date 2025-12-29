@@ -151,15 +151,15 @@ def create_descriptive_table(df, output_dir):
         tsi_q75 = df['mri_time_since_injury'].quantile(0.75)
         results['Time since injury (days)'] = f"{tsi_mean:.1f} ± {tsi_std:.1f} (median: {tsi_median:.1f}, IQR: {tsi_q25:.1f}-{tsi_q75:.1f})"
 
-    # AIS grade distribution
-    if 'ais_bl' in df.columns:
-        ais_counts = df['ais_bl'].value_counts().sort_index()
-        ais_descriptions = []
-        for grade, count in ais_counts.items():
-            pct = (count / n_total) * 100
-            grade_label = AIS_LABELS.get(grade, grade)
-            ais_descriptions.append(f"{grade} ({grade_label}): {count} ({pct:.1f}%)")
-        results['AIS Grade at BL'] = "; ".join(ais_descriptions)
+    # # AIS grade distribution
+    # if 'ais_bl' in df.columns:
+    #     ais_counts = df['ais_bl'].value_counts().sort_index()
+    #     ais_descriptions = []
+    #     for grade, count in ais_counts.items():
+    #         pct = (count / n_total) * 100
+    #         grade_label = AIS_LABELS.get(grade, grade)
+    #         ais_descriptions.append(f"{grade} ({grade_label}): {count} ({pct:.1f}%)")
+    #     results['AIS Grade at BL'] = "; ".join(ais_descriptions)
 
     # Cervical/ThoracoLumbar distribution
     if 'nli_bl' in df.columns:
