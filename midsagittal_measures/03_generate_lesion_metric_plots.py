@@ -1,11 +1,12 @@
 """
-Generate correlation matrices between three methods for each lesion metric.
+Generate scatter plots and Bland-Altman plots between manual and automatic lesion metrics.
 
 The script:
 - reads CSV file with lesion metrics with _sct and _manual suffixes.
-- computes both Spearman correlations with statistical significance
-- creates scatter plots with linear regression lines for each metric
-- creates Bland-Altman Mean Difference plot for each metric
+- for each lesion metric (lesion length, width, tissue bridges):
+    - computes Spearman correlation between manual and automatic lesion metrics
+    - creates scatter plot with linear regression line
+    - creates Bland-Altman Mean Difference plot
 
 Example usage:
     python 03_generate_lesion_metric_plots.py
