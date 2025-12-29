@@ -1,5 +1,8 @@
 """
+Figure 3.
+
 Generate scatter plots and Bland-Altman plots between manual and automatic lesion metrics.
+The script generates a single figure with 3 scatter plots (first row) and 3 Bland-Altman plots (second row).
 
 The script:
 - reads CSV file with lesion metrics with _sct and _manual suffixes.
@@ -315,8 +318,6 @@ def create_diff_plot(df, output_dir):
         )
 
         ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
-        # ax.set_ylabel(f'{METRIC_TO_TITLE[metric].split("[")[0]} Difference\nManual vs Automatic',
-        #               fontsize=FONT_SIZE)
         ax.set_ylabel(f'Difference Manual − Automatic',
                       fontsize=FONT_SIZE)
 
@@ -406,8 +407,8 @@ def main():
     fname_combined_diff = create_diff_plot(df, args.o)
 
     print(f"Combining scatter and diff plots into a single figure...")
-    fname_out = os.path.join(args.o, 'combined', f'combined_scatter_and_diff.png')
-    # 1 row, 3 columns:
+    fname_out = os.path.join(args.o, 'combined', f'Fig3_combined_scatter_and_diff.png')
+    # Combine scatter and diff plots into a single figure (scatter on top, diff on bottom)
     cmd_combine = f"convert {fname_combined_scatter} {fname_combined_diff} -append {fname_out}"
     subprocess.run(cmd_combine, shell=True)
     print(f"Combined scatter and diff plots saved as {fname_out}")
