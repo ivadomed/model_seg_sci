@@ -3,7 +3,7 @@
 This folder contains scripts to compare the midsagittal lesion length, lesion width, and tissue bridges obtained using different methods:
 
 1. **_manual_**: manual measurements provided by Dario and Lynn
-2. **_automatic_**: automatic measurement computed from the spinal cord and lesion segmentations obtained using SCIsegV2 (i.e., SCT's `sct_deepseg lesion_sci_t2` + `sct_analyze_lesion`)
+2. **_automatic_**: automatic measurement computed from the spinal cord and lesion segmentations obtained using SCT v7.0 (i.e., `sct_deepseg lesion_sci_t2` (SCIsegV2) + `sct_analyze_lesion`)
 
 ## 0. Download the datasets
 
