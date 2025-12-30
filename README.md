@@ -12,6 +12,10 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 ## Updates
 
+### 2025-05-08
+
+* As of [SCT v7.0](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/7.0), SCIsegV2 is available via the updated `sct_deepseg lesion_sci_t2` command, for example: `sct_deepseg lesion_sci_t2 -i <INPUT>`. See the [Getting the lesion and spinal cord segmentation](#getting-the-lesion-and-spinal-cord-segmentation) section for details.
+
 ### 2024-09-19
 
 * We have added a new tutorial on how to use the SCIsegV2 model for lesion segmentation and tissue bridges computation. The tutorial is available [here](https://spinalcordtoolbox.com/user_section/tutorials/lesion-analysis.html).
@@ -31,14 +35,14 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 ### Install dependencies
 
-- [Spinal Cord Toolbox (SCT) v6.4](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/6.4) or higher -- follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
+- [Spinal Cord Toolbox (SCT) v7.0](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/7.0) or higher - follow the installation instructions [here](https://github.com/spinalcordtoolbox/spinalcordtoolbox?tab=readme-ov-file#installation)
 - [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) 
 - Python (v3.9)
 
 Once the dependencies are installed, download the latest SCIseg model:
 
 ```bash
-sct_deepseg -install-task seg_sc_lesion_t2w_sci
+sct_deepseg lesion_sci_t2 -install
 ```
 
 ### Getting the lesion and spinal cord segmentation
@@ -46,13 +50,13 @@ sct_deepseg -install-task seg_sc_lesion_t2w_sci
 To segment a single image, run the following command: 
 
 ```bash
-sct_deepseg -i <INPUT> -task seg_sc_lesion_t2w_sci
+sct_deepseg lesion_sci_t2 -i <INPUT>
 ```
 
 For example:
 
 ```bash
-sct_deepseg -i sub-001_T2w.nii.gz -task seg_sc_lesion_t2w_sci
+sct_deepseg lesion_sci_t2 -i sub-001_T2w.nii.gz
 ```
 
 The outputs will be saved in the same directory as the input image, with the suffix `_lesion_seg.nii.gz` for the lesion 
