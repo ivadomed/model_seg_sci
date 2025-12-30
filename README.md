@@ -14,7 +14,7 @@ The model was trained on raw T2-weighted images of SCI patients from seven sites
 
 ### 2025-05-08
 
-* Starting with [SCT v7.0](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/7.0) and later, SCIsegV2 is available via the updated `sct_deepseg lesion_sci_t2` command, for example: `sct_deepseg lesion_sci_t2 -i <INPUT>`. See the [Getting the lesion and spinal cord segmentation](#getting-the-lesion-and-spinal-cord-segmentation) section for details.
+* As of [SCT v7.0](https://github.com/spinalcordtoolbox/spinalcordtoolbox/releases/tag/7.0), SCIsegV2 is available via the updated `sct_deepseg lesion_sci_t2` command, for example: `sct_deepseg lesion_sci_t2 -i <INPUT>`. See the [Getting the lesion and spinal cord segmentation](#getting-the-lesion-and-spinal-cord-segmentation) section for details.
 
 ### 2024-09-19
 
