@@ -51,7 +51,7 @@ CLINICAL_SCORES_TO_AXES = {
     'lems': 'Lower Extremity Motor Score',
     'ms': 'Total Motor Score',
     'pp': 'Pinprick Score',
-    'lt': 'Light-Touch Score'
+    'lt': 'Light Touch Score'
 }
 
 SCORE_TO_YLIM = {
