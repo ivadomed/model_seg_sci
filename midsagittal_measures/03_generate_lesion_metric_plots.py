@@ -225,12 +225,13 @@ def create_scatterplot(df, output_dir):
         # Change axes labels
         ax.set_title(f'{METRIC_TO_TITLE[metric]}', fontsize=FONT_SIZE)
         ax.set_xlabel(f'Manual', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Automatic', fontsize=FONT_SIZE)
 
         if metric == 'midsagittal_length':
             # Tweak axes ticks
             ax.set_xticks([0, 50, 100, 150, 200])
             ax.set_yticks([0, 50, 100, 150, 200])
+            # Set y-label only for this plot to avoid repetition in combined figure
+            ax.set_ylabel(f'Automatic', fontsize=FONT_SIZE)
         elif metric == 'midsagittal_width':
             ax.set_xticks([0, 2, 4, 6, 8, 10])
             ax.set_yticks([0, 2, 4, 6, 8, 10])
@@ -318,8 +319,12 @@ def create_diff_plot(df, output_dir):
         )
 
         ax.set_xlabel(f'Mean {METRIC_TO_TITLE[metric].split("[")[0]}', fontsize=FONT_SIZE)
-        ax.set_ylabel(f'Difference Manual − Automatic',
-                      fontsize=FONT_SIZE)
+        if metric == 'midsagittal_length':
+            # Set y-label only for this plot to avoid repetition in combined figure
+            ax.set_ylabel(f'Difference Manual − Automatic',
+                          fontsize=FONT_SIZE)
+        else:
+            ax.set_ylabel('')
 
         # Get the limits and means for custom styling
         diff = x - y            # Difference between x and y
