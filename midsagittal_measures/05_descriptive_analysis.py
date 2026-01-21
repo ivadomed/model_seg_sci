@@ -63,6 +63,7 @@ LABEL_SIZE = FONT_SIZE = TITLE_SIZE - 2
 TICK_SIZE = TITLE_SIZE - 6
 
 # Based on cm.Pastel1
+PIE_COLORS_SEX = ['#B3CDE3', '#FBB4AE'] # males: blue; females: red
 PIE_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6', '#FFFFCC', '#E5D8BD', '#FDDAEC', '#F2F2F2']
 TRAJECTORY_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6']
 # AIS A–E: warm → neutral → greenish, same pastel tones as PIE_COLORS
@@ -338,7 +339,7 @@ def create_comprehensive_figure(df, output_dir):
             labels = ['Male' if 'male' in str(x).lower() else 'Female' for x in sex_counts.index]
 
         wedges, texts, autotexts = ax1.pie(sex_counts.values, labels=labels, autopct=_make_autopct(sex_counts),
-                                          colors=PIE_COLORS[:len(sex_counts)], startangle=90,
+                                          colors=PIE_COLORS_SEX, startangle=90,
                                           textprops={'fontsize': TICK_SIZE})
         ax1.set_title('Sex', fontsize=TITLE_SIZE, fontweight='bold')
 
