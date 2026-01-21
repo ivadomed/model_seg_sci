@@ -500,12 +500,12 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
     #     title_metric = f'{METRIC_TO_TITLE[metrics[0]]} & {METRIC_TO_TITLE[metrics[1]]}'
     #
     # ax.set_title(f'{CLINICAL_SCORES_TO_AXES[score]} over time stratified by {title_metric}', fontsize=FONT_SIZE)
-    ax.set_xlabel('Time Point', fontsize=FONT_SIZE)
+    ax.set_xlabel('', fontsize=FONT_SIZE)
     ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
 
     # Set x-ticks at the actual month points (0, 1, 3, 6)
     ax.set_xticks(time_points_months)
-    ax.set_xticklabels(['BL', 'M1', 'M3', 'M6'], fontsize=FONT_SIZE)
+    ax.set_xticklabels(['Baseline', '1-month', '3-month', '6-month'], fontsize=FONT_SIZE)
 
     # Add minor ticks only at the labeled tick positions for better visualization
     ax.tick_params(axis='x', which='minor', bottom=True, length=4)

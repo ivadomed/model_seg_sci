@@ -489,8 +489,8 @@ def create_comprehensive_figure(df, output_dir):
 
         # Customize the plot
         ax3.set_xticks(x_pos)
-        ax3.set_xticklabels(tp_labels, fontsize=TICK_SIZE)
-        ax3.set_xlabel('Time Point', fontsize=LABEL_SIZE)
+        ax3.set_xticklabels(['Baseline', '1-month', '3-month', '6-month'], fontsize=TICK_SIZE)
+        ax3.set_xlabel('', fontsize=LABEL_SIZE)
         ax3.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
         ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold')
         ax3.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
@@ -570,7 +570,7 @@ def create_comprehensive_figure(df, output_dir):
         )
         ax4.set_xticks(range(len(sorted_levels)))
         ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
-        ax4.set_xlabel('Neurological Level', fontsize=LABEL_SIZE)
+        ax4.set_xlabel('', fontsize=LABEL_SIZE)
         ax4.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
         ax4.set_title('Neurological Level of Injury at BL', fontsize=TITLE_SIZE, fontweight='bold')
         ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
