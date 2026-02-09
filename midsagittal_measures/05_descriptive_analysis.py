@@ -73,6 +73,7 @@ AIS_COLORS = [
     '#FFFFCC',  # C – pastel yellow
     '#CCEBC5',  # D – pastel green
     '#B3CDE3',  # E – cool green-blue
+    '#E5D8BD'   # Unknown – light beige/gray
 ]
 
 
@@ -439,13 +440,12 @@ def create_comprehensive_figure(df, output_dir):
         all_grades = set()
         for tp in available_ais_timepoints:
             ais_col = f'ais_{tp}'
-            grades = df[ais_col].dropna()
-            # Filter out NT values
-            grades = grades[grades != 'NT']
+            # Replace NaN with "Unknown" to be included in the plot
+            grades = df[ais_col].replace('NaN', pd.NA).fillna('Unknown')
             all_grades.update(grades.unique())
 
         # Sort grades (A, B, C, D, E, then any others)
-        grade_order = ['A', 'B', 'C', 'D', 'E']
+        grade_order = ['A', 'B', 'C', 'D', 'E', 'Unknown']
         sorted_grades = [g for g in grade_order if g in all_grades]
         sorted_grades.extend([g for g in sorted(all_grades) if g not in grade_order])
 
@@ -456,7 +456,7 @@ def create_comprehensive_figure(df, output_dir):
 
         for tp in available_ais_timepoints:
             ais_col = f'ais_{tp}'
-            tp_data = df[ais_col].dropna()
+            tp_data = df[ais_col].replace('NaN', pd.NA).fillna('Unknown')
             tp_total = len(tp_data)
             total_counts.append(tp_total)
 
@@ -473,7 +473,7 @@ def create_comprehensive_figure(df, output_dir):
         for i, grade in enumerate(sorted_grades):
             # Use the same colormap as other subplots
             color = AIS_COLORS[i % len(AIS_COLORS)]
-            label = f"AIS {grade}" if grade in AIS_LABELS else f"AIS {grade}"
+            label = f"AIS {grade}" if grade != 'Unknown' else "Unknown"
             bar = ax3.bar(x_pos, grade_counts[grade], bottom=bottom,
                          color=color, alpha=1, label=label,
                          edgecolor='white', linewidth=0.5)
