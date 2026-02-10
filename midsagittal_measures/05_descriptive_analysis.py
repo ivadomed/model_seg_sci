@@ -509,23 +509,6 @@ def create_comprehensive_figure(df, output_dir):
         # Set y-axis to start from 0
         ax3.set_ylim(0, max(total_counts) * 1.1)
 
-    else:
-        # Fallback: show only baseline AIS grade distribution as pie chart if no longitudinal data
-        if 'ais_bl' in df.columns:
-            # Filter out NT values
-            ais_data = df['ais_bl'][df['ais_bl'] != 'NT']
-            ais_counts = ais_data.value_counts().sort_index()
-            labels = []
-            for grade in ais_counts.index:
-                if grade in AIS_LABELS:
-                    labels.append(f"AIS {grade}\n({AIS_LABELS[grade]})")
-                else:
-                    labels.append(f"AIS {grade}")
-            wedges, texts, autotexts = ax3.pie(ais_counts.values, labels=labels, autopct='%1.1f%%',
-                                              colors=PIE_COLORS[:len(ais_counts)], startangle=90,
-                                              textprops={'fontsize': TICK_SIZE})
-            ax3.set_title('AIS Grade (Baseline Only)', fontsize=TITLE_SIZE, fontweight='bold')
-
     # Subplot 4: Neurological level of injury
     ax4 = plt.subplot(2, 2, 4)
     if 'nli_bl' in df.columns:
