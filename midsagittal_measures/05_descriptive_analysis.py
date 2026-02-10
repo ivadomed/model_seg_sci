@@ -493,7 +493,8 @@ def create_comprehensive_figure(df, output_dir):
         ax3.set_xticklabels(['Baseline', '1-month', '3-month', '6-month'], fontsize=TICK_SIZE)
         ax3.set_xlabel('', fontsize=LABEL_SIZE)
         ax3.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
-        ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold')
+        # Move title slightly up
+        ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax3.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
 
         # Add legend at right center (0.78, 0.42)
@@ -573,7 +574,8 @@ def create_comprehensive_figure(df, output_dir):
         ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
         ax4.set_xlabel('', fontsize=LABEL_SIZE)
         ax4.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
-        ax4.set_title('Neurological Level of Injury at Baseline', fontsize=TITLE_SIZE, fontweight='bold')
+        # Move title slightly up
+        ax4.set_title('Neurological Level of Injury at Baseline', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
         ax4.spines['right'].set_visible(False)
         ax4.spines['top'].set_visible(False)
