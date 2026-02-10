@@ -68,11 +68,11 @@ PIE_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6', '#FFFFCC', 
 TRAJECTORY_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6']
 # AIS A–E: warm → neutral → greenish, same pastel tones as PIE_COLORS
 AIS_COLORS = [
-    '#FBB4AE',  # A – pastel red/pink
-    '#FED9A6',  # B – pastel orange
-    '#FFFFCC',  # C – pastel yellow
-    '#CCEBC5',  # D – pastel green
     '#B3CDE3',  # E – cool green-blue
+    '#CCEBC5',  # D – pastel green
+    '#FFFFCC',  # C – pastel yellow
+    '#FED9A6',  # B – pastel orange
+    '#FBB4AE',  # A – pastel red/pink
     '#E5D8BD'   # Unknown – light beige/gray
 ]
 
@@ -444,8 +444,8 @@ def create_comprehensive_figure(df, output_dir):
             grades = df[ais_col].replace('NaN', pd.NA).fillna('Unknown')
             all_grades.update(grades.unique())
 
-        # Sort grades (A, B, C, D, E, then any others)
-        grade_order = ['A', 'B', 'C', 'D', 'E', 'Unknown']
+        # Sort grades (E at bottom, then D, C, B, A, Unknown at top)
+        grade_order = ['E', 'D', 'C', 'B', 'A', 'Unknown']
         sorted_grades = [g for g in grade_order if g in all_grades]
         sorted_grades.extend([g for g in sorted(all_grades) if g not in grade_order])
 
@@ -497,10 +497,28 @@ def create_comprehensive_figure(df, output_dir):
         ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax3.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
 
-        # Add legend at right center (0.78, 0.42)
-        ax3.legend(bbox_to_anchor=(1, 0.9), loc='center left', fontsize=TICK_SIZE-2, framealpha=0.9)
+        # Create custom legend with desired order: Unknown, A, B, C, D, E
+        legend_order = ['Unknown', 'A', 'B', 'C', 'D', 'E']
+        legend_colors = [
+            '#E5D8BD',  # Unknown – light beige/gray
+            '#FBB4AE',  # A – pastel red/pink
+            '#FED9A6',  # B – pastel orange
+            '#FFFFCC',  # C – pastel yellow
+            '#CCEBC5',  # D – pastel green
+            '#B3CDE3'   # E – cool green-blue
+        ]
 
-        # Remove the total sample size annotations above bars since we now show counts within sub-bars
+        # Create legend handles and labels in the desired order
+        legend_handles = []
+        legend_labels = []
+        for i, grade in enumerate(legend_order):
+            if grade in sorted_grades:  # Only include grades that exist in the data
+                import matplotlib.patches as mpatches
+                handle = mpatches.Patch(color=legend_colors[i], label=f"AIS {grade}" if grade != 'Unknown' else "Unknown")
+                legend_handles.append(handle)
+                legend_labels.append(f"AIS {grade}" if grade != 'Unknown' else "Unknown")
+
+        ax3.legend(handles=legend_handles, labels=legend_labels, bbox_to_anchor=(1, 0.9), loc='center left', fontsize=TICK_SIZE-2, framealpha=0.9)
 
         # Remove right and top spines
         ax3.spines['right'].set_visible(False)
