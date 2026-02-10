@@ -482,7 +482,11 @@ def create_comprehensive_figure(df, output_dir):
             # Add count labels for each sub-bar (only if count > 0)
             for j, (x, count) in enumerate(zip(x_pos, grade_counts[grade])):
                 if count > 0:  # Only show label if there are participants
-                    y_center = bottom[j] + count / 2  # Center of the sub-bar
+                    # 6 month AIS E --> only 2 participants, so move the label slightly up
+                    if x == 3 and grade == 'E':
+                        y_center = bottom[j] + count / 2 + 1  # Move label slightly up
+                    else:
+                        y_center = bottom[j] + count / 2  # Center of the sub-bar
                     ax3.text(x, y_center, str(count), ha='center', va='center',
                             fontsize=TICK_SIZE, fontweight='bold', color='black')
 
