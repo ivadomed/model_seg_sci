@@ -567,21 +567,26 @@ def create_comprehensive_figure(df, output_dir):
         sorted_levels = sorted(nli_counts.index, key=sort_nli)
         sorted_counts = [nli_counts[level] for level in sorted_levels]
 
+        spacing = 1.2  # >1 increases distance between bars to prevent overlap of xtick labels
+        x = np.arange(len(sorted_levels)) * spacing
+
         bars = ax4.bar(
-            range(len(sorted_levels)),
+            x,
             sorted_counts,
             color=PIE_COLORS[1],
             alpha=0.8,
             edgecolor='white',
             linewidth=0.5,
         )
-        ax4.set_xticks(range(len(sorted_levels)))
-        ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
+        ax4.set_xticks(x)
+        # ax4.set_xticks(range(len(sorted_levels)))
+        ax4.set_xticklabels(sorted_levels, rotation=0, fontsize=TICK_SIZE)
         ax4.set_xlabel('', fontsize=LABEL_SIZE)
         ax4.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
         # Move title slightly up
         ax4.set_title('Neurological Level of Injury at Baseline', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+        ax4.tick_params(axis="x", which="major")#, pad=1)  # smaller = closer to bars
         ax4.spines['right'].set_visible(False)
         ax4.spines['top'].set_visible(False)
 
@@ -596,7 +601,7 @@ def create_comprehensive_figure(df, output_dir):
                     fontsize=TICK_SIZE,
                 )
 
-        plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
+        # plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
 
     # Use tighter layout with minimal padding
     plt.tight_layout(pad=1.5, h_pad=1.0, w_pad=1.0)
