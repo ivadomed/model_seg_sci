@@ -10,17 +10,27 @@ Generate 2x2 figure showing trajectory plots for:
 - Pinprick Score
 - Light-Touch Score
 
+The script generates two types of plots:
+1. Raw trajectory plots: Mean ± 95% CI trajectories with time points shown as months (0, 1, 3, 6)
+2. LME trajectory plots: Linear Mixed-Effects (LME) fitted trajectories using actual days from baseline
+   - Individual trajectories shown as thin, semi-transparent lines
+   - Population-level LME fitted lines shown as thick, solid lines
+   - Uses actual timepoint data (days) from the -file-timepoints XLSX file
+   - LME model: score ~ days (fixed) + (1 + days | participant_id) (random intercept and slope)
+
 The script:
 - reads CSV file with lesion metrics (Note: we don't use the lesion metrics but need participant_id column)
 - reads XLSX files with clinical scores for both datasets
+- reads XLSX file with exact timepoints in days for clinical assessments (optional, uses approximate days if not provided)
 - merges the data into a single dataframe
 - creates trajectory plots of clinical scores over time
 
 Example usage:
-    python 04_generate_trajectory_plots.py
-        -i <PATH_TO_CSV_FILE>
-        -file-clinical-nisci <PATH_TO_CLINICAL_SCORES_XLSX_NISCI>
-        -file-clinical-sci-zurich <PATH_TO_CLINICAL_SCORES_XLSX_SCI_ZURICH>
+    python 04_generate_trajectory_plots.py \
+        -i <PATH_TO_CSV_FILE> \
+        -file-clinical-nisci <PATH_TO_CLINICAL_SCORES_XLSX_NISCI> \
+        -file-clinical-sci-zurich <PATH_TO_CLINICAL_SCORES_XLSX_SCI_ZURICH> \
+        -file-timepoints <PATH_TO_TIMEPOINTS_XLSX> \
         -o <OUTPUT_DIR>
 
 Note: to read XLS files, you might need to install the following packages:
@@ -35,8 +45,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 import subprocess
+import warnings
 
 from matplotlib.lines import Line2D
+from statsmodels.formula.api import mixedlm
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from utils import read_csv_file_with_lesion_metrics
 
@@ -216,8 +229,63 @@ def create_trajectory_plots(df, output_dir):
     # Sort time points in a logical order
     time_points = sorted(list(time_point_mapping.keys()), key=lambda x: time_point_mapping.get(x, {}).get('order'))
 
-    # PART 1: Raw trajectory plots
+    # PART 1: Raw trajectory plots (original, using months)
     create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir, time_point_mapping, time_points)
+
+    # PART 2: LME-fitted trajectory plots (using actual days)
+    print("\n" + "="*60)
+    print("Generating LME-fitted trajectory plots with days on x-axis...")
+    print("="*60)
+    create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
+
+
+def reshape_to_long_format(df, score):
+    """
+    Reshape dataframe from wide to long format for LME modeling.
+
+    :param df: pandas dataframe in wide format with columns like lems_bl, lems_1m, etc.
+    :param score: clinical score name (e.g., 'lems', 'ms')
+    :return: dataframe in long format with columns: participant_id, days, score_value, group_idx, metric columns
+    """
+    time_points = ['bl', '1m', '3m', '6m']
+
+    # Create list to store reshaped data
+    long_data = []
+
+    for _, row in df.iterrows():
+        participant_id = row['participant_id']
+
+        for tp in time_points:
+            # Get clinical score value
+            score_col = f'{score}_{tp}'
+            if score_col in df.columns and not pd.isna(row[score_col]):
+                score_value = float(row[score_col])
+
+                # Get days for this timepoint (if available)
+                days_col = tp
+                if days_col in df.columns and not pd.isna(row[days_col]):
+                    days = float(row[days_col])
+                else:
+                    # Fallback to approximate days if exact timepoint not available
+                    days_mapping = {'bl': 0, '1m': 30, '3m': 90, '6m': 180}
+                    days = days_mapping[tp]
+
+                # Create row for long format
+                long_row = {
+                    'participant_id': participant_id,
+                    'timepoint': tp,
+                    'days': days,
+                    'score_value': score_value,
+                }
+
+                # Add metric columns
+                for col in df.columns:
+                    if col.endswith('_sct') or col == 'session_id':
+                        long_row[col] = row[col]
+
+                long_data.append(long_row)
+
+    return pd.DataFrame(long_data)
 
 
 def create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir, time_point_mapping, time_points):
@@ -402,6 +470,194 @@ def create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir,
         plt.savefig(figure_fname, dpi=300)
         plt.close()
 
+    combine_plots(figure_fnames, output_dir)
+
+
+def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir):
+    """
+    Create trajectory plots with Linear Mixed-Effects (LME) fitted lines using actual days on x-axis.
+
+    Fits a single LME model with group interaction: score ~ days * C(group_idx) + (1 + days | participant_id)
+    This allows testing whether recovery rates (slopes) differ significantly between groups.
+
+    :param df: pandas dataframe with baseline lesion metrics and clinical scores
+    :param group_colors: list of colors for each group
+    :param metric_thresholds: dict: thresholds for each metric to create groups
+    :param output_dir: output directory
+    """
+
+    figure_fnames = []
+
+    # Loop over clinical scores (e.g., 'lems', 'ms', ...)
+    for score, metrics in metric_thresholds.items():
+        metric_names = list(metrics.keys())
+
+        # Reshape data to long format for LME
+        df_long = reshape_to_long_format(df, score)
+
+        if df_long.empty:
+            print(f"No data available for {score}, skipping...")
+            continue
+
+        # Single metric - 2 groups
+        if len(metric_names) == 1:
+            metric = metric_names[0]
+            metric_name = f'{metric}_sct'
+            threshold = metric_thresholds[score][metric][0]
+
+            # Assign groups
+            df_long['group_idx'] = df_long[metric_name].apply(
+                lambda x: 0 if pd.isna(x) or x <= threshold else 1
+            )
+            num_groups = 2
+
+        # Multiple metrics - 3 groups (hierarchical)
+        else:
+            metric1, metric2 = metric_names[0], metric_names[1]
+            metric1_name = f'{metric1}_sct'
+            metric2_name = f'{metric2}_sct'
+            threshold1 = metric_thresholds[score][metric1][0]
+            threshold2 = metric_thresholds[score][metric2][0]
+
+            def assign_group(row):
+                m1_val = row[metric1_name]
+                m2_val = row[metric2_name]
+                if pd.isna(m1_val) or m1_val <= threshold1:
+                    return 0
+                elif pd.isna(m2_val) or m2_val <= threshold2:
+                    return 1
+                else:
+                    return 2
+
+            df_long['group_idx'] = df_long.apply(assign_group, axis=1)
+            num_groups = 3
+
+        # Convert group_idx to categorical for proper interaction term handling
+        df_long['group_idx'] = df_long['group_idx'].astype('category')
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot individual trajectories (light, thin lines) and fit LME for each group
+        group_labels = [""] * num_groups
+
+        for group_idx in range(num_groups):
+            group_data = df_long[df_long['group_idx'] == group_idx].copy()
+
+            if group_data.empty:
+                continue
+
+            # Count unique subjects at last timepoint (6m)
+            last_tp_subjects = group_data[group_data['timepoint'] == '6m']['participant_id'].nunique()
+
+            # Create group label
+            if len(metric_names) == 1:
+                metric = metric_names[0]
+                threshold = metric_thresholds[score][metric][0]
+                unit = '%' if 'ratio' in metric else 'mm'
+                if group_idx == 0:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} ≤{threshold:.2f} {unit} (n = {last_tp_subjects})'
+                else:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} >{threshold:.2f} {unit} (n = {last_tp_subjects})'
+            else:
+                metric1, metric2 = metric_names[0], metric_names[1]
+                threshold1 = metric_thresholds[score][metric1][0]
+                threshold2 = metric_thresholds[score][metric2][0]
+                unit1 = '%' if 'ratio' in metric1 else 'mm'
+                unit2 = '%' if 'ratio' in metric2 else 'mm'
+                if group_idx == 0:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} ≤{threshold1:.2f} {unit1} (n = {last_tp_subjects})'
+                elif group_idx == 1:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} ≤{threshold2:.2f} {unit2} (n = {last_tp_subjects})'
+                else:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} >{threshold2:.2f} {unit2} (n = {last_tp_subjects})'
+
+            # Plot individual trajectories (thin, semi-transparent)
+            for participant_id in group_data['participant_id'].unique():
+                participant_data = group_data[group_data['participant_id'] == participant_id].sort_values('days')
+                if len(participant_data) >= 2:
+                    ax.plot(participant_data['days'], participant_data['score_value'],
+                           color=group_colors[group_idx], alpha=0.15, linewidth=0.8, zorder=1)
+
+            # Fit Linear Mixed-Effects Model
+            try:
+                # Suppress convergence warnings for cleaner output
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', category=ConvergenceWarning)
+                    # Formula: score ~ days (fixed effect) + (1 + days | participant_id) (random intercept and slope)
+                    lme_model = mixedlm("score_value ~ days", group_data,
+                                       groups=group_data["participant_id"],
+                                       re_formula="~days")
+                    lme_result = lme_model.fit(method='lbfgs', maxiter=200)
+
+                # Generate predictions for smooth line
+                days_range = np.linspace(group_data['days'].min(), group_data['days'].max(), 100)
+                pred_df = pd.DataFrame({'days': days_range})
+
+                # Get fixed effects predictions (population-level trajectory)
+                predictions = lme_result.predict(exog=pred_df)
+
+                # Plot LME fitted line (thick, solid)
+                ax.plot(days_range, predictions,
+                       color=group_colors[group_idx], linewidth=3, zorder=3,
+                       label=group_labels[group_idx])
+
+                # Print model summary
+                print(f"\n{'='*60}")
+                print(f"LME Model for {score.upper()}, Group {group_idx}: {group_labels[group_idx]}")
+                print(f"{'='*60}")
+                print(f"Fixed Effects - Intercept: {lme_result.fe_params['Intercept']:.3f}")
+                print(f"Fixed Effects - Days (slope): {lme_result.fe_params['days']:.4f}")
+                print(f"P-value for days: {lme_result.pvalues['days']:.4f}")
+                print(f"Number of subjects: {group_data['participant_id'].nunique()}")
+                print(f"Number of observations: {len(group_data)}")
+
+            except Exception as e:
+                print(f"Warning: LME fitting failed for {score}, group {group_idx}: {str(e)}")
+                # Plot mean trajectory as fallback
+                mean_data = group_data.groupby('days')['score_value'].mean().reset_index()
+                ax.plot(mean_data['days'], mean_data['score_value'],
+                       color=group_colors[group_idx], linewidth=3, zorder=3,
+                       label=group_labels[group_idx])
+
+        # Customize plot
+        ax.set_xlabel('Days from Baseline', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
+        ax.tick_params(axis='both', labelsize=FONT_SIZE)
+
+        # Reorder legend
+        legend_order = [0, 2, 1] if num_groups == 3 else [0, 1]
+        handles, labels = ax.get_legend_handles_labels()
+        ordered_handles = [handles[i] for i in legend_order if i < len(handles)]
+        ordered_labels = [labels[i] for i in legend_order if i < len(labels)]
+        ax.legend(ordered_handles, ordered_labels, loc='upper left',
+                 fontsize=FONT_SIZE - 4, framealpha=0.9)
+
+        # Remove top and right spines
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Set ylim
+        ax.set_ylim(SCORE_TO_YLIM[score][0], SCORE_TO_YLIM[score][1])
+
+        plt.tight_layout()
+
+        # Save figure
+        num_subjects = df['participant_id'].nunique()
+        if len(metric_names) == 1:
+            figure_fname = os.path.join(output_dir,
+                                       f'trajectory_plot_LME_{score}_{metric_names[0]}_{num_subjects}subjects.png')
+            print(f'\nLME trajectory plot for {score} by {metric_names[0]} saved as {figure_fname}')
+        else:
+            figure_fname = os.path.join(output_dir,
+                                       f'trajectory_plot_LME_{score}_{metric_names[0]}_{metric_names[1]}_{num_subjects}subjects.png')
+            print(f'\nLME trajectory plot for {score} by {metric_names[0]} and {metric_names[1]} saved as {figure_fname}')
+
+        figure_fnames.append(figure_fname)
+        plt.savefig(figure_fname, dpi=300)
+        plt.close()
+
+    # Combine plots
     combine_plots(figure_fnames, output_dir)
 
 
