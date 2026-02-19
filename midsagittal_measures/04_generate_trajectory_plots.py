@@ -123,11 +123,12 @@ def get_parser():
 
 
 
-def combine_plots(figure_fnames, output_dir):
+def combine_plots(figure_fnames, output_type, output_dir):
     """
     Combine all the plots into a single figure using bash convert command
     This requires ImageMagick to be installed
     :param figure_fnames: list of figure filenames
+    :param output_type: str: type of figure (e.g., 'lme' or 'raw') to fname
     :param output_dir: str: output directory where the combined figure will be saved
     """
 
@@ -171,7 +172,7 @@ def combine_plots(figure_fnames, output_dir):
 
     if len(labeled_files) == 4:
         # Combine into 2x2 grid
-        output_combined = os.path.join(combined_dir, 'Fig5_trajectory_plots_combined.png')
+        output_combined = os.path.join(combined_dir, f'Fig5_trajectory_plots_{output_type}_combined.png')
         cmd = f"convert '{labeled_files[0]}' '{labeled_files[1]}' +append temp_row1.png && " \
               f"convert '{labeled_files[2]}' '{labeled_files[3]}' +append temp_row2.png && " \
               f"convert temp_row1.png temp_row2.png -append '{output_combined}' && " \
@@ -470,7 +471,7 @@ def create_raw_trajectory_plots(df, group_colors, metric_thresholds, output_dir,
         plt.savefig(figure_fname, dpi=300)
         plt.close()
 
-    combine_plots(figure_fnames, output_dir)
+    combine_plots(figure_fnames, 'raw', output_dir)
 
 
 def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir):
@@ -683,7 +684,7 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
         plt.close()
 
     # Combine plots
-    combine_plots(figure_fnames, output_dir)
+    combine_plots(figure_fnames, 'lme', output_dir)
 
 
 def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
