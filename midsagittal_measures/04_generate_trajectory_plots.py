@@ -478,7 +478,9 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
     Create trajectory plots with Linear Mixed-Effects (LME) fitted lines using actual days on x-axis.
 
     Fits a single LME model with group interaction: score ~ days * C(group_idx) + (1 + days | participant_id)
-    This allows testing whether recovery rates (slopes) differ significantly between groups.
+        - C(group_idx) treats group_idx as a categorical variable, allowing for different intercepts and slopes for each group (e.g., lesion width < XX mm and lesion width > XX mm).
+        - The interaction term (days * C(group_idx)) allows the slope of days to differ between groups.
+        - (1 + days | participant_id) allows for random intercepts and slopes for each participant, accounting for individual variability in trajectories.
 
     :param df: pandas dataframe with baseline lesion metrics and clinical scores
     :param group_colors: list of colors for each group
@@ -541,6 +543,26 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
         # Plot individual trajectories (light, thin lines) and fit LME for each group
         group_labels = [""] * num_groups
 
+        # Fit a Linear Mixed-Effects Model
+        # C(group_idx) forces patsy/statsmodels to treat group_idx as a *categorical*
+        # predictor, even though it is encoded as integers (0/1/2). Without C(...), the model
+        # would interpret group_idx as a continuous numeric variable and (incorrectly) assume that
+        # going from group 0 -> 1 -> 2 has a linear effect. With C(group_idx), each group gets its
+        # own intercept (and its own slope when interacted with time), which is what we want here.
+        y_col = 'score_value'
+        x_col = 'days'
+        formula = f"{y_col} ~ {x_col} * C(group_idx)"
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=ConvergenceWarning)
+                lme_model = mixedlm(formula, df_long,
+                                   groups=df_long['participant_id'],
+                                   re_formula='~days')
+                lme_result = lme_model.fit(method='lbfgs', maxiter=200)
+        except Exception as e:
+            lme_result = None
+            print(f"Warning: LME fitting failed for {score}: {str(e)}")
+
         for group_idx in range(num_groups):
             group_data = df_long[df_long['group_idx'] == group_idx].copy()
 
@@ -579,46 +601,53 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
                     ax.plot(participant_data['days'], participant_data['score_value'],
                            color=group_colors[group_idx], alpha=0.15, linewidth=0.8, zorder=1)
 
-            # Fit Linear Mixed-Effects Model
-            try:
-                # Suppress convergence warnings for cleaner output
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', category=ConvergenceWarning)
-                    # Formula: score ~ days (fixed effect) + (1 + days | participant_id) (random intercept and slope)
-                    lme_model = mixedlm("score_value ~ days", group_data,
-                                       groups=group_data["participant_id"],
-                                       re_formula="~days")
-                    lme_result = lme_model.fit(method='lbfgs', maxiter=200)
-
-                # Generate predictions for smooth line
+            # Plot model-based fitted line from the single LME
+            if lme_result is not None:
                 days_range = np.linspace(group_data['days'].min(), group_data['days'].max(), 100)
-                pred_df = pd.DataFrame({'days': days_range})
+                pred_df = pd.DataFrame({'days': days_range, 'group_idx': group_idx})
+                # Ensure the categorical levels match the training data (important for patsy).
+                pred_df['group_idx'] = pd.Categorical(
+                    pred_df['group_idx'], categories=df_long['group_idx'].cat.categories
+                )
 
-                # Get fixed effects predictions (population-level trajectory)
                 predictions = lme_result.predict(exog=pred_df)
 
-                # Plot LME fitted line (thick, solid)
                 ax.plot(days_range, predictions,
-                       color=group_colors[group_idx], linewidth=3, zorder=3,
-                       label=group_labels[group_idx])
+                        color=group_colors[group_idx], linewidth=3, zorder=3,
+                        label=group_labels[group_idx])
 
-                # Print model summary
+                # Optional: print per-group intercept/slope implied by the fixed effects.
+                fe = lme_result.fe_params
+                base_intercept = float(fe.get('Intercept', np.nan))
+                base_slope = float(fe.get('days', np.nan))
+                if group_idx == 0:
+                    intercept = base_intercept
+                    slope = base_slope
+                else:
+                    g_term = f"C(group_idx)[T.{group_idx}]"
+                    # statsmodels may order interaction names as 'days:C(group_idx)[T.x]' or vice versa.
+                    int_a = f"days:C(group_idx)[T.{group_idx}]"
+                    int_b = f"C(group_idx)[T.{group_idx}]:days"
+                    intercept = base_intercept + float(fe.get(g_term, 0.0))
+                    slope = base_slope + float(fe.get(int_a, fe.get(int_b, 0.0)))
+
                 print(f"\n{'='*60}")
                 print(f"LME Model for {score.upper()}, Group {group_idx}: {group_labels[group_idx]}")
                 print(f"{'='*60}")
-                print(f"Fixed Effects - Intercept: {lme_result.fe_params['Intercept']:.3f}")
-                print(f"Fixed Effects - Days (slope): {lme_result.fe_params['days']:.4f}")
-                print(f"P-value for days: {lme_result.pvalues['days']:.4f}")
+                print(f"Fixed-effects implied intercept: {intercept:.3f}")
+                print(f"Fixed-effects implied days slope: {slope:.4f}")
                 print(f"Number of subjects: {group_data['participant_id'].nunique()}")
                 print(f"Number of observations: {len(group_data)}")
 
             except Exception as e:
                 print(f"Warning: LME fitting failed for {score}, group {group_idx}: {str(e)}")
                 # Plot mean trajectory as fallback
+            else:
+                # Fallback: plot mean trajectory if model fitting failed.
                 mean_data = group_data.groupby('days')['score_value'].mean().reset_index()
                 ax.plot(mean_data['days'], mean_data['score_value'],
-                       color=group_colors[group_idx], linewidth=3, zorder=3,
-                       label=group_labels[group_idx])
+                        color=group_colors[group_idx], linewidth=3, zorder=3,
+                        label=group_labels[group_idx])
 
         # Customize plot
         ax.set_xlabel('Days from Baseline', fontsize=FONT_SIZE)
