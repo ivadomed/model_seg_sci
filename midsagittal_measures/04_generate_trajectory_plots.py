@@ -94,6 +94,12 @@ def get_parser():
         help='Absolute path to a XLSX file with participant clinical data for sci-zurich.'
     )
     parser.add_argument(
+        '-file-timepoints',
+        required=False,
+        type=str,
+        help='Absolute path to a XLSX file with exact timepoints for clinical assessments for both datasets.'
+    )
+    parser.add_argument(
         '-o',
         required=True,
         type=str,
@@ -630,6 +636,19 @@ def main():
     print(f'Number of subjects before dropping missing 6-month data: {df.shape[0]}')
     df = df[~df['lems_6m'].isna() & ~df['ms_6m'].isna() & ~df['pp_6m'].isna() & ~df['lt_6m'].isna()]
     print(f'Number of subjects after dropping missing 6-month data: {df.shape[0]}')
+
+    # ----------------
+    # Time points for clinical assessments
+    # ----------------
+    if args.file_timepoints:
+        df_timepoints = pd.read_excel(args.file_timepoints, engine='openpyxl')
+        # # If session_id is empty, fill with 'ses-01'
+        # df_timepoints['session_id'] = df_timepoints['session_id'].fillna('ses-01')
+        # Replace 'NT' with NaN
+        df_timepoints = df_timepoints.replace('NT', np.nan)
+
+        # Merge time points into main dataframe
+        df = pd.merge(df, df_timepoints, on=['participant_id'], how='left')
 
     #----------------
     # Clinical scores and baseline metrics over time
