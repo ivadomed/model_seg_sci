@@ -5,7 +5,7 @@
 #
 # For each URP-CTREE node, creates two barplots:
 # 1. AIS grade distribution (ais_bl)
-# 2. Neurological level of injury distribution with Cervical/ThoracoLumbar categories (nli_bl)
+# 2. Neurological level of injury distribution with Cervical/Thoracolumbar categories (nli_bl)
 #
 
 
@@ -20,8 +20,9 @@ warnings.filterwarnings('ignore')
 
 # Constants for plotting
 TITLE_SIZE = 16
-LABEL_SIZE = FONT_SIZE = TITLE_SIZE - 2
+FONT_SIZE = TITLE_SIZE - 2
 TICK_SIZE = TITLE_SIZE
+LABEL_SIZE = TITLE_SIZE + 4
 
 # Color scheme based on the existing analysis (order: Unknown, A, B, C, D, E)
 AIS_COLORS = [
@@ -117,9 +118,8 @@ def create_ais_distribution_plot(df_subset, node_value, output_dir):
                     y_center = bottom + count / 2 - 0.8  # Shift down slightly
                 else:
                     y_center = bottom + count / 2
-                ax.text(x_pos, y_center, f'{grade}\n(n = {count})',
-                        ha='center', va='center',
-                       fontsize=TICK_SIZE, fontweight='bold', color='black')
+                ax.text(x_pos, y_center, f'{grade} (n = {count})',
+                        ha='center', va='center', fontsize=LABEL_SIZE, fontweight='bold', color='black')
 
             bottom += count
 
@@ -168,7 +168,7 @@ def create_ais_distribution_plot(df_subset, node_value, output_dir):
 def create_nli_distribution_plot(df_subset, node_value, output_dir):
     """
     Create neurological level of injury distribution stacked barplot for a specific nodeProCSM value.
-    Shows Cervical vs ThoracoLumbar distribution.
+    Shows Cervical vs Thoracolumbar distribution.
     """
     # Set style for publication
     plt.style.use('default')
@@ -193,15 +193,15 @@ def create_nli_distribution_plot(df_subset, node_value, output_dir):
         total = cervical_n + thoracolumbar_n
 
         if total > 0:
-            # Order for stacking: ThoracoLumbar at bottom, Cervical at top
-            categories_stacking = ['ThoracoLumbar', 'Cervical']
+            # Order for stacking: Thoracolumbar at bottom, Cervical at top
+            categories_stacking = ['Thoracolumbar', 'Cervical']
             counts_stacking = [thoracolumbar_n, cervical_n]
-            # Order for legend: Cervical, ThoracoLumbar (same as before)
-            categories_legend = ['Cervical', 'ThoracoLumbar']
-            colors = [PIE_COLORS[0], PIE_COLORS[1]]  # Cervical=red, ThoracoLumbar=blue
+            # Order for legend: Cervical, Thoracolumbar (same as before)
+            categories_legend = ['Cervical', 'Thoracolumbar']
+            colors = [PIE_COLORS[0], PIE_COLORS[1]]  # Cervical=red, Thoracolumbar=blue
 
             # Create color mapping
-            color_map = {'Cervical': PIE_COLORS[0], 'ThoracoLumbar': PIE_COLORS[1]}
+            color_map = {'Cervical': PIE_COLORS[0], 'Thoracolumbar': PIE_COLORS[1]}
 
             # Create stacked bar chart (single bar)
             x_pos = 0  # Single bar at position 0
@@ -211,12 +211,12 @@ def create_nli_distribution_plot(df_subset, node_value, output_dir):
                 if count > 0:
                     bar = ax.bar(x_pos, count, bottom=bottom, color=color_map[category], alpha=0.8,
                                edgecolor='white', linewidth=0.5, label=category)
-                    if category == 'ThoracoLumbar' and count == 2:  # Special case
+                    if category == 'Thoracolumbar' and count == 2:  # Special case
                         y_center = bottom + count / 2 + 0.8  # Shift up
                     else:
                         y_center = bottom + count / 2
-                    ax.text(x_pos, y_center, f'{category}\n(n = {count})',
-                           ha='center', va='center', fontsize=TICK_SIZE, fontweight='bold')
+                    ax.text(x_pos, y_center, f'{category} (n = {count})',
+                           ha='center', va='center', fontsize=LABEL_SIZE, fontweight='bold')
 
                     bottom += count
 
@@ -229,13 +229,13 @@ def create_nli_distribution_plot(df_subset, node_value, output_dir):
         ax.set_xticks([])
         ax.set_yticks([])
 
-        # # Add legend with proper display order (Cervical, ThoracoLumbar)
+        # # Add legend with proper display order (Cervical, Thoracolumbar)
         # if total > 0:
         #     import matplotlib.patches as mpatches
         #     legend_handles = []
         #     legend_labels = []
         #     for category in categories_legend:
-        #         if (category == 'Cervical' and cervical_n > 0) or (category == 'ThoracoLumbar' and thoracolumbar_n > 0):
+        #         if (category == 'Cervical' and cervical_n > 0) or (category == 'Thoracolumbar' and thoracolumbar_n > 0):
         #             handle = mpatches.Patch(color=color_map[category], label=category)
         #             legend_handles.append(handle)
         #             legend_labels.append(category)
