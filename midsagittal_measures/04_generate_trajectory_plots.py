@@ -70,7 +70,7 @@ CLINICAL_SCORES_TO_AXES = {
 SCORE_TO_YLIM = {
     'uems': (0, 50),
     'lems': (-3, 60),
-    'ms': (5, 105),
+    'ms': (5, 115),
     'pp': (8, 80),
     'lt': (15, 100)
 }
@@ -638,10 +638,6 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
                 print(f"Fixed-effects implied days slope: {slope:.4f}")
                 print(f"Number of subjects: {group_data['participant_id'].nunique()}")
                 print(f"Number of observations: {len(group_data)}")
-
-            except Exception as e:
-                print(f"Warning: LME fitting failed for {score}, group {group_idx}: {str(e)}")
-                # Plot mean trajectory as fallback
             else:
                 # Fallback: plot mean trajectory if model fitting failed.
                 mean_data = group_data.groupby('days')['score_value'].mean().reset_index()
