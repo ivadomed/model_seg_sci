@@ -679,6 +679,8 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
 
         # Set ylim
         ax.set_ylim(SCORE_TO_YLIM[score][0], SCORE_TO_YLIM[score][1])
+        # Set xlim to 200 days (~6 months)
+        ax.set_xlim(-5, 200)
 
         plt.tight_layout()
 
@@ -1059,6 +1061,8 @@ def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
 
     # Set ylim to 110% of the maximum possible score to better fit the legend
     ax.set_ylim(SCORE_TO_YLIM[score][0], SCORE_TO_YLIM[score][1])
+    # Set xlim to 200 days (~6 months)
+    ax.set_xlim(-5, 200)
 
 
 
