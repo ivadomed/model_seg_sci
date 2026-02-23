@@ -17,6 +17,12 @@ The script generates two types of plots:
    - Population-level LME fitted lines shown as thick, solid lines
    - Uses actual timepoint data (days) from the -file-timepoints XLSX file
    - LME model: score ~ days (fixed) + (1 + days | participant_id) (random intercept and slope)
+3. LME trajectory plots with log(days + 1) transformation to capture non-linear recovery patterns
+   - Individual trajectories shown as thin, semi-transparent lines
+   - Population-level LME fitted lines shown as thick, solid lines
+   - Uses actual timepoint data (days) from the -file-timepoints XLSX file
+   - NLME model: score ~ log(days + 1) * C(group_idx) (fixed) + (1 + log(days + 1) | participant_id) (random intercept and slope)
+   - Log transformation captures non-linear recovery patterns typical in clinical data (rapid early recovery that plateaus)
 
 The script:
 - reads CSV file with lesion metrics (Note: we don't use the lesion metrics but need participant_id column)
@@ -238,6 +244,14 @@ def create_trajectory_plots(df, output_dir):
     print("Generating LME-fitted trajectory plots with days on x-axis...")
     print("="*60)
     create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
+
+    # PART 3: NLME-fitted trajectory plots (using actual days)
+    print("\n" + "="*60)
+    print("Generating Non-Linear Mixed-Effects (NLME) trajectory plots with days on x-axis...")
+    print("Using log(days + 1) transformation to capture non-linear recovery patterns")
+    print("="*60)
+    create_nlme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
+
 
 
 def reshape_to_long_format(df, score):
@@ -685,6 +699,229 @@ def create_lme_trajectory_plots(df, group_colors, metric_thresholds, output_dir)
 
     # Combine plots
     combine_plots(figure_fnames, 'lme', output_dir)
+
+
+def create_nlme_trajectory_plots(df, group_colors, metric_thresholds, output_dir):
+    """
+    Create trajectory plots with Non-Linear Mixed-Effects (NLME) fitted lines using actual days on x-axis.
+
+    Fits a single mixed-effects model with non-linear time component and group interaction:
+    score ~ np.log(days + 1) * C(group_idx) + (1 + np.log(days + 1) | participant_id)
+        - Uses logarithmic transformation of time (log(days + 1)) to capture non-linear recovery patterns (common in clinical recovery data where rapid initial improvement plateaus over time)
+        - C(group_idx) treats group_idx as a categorical variable, allowing for different intercepts and slopes for each group (e.g., lesion width < XX mm and lesion width > XX mm).
+        - The interaction term allows the non-linear slope to differ between groups.
+        - (1 + np.log(days + 1) | participant_id) allows for random intercepts and slopes for each participant, accounting for individual variability in trajectories.
+
+    :param df: pandas dataframe with baseline lesion metrics and clinical scores
+    :param group_colors: list of colors for each group
+    :param metric_thresholds: dict: thresholds for each metric to create groups
+    :param output_dir: output directory
+    """
+
+    figure_fnames = []
+
+    # Loop over clinical scores (e.g., 'lems', 'ms', ...)
+    for score, metrics in metric_thresholds.items():
+        metric_names = list(metrics.keys())
+
+        # Reshape data to long format for LME
+        df_long = reshape_to_long_format(df, score)
+
+        if df_long.empty:
+            print(f"No data available for {score}, skipping...")
+            continue
+
+        # Single metric - 2 groups
+        if len(metric_names) == 1:
+            metric = metric_names[0]
+            metric_name = f'{metric}_sct'
+            threshold = metric_thresholds[score][metric][0]
+
+            # Assign groups
+            df_long['group_idx'] = df_long[metric_name].apply(
+                lambda x: 0 if pd.isna(x) or x <= threshold else 1
+            )
+            num_groups = 2
+
+        # Multiple metrics - 3 groups (hierarchical)
+        else:
+            metric1, metric2 = metric_names[0], metric_names[1]
+            metric1_name = f'{metric1}_sct'
+            metric2_name = f'{metric2}_sct'
+            threshold1 = metric_thresholds[score][metric1][0]
+            threshold2 = metric_thresholds[score][metric2][0]
+
+            def assign_group(row):
+                m1_val = row[metric1_name]
+                m2_val = row[metric2_name]
+                if pd.isna(m1_val) or m1_val <= threshold1:
+                    return 0
+                elif pd.isna(m2_val) or m2_val <= threshold2:
+                    return 1
+                else:
+                    return 2
+
+            df_long['group_idx'] = df_long.apply(assign_group, axis=1)
+            num_groups = 3
+
+        # Convert group_idx to categorical for proper interaction term handling
+        df_long['group_idx'] = df_long['group_idx'].astype('category')
+
+        # Add non-linear time transformation for modeling recovery curves
+        # log(days + 1) captures the typical pattern of rapid initial recovery that plateaus over time
+        df_long['log_days'] = np.log(df_long['days'] + 1)
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot individual trajectories (light, thin lines) and fit LME for each group
+        group_labels = [""] * num_groups
+
+        # Fit a Non-Linear Mixed-Effects Model
+        # C(group_idx) forces patsy/statsmodels to treat group_idx as a *categorical*
+        # predictor, even though it is encoded as integers (0/1/2). Without C(...), the model
+        # would interpret group_idx as a continuous numeric variable and (incorrectly) assume that
+        # going from group 0 -> 1 -> 2 has a linear effect. With C(group_idx), each group gets its
+        # own intercept (and its own slope when interacted with time), which is what we want here.
+        # Using log(days + 1) instead of days to capture non-linear recovery patterns.
+        y_col = 'score_value'
+        x_col = 'log_days'
+        formula = f"{y_col} ~ {x_col} * C(group_idx)"
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=ConvergenceWarning)
+                lme_model = mixedlm(formula, df_long,
+                                   groups=df_long['participant_id'],
+                                   re_formula='~log_days')
+                lme_result = lme_model.fit(method='lbfgs', maxiter=200)
+        except Exception as e:
+            lme_result = None
+            print(f"Warning: Non-linear mixed-effects model fitting failed for {score}: {str(e)}")
+
+        for group_idx in range(num_groups):
+            group_data = df_long[df_long['group_idx'] == group_idx].copy()
+
+            if group_data.empty:
+                continue
+
+            # Count unique subjects at last timepoint (6m)
+            last_tp_subjects = group_data[group_data['timepoint'] == '6m']['participant_id'].nunique()
+
+            # Create group label
+            if len(metric_names) == 1:
+                metric = metric_names[0]
+                threshold = metric_thresholds[score][metric][0]
+                unit = '%' if 'ratio' in metric else 'mm'
+                if group_idx == 0:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} ≤{threshold:.2f} {unit} (n = {last_tp_subjects})'
+                else:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric]} >{threshold:.2f} {unit} (n = {last_tp_subjects})'
+            else:
+                metric1, metric2 = metric_names[0], metric_names[1]
+                threshold1 = metric_thresholds[score][metric1][0]
+                threshold2 = metric_thresholds[score][metric2][0]
+                unit1 = '%' if 'ratio' in metric1 else 'mm'
+                unit2 = '%' if 'ratio' in metric2 else 'mm'
+                if group_idx == 0:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} ≤{threshold1:.2f} {unit1} (n = {last_tp_subjects})'
+                elif group_idx == 1:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} ≤{threshold2:.2f} {unit2} (n = {last_tp_subjects})'
+                else:
+                    group_labels[group_idx] = f'{METRIC_TO_TITLE[metric1]} >{threshold1:.2f} {unit1} & {METRIC_TO_TITLE[metric2]} >{threshold2:.2f} {unit2} (n = {last_tp_subjects})'
+
+            # Plot individual trajectories (thin, semi-transparent)
+            for participant_id in group_data['participant_id'].unique():
+                participant_data = group_data[group_data['participant_id'] == participant_id].sort_values('days')
+                if len(participant_data) >= 2:
+                    ax.plot(participant_data['days'], participant_data['score_value'],
+                           color=group_colors[group_idx], alpha=0.15, linewidth=0.8, zorder=1)
+
+            # Plot model-based fitted line from the single NLME model
+            if lme_result is not None:
+                days_range = np.linspace(group_data['days'].min(), group_data['days'].max(), 100)
+                log_days_range = np.log(days_range + 1)
+                pred_df = pd.DataFrame({'log_days': log_days_range, 'group_idx': group_idx})
+                # Ensure the categorical levels match the training data (important for patsy).
+                pred_df['group_idx'] = pd.Categorical(
+                    pred_df['group_idx'], categories=df_long['group_idx'].cat.categories
+                )
+
+                predictions = lme_result.predict(exog=pred_df)
+
+                ax.plot(days_range, predictions,
+                        color=group_colors[group_idx], linewidth=3, zorder=3,
+                        label=group_labels[group_idx])
+
+                # Optional: print per-group intercept/slope implied by the fixed effects.
+                fe = lme_result.fe_params
+                base_intercept = float(fe.get('Intercept', np.nan))
+                base_slope = float(fe.get('log_days', np.nan))
+                if group_idx == 0:
+                    intercept = base_intercept
+                    slope = base_slope
+                else:
+                    g_term = f"C(group_idx)[T.{group_idx}]"
+                    # statsmodels may order interaction names as 'log_days:C(group_idx)[T.x]' or vice versa.
+                    int_a = f"log_days:C(group_idx)[T.{group_idx}]"
+                    int_b = f"C(group_idx)[T.{group_idx}]:log_days"
+                    intercept = base_intercept + float(fe.get(g_term, 0.0))
+                    slope = base_slope + float(fe.get(int_a, fe.get(int_b, 0.0)))
+
+                print(f"\n{'='*60}")
+                print(f"Non-Linear Mixed-Effects Model for {score.upper()}, Group {group_idx}: {group_labels[group_idx]}")
+                print(f"{'='*60}")
+                print(f"Fixed-effects implied intercept: {intercept:.3f}")
+                print(f"Fixed-effects implied log(days+1) coefficient: {slope:.4f}")
+                print(f"Number of subjects: {group_data['participant_id'].nunique()}")
+                print(f"Number of observations: {len(group_data)}")
+            else:
+                # Fallback: plot mean trajectory if model fitting failed.
+                mean_data = group_data.groupby('days')['score_value'].mean().reset_index()
+                ax.plot(mean_data['days'], mean_data['score_value'],
+                        color=group_colors[group_idx], linewidth=3, zorder=3,
+                        label=group_labels[group_idx])
+
+        # Customize plot
+        ax.set_xlabel('Days from Baseline', fontsize=FONT_SIZE)
+        ax.set_ylabel(f'{CLINICAL_SCORES_TO_AXES[score]}', fontsize=FONT_SIZE)
+        ax.tick_params(axis='both', labelsize=FONT_SIZE)
+
+        # Reorder legend
+        legend_order = [0, 2, 1] if num_groups == 3 else [0, 1]
+        handles, labels = ax.get_legend_handles_labels()
+        ordered_handles = [handles[i] for i in legend_order if i < len(handles)]
+        ordered_labels = [labels[i] for i in legend_order if i < len(labels)]
+        ax.legend(ordered_handles, ordered_labels, loc='upper left',
+                 fontsize=FONT_SIZE - 4, framealpha=0.9)
+
+        # Remove top and right spines
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Set ylim
+        ax.set_ylim(SCORE_TO_YLIM[score][0], SCORE_TO_YLIM[score][1])
+        # Set xlim to 200 days (~6 months)
+        ax.set_xlim(-5, 200)
+
+        plt.tight_layout()
+
+        # Save figure
+        num_subjects = df['participant_id'].nunique()
+        if len(metric_names) == 1:
+            figure_fname = os.path.join(output_dir,
+                                       f'trajectory_plot_NLME_{score}_{metric_names[0]}_{num_subjects}subjects.png')
+            print(f'\nNLME trajectory plot for {score} by {metric_names[0]} saved as {figure_fname}')
+        else:
+            figure_fname = os.path.join(output_dir,
+                                       f'trajectory_plot_NLME_{score}_{metric_names[0]}_{metric_names[1]}_{num_subjects}subjects.png')
+            print(f'\nNLME trajectory plot for {score} by {metric_names[0]} and {metric_names[1]} saved as {figure_fname}')
+
+        figure_fnames.append(figure_fname)
+        plt.savefig(figure_fname, dpi=300)
+        plt.close()
+
+    # Combine plots
+    combine_plots(figure_fnames, 'nlme', output_dir)
 
 
 def plot_trajectory_groups(ax, group_data, time_points, time_point_mapping,
