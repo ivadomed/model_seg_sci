@@ -186,6 +186,12 @@ def combine_plots(figure_fnames, output_type, output_dir):
 
         subprocess.run(cmd, shell=True, check=True)
         print(f"Combined trajectory plots saved as: {output_combined}")
+
+        # Also save as TIFF at 300 DPI
+        output_combined_tiff = output_combined.replace('.png', '.tiff')
+        cmd_tiff = f"convert '{output_combined}' -density 300 -compress lzw '{output_combined_tiff}'"
+        subprocess.run(cmd_tiff, shell=True, check=True)
+        print(f"Combined trajectory plots also saved as: {output_combined_tiff}")
     else:
         print(f"Warning: Expected 4 figures but found {len(labeled_files)}. Cannot create 2x2 grid.")
 

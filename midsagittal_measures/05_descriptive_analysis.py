@@ -610,6 +610,8 @@ def create_comprehensive_figure(df, output_dir):
     figure_path = os.path.join(output_dir, 'Fig2_descriptive_analysis_comprehensive.png')
     plt.savefig(figure_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.savefig(figure_path.replace('.png', '.pdf'), dpi=300, bbox_inches='tight', facecolor='white')
+    # Also save as TIFF at 300 DPI
+    plt.savefig(figure_path.replace('.png', '.tiff'), dpi=300, bbox_inches='tight', facecolor='white')
 
     print(f"Comprehensive descriptive figure saved to: {figure_path}")
     plt.close()
