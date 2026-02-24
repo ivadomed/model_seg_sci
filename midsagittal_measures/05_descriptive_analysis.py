@@ -68,11 +68,12 @@ PIE_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6', '#FFFFCC', 
 TRAJECTORY_COLORS = ['#FBB4AE', '#B3CDE3', '#CCEBC5', '#DECBE4', '#FED9A6']
 # AIS A–E: warm → neutral → greenish, same pastel tones as PIE_COLORS
 AIS_COLORS = [
-    '#FBB4AE',  # A – pastel red/pink
-    '#FED9A6',  # B – pastel orange
-    '#FFFFCC',  # C – pastel yellow
-    '#CCEBC5',  # D – pastel green
     '#B3CDE3',  # E – cool green-blue
+    '#CCEBC5',  # D – pastel green
+    '#FFFFCC',  # C – pastel yellow
+    '#FED9A6',  # B – pastel orange
+    '#FBB4AE',  # A – pastel red/pink
+    '#E5D8BD'   # Unknown – light beige/gray
 ]
 
 
@@ -439,13 +440,12 @@ def create_comprehensive_figure(df, output_dir):
         all_grades = set()
         for tp in available_ais_timepoints:
             ais_col = f'ais_{tp}'
-            grades = df[ais_col].dropna()
-            # Filter out NT values
-            grades = grades[grades != 'NT']
+            # Replace NaN with "Unknown" to be included in the plot
+            grades = df[ais_col].replace('NaN', pd.NA).fillna('Unknown')
             all_grades.update(grades.unique())
 
-        # Sort grades (A, B, C, D, E, then any others)
-        grade_order = ['A', 'B', 'C', 'D', 'E']
+        # Sort grades (E at bottom, then D, C, B, A, Unknown at top)
+        grade_order = ['E', 'D', 'C', 'B', 'A', 'Unknown']
         sorted_grades = [g for g in grade_order if g in all_grades]
         sorted_grades.extend([g for g in sorted(all_grades) if g not in grade_order])
 
@@ -456,7 +456,7 @@ def create_comprehensive_figure(df, output_dir):
 
         for tp in available_ais_timepoints:
             ais_col = f'ais_{tp}'
-            tp_data = df[ais_col].dropna()
+            tp_data = df[ais_col].replace('NaN', pd.NA).fillna('Unknown')
             tp_total = len(tp_data)
             total_counts.append(tp_total)
 
@@ -473,7 +473,7 @@ def create_comprehensive_figure(df, output_dir):
         for i, grade in enumerate(sorted_grades):
             # Use the same colormap as other subplots
             color = AIS_COLORS[i % len(AIS_COLORS)]
-            label = f"AIS {grade}" if grade in AIS_LABELS else f"AIS {grade}"
+            label = f"AIS {grade}" if grade != 'Unknown' else "Unknown"
             bar = ax3.bar(x_pos, grade_counts[grade], bottom=bottom,
                          color=color, alpha=1, label=label,
                          edgecolor='white', linewidth=0.5)
@@ -482,7 +482,11 @@ def create_comprehensive_figure(df, output_dir):
             # Add count labels for each sub-bar (only if count > 0)
             for j, (x, count) in enumerate(zip(x_pos, grade_counts[grade])):
                 if count > 0:  # Only show label if there are participants
-                    y_center = bottom[j] + count / 2  # Center of the sub-bar
+                    # 6 month AIS E --> only 2 participants, so move the label slightly up
+                    if x == 3 and grade == 'E':
+                        y_center = bottom[j] + count / 2 + 1  # Move label slightly up
+                    else:
+                        y_center = bottom[j] + count / 2  # Center of the sub-bar
                     ax3.text(x, y_center, str(count), ha='center', va='center',
                             fontsize=TICK_SIZE, fontweight='bold', color='black')
 
@@ -493,13 +497,32 @@ def create_comprehensive_figure(df, output_dir):
         ax3.set_xticklabels(['Baseline', '1-month', '3-month', '6-month'], fontsize=TICK_SIZE)
         ax3.set_xlabel('', fontsize=LABEL_SIZE)
         ax3.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
-        ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold')
+        # Move title slightly up
+        ax3.set_title('AIS Grade Distribution Over Time', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax3.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
 
-        # Add legend at right center (0.78, 0.42)
-        ax3.legend(bbox_to_anchor=(1, 0.9), loc='center left', fontsize=TICK_SIZE-2, framealpha=0.9)
+        # Create custom legend with desired order: Unknown, A, B, C, D, E
+        legend_order = ['Unknown', 'A', 'B', 'C', 'D', 'E']
+        legend_colors = [
+            '#E5D8BD',  # Unknown – light beige/gray
+            '#FBB4AE',  # A – pastel red/pink
+            '#FED9A6',  # B – pastel orange
+            '#FFFFCC',  # C – pastel yellow
+            '#CCEBC5',  # D – pastel green
+            '#B3CDE3'   # E – cool green-blue
+        ]
 
-        # Remove the total sample size annotations above bars since we now show counts within sub-bars
+        # Create legend handles and labels in the desired order
+        legend_handles = []
+        legend_labels = []
+        for i, grade in enumerate(legend_order):
+            if grade in sorted_grades:  # Only include grades that exist in the data
+                import matplotlib.patches as mpatches
+                handle = mpatches.Patch(color=legend_colors[i], label=f"AIS {grade}" if grade != 'Unknown' else "Unknown")
+                legend_handles.append(handle)
+                legend_labels.append(f"AIS {grade}" if grade != 'Unknown' else "Unknown")
+
+        ax3.legend(handles=legend_handles, labels=legend_labels, bbox_to_anchor=(1, 0.9), loc='center left', fontsize=TICK_SIZE-2, framealpha=0.9)
 
         # Remove right and top spines
         ax3.spines['right'].set_visible(False)
@@ -507,23 +530,6 @@ def create_comprehensive_figure(df, output_dir):
 
         # Set y-axis to start from 0
         ax3.set_ylim(0, max(total_counts) * 1.1)
-
-    else:
-        # Fallback: show only baseline AIS grade distribution as pie chart if no longitudinal data
-        if 'ais_bl' in df.columns:
-            # Filter out NT values
-            ais_data = df['ais_bl'][df['ais_bl'] != 'NT']
-            ais_counts = ais_data.value_counts().sort_index()
-            labels = []
-            for grade in ais_counts.index:
-                if grade in AIS_LABELS:
-                    labels.append(f"AIS {grade}\n({AIS_LABELS[grade]})")
-                else:
-                    labels.append(f"AIS {grade}")
-            wedges, texts, autotexts = ax3.pie(ais_counts.values, labels=labels, autopct='%1.1f%%',
-                                              colors=PIE_COLORS[:len(ais_counts)], startangle=90,
-                                              textprops={'fontsize': TICK_SIZE})
-            ax3.set_title('AIS Grade (Baseline Only)', fontsize=TITLE_SIZE, fontweight='bold')
 
     # Subplot 4: Neurological level of injury
     ax4 = plt.subplot(2, 2, 4)
@@ -561,20 +567,26 @@ def create_comprehensive_figure(df, output_dir):
         sorted_levels = sorted(nli_counts.index, key=sort_nli)
         sorted_counts = [nli_counts[level] for level in sorted_levels]
 
+        spacing = 1.2  # >1 increases distance between bars to prevent overlap of xtick labels
+        x = np.arange(len(sorted_levels)) * spacing
+
         bars = ax4.bar(
-            range(len(sorted_levels)),
+            x,
             sorted_counts,
             color=PIE_COLORS[1],
             alpha=0.8,
             edgecolor='white',
             linewidth=0.5,
         )
-        ax4.set_xticks(range(len(sorted_levels)))
-        ax4.set_xticklabels(sorted_levels, rotation=45, fontsize=TICK_SIZE)
+        ax4.set_xticks(x)
+        # ax4.set_xticks(range(len(sorted_levels)))
+        ax4.set_xticklabels(sorted_levels, rotation=0, fontsize=TICK_SIZE)
         ax4.set_xlabel('', fontsize=LABEL_SIZE)
         ax4.set_ylabel('Number of Participants', fontsize=LABEL_SIZE)
-        ax4.set_title('Neurological Level of Injury at Baseline', fontsize=TITLE_SIZE, fontweight='bold')
+        # Move title slightly up
+        ax4.set_title('Neurological Level of Injury at Baseline', fontsize=TITLE_SIZE, fontweight='bold', pad=15)
         ax4.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+        ax4.tick_params(axis="x", which="major")#, pad=1)  # smaller = closer to bars
         ax4.spines['right'].set_visible(False)
         ax4.spines['top'].set_visible(False)
 
@@ -589,7 +601,7 @@ def create_comprehensive_figure(df, output_dir):
                     fontsize=TICK_SIZE,
                 )
 
-        plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
+        # plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
 
     # Use tighter layout with minimal padding
     plt.tight_layout(pad=1.5, h_pad=1.0, w_pad=1.0)
@@ -598,6 +610,8 @@ def create_comprehensive_figure(df, output_dir):
     figure_path = os.path.join(output_dir, 'Fig2_descriptive_analysis_comprehensive.png')
     plt.savefig(figure_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.savefig(figure_path.replace('.png', '.pdf'), dpi=300, bbox_inches='tight', facecolor='white')
+    # Also save as TIFF at 300 DPI
+    plt.savefig(figure_path.replace('.png', '.tiff'), dpi=300, bbox_inches='tight', facecolor='white')
 
     print(f"Comprehensive descriptive figure saved to: {figure_path}")
     plt.close()

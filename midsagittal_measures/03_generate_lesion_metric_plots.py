@@ -418,5 +418,11 @@ def main():
     subprocess.run(cmd_combine, shell=True)
     print(f"Combined scatter and diff plots saved as {fname_out}")
 
+    # Also save as TIFF at 300 DPI
+    fname_out_tiff = fname_out.replace('.png', '.tiff')
+    cmd_tiff = f"convert {fname_out} -density 300 -compress lzw {fname_out_tiff}"
+    subprocess.run(cmd_tiff, shell=True)
+    print(f"Combined scatter and diff plots also saved as {fname_out_tiff}")
+
 if __name__ == '__main__':
     main()
