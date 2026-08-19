@@ -129,6 +129,31 @@ def get_parser():
 
 
 
+def report_clinical_timepoints(df_timepoints):
+    """
+    Print per-cohort descriptive statistics (mean ± SD, median, min, max) of the clinical assessment timing
+    (days since injury) for each timepoint. Cohort is derived from the participant_id prefix
+    ('sub-zh...' -> Zurich, otherwise -> NISCI).
+    Useful to reproduce the timing values reported in the manuscript.
+    :param df_timepoints: pandas DataFrame read from the -file-timepoints XLSX file, with columns
+                          participant_id, bl, 1m, 3m, 6m (days since injury).
+    """
+    tp_labels = {'bl': 'baseline', '1m': '1-month', '3m': '3-month', '6m': '6-month'}
+    df = df_timepoints.copy()
+    df['cohort'] = df['participant_id'].apply(lambda x: 'Zurich' if str(x).startswith('sub-zh') else 'NISCI')
+
+    print("\nClinical assessment timing (days since injury):")
+    for cohort, df_cohort in df.groupby('cohort'):
+        print(f"- {cohort} (n={len(df_cohort)}):")
+        for tp, label in tp_labels.items():
+            if tp in df_cohort.columns:
+                data = pd.to_numeric(df_cohort[tp], errors='coerce').dropna()
+                if len(data) > 0:
+                    print(f"    {label:9s}: mean ± SD: {data.mean():.1f} ± {data.std():.1f}, "
+                          f"median: {data.median():.1f}, min: {data.min():.1f}, max: {data.max():.1f} "
+                          f"(n={len(data)})")
+
+
 def combine_plots(figure_fnames, output_type, output_dir):
     """
     Combine all the plots into a single figure using bash convert command
@@ -1175,6 +1200,9 @@ def main():
         # df_timepoints['session_id'] = df_timepoints['session_id'].fillna('ses-01')
         # Replace 'NT' with NaN
         df_timepoints = df_timepoints.replace('NT', np.nan)
+
+        # Print per-cohort clinical assessment timing (mean ± SD, median, min, max) to reproduce manuscript values
+        report_clinical_timepoints(df_timepoints)
 
         # Merge time points into main dataframe
         df = pd.merge(df, df_timepoints, on=['participant_id'], how='left')

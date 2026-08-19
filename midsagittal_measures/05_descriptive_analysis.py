@@ -165,7 +165,9 @@ def create_descriptive_table(df, output_dir):
         tsi_median = df['mri_time_since_injury'].median()
         tsi_q25 = df['mri_time_since_injury'].quantile(0.25)
         tsi_q75 = df['mri_time_since_injury'].quantile(0.75)
-        results['Time since injury (days)'] = f"{tsi_mean:.1f} ± {tsi_std:.1f} (median: {tsi_median:.1f}, IQR: {tsi_q25:.1f}-{tsi_q75:.1f})"
+        tsi_min = df['mri_time_since_injury'].min()
+        tsi_max = df['mri_time_since_injury'].max()
+        results['Time since injury (days)'] = f"{tsi_mean:.1f} ± {tsi_std:.1f} (median: {tsi_median:.1f}, IQR: {tsi_q25:.1f}-{tsi_q75:.1f}, range: {tsi_min:.1f}-{tsi_max:.1f})"
 
     # # AIS grade distribution
     # if 'ais_bl' in df.columns:
@@ -273,6 +275,23 @@ def report_MagneticFieldStrength(df):
         for field, count in mfs_counts.items():
             pct = (count / len(standardized_mfs)) * 100
             print(f"- {field}: {count} ({pct:.1f}%)")
+
+
+def report_time_since_injury(df):
+    """
+    Print time since injury for each cohort.
+    """
+    if 'mri_time_since_injury' in df.columns:
+        print("\nTime since injury (days):")
+        for source, df_source in df.groupby('source'):
+            tsi_data = df_source['mri_time_since_injury'].dropna()
+            if len(tsi_data) > 0:
+                print(f"- {source} (n={len(tsi_data)}): "
+                      f"mean ± SD: {tsi_data.mean():.1f} ± {tsi_data.std():.1f}, "
+                      f"median: {tsi_data.median():.1f}, "
+                      f"min: {tsi_data.min():.1f}, max: {tsi_data.max():.1f}")
+            else:
+                print(f"- {source}: no data")
 
 
 def report_cervical_and_thoracic_injuries(df):
@@ -650,10 +669,13 @@ def main():
     # sci-zurich clinical data
     # --------------
     df_clinical_sci_zurich = pd.read_excel(args.file_clinical_sci_zurich, engine='openpyxl',
-                                         usecols=['participant_id', 'session_id', 'nli_bl',
+                                         usecols=['participant_id', 'session_id', 'mri_time_since_injury', 'nli_bl',
                                                   'ais_bl', 'ais_1m', 'ais_3m', 'ais_6m'])
     # If session_id is empty, fill with 'ses-01'
     df_clinical_sci_zurich['session_id'] = df_clinical_sci_zurich['session_id'].fillna('ses-01')
+    # Remove any strings from the 'mri_time_since_injury' column (e.g., '100 days' --> 100)
+    df_clinical_sci_zurich['mri_time_since_injury'] = (
+        df_clinical_sci_zurich['mri_time_since_injury'].astype(str).str.extract(r'(\d+)').astype(float))
     # Replace 'NT' with NaN
     df_clinical_sci_zurich = df_clinical_sci_zurich.replace('NT', np.nan)
     df = pd.merge(df, df_clinical_sci_zurich, on=['participant_id', 'session_id'], how='left')
@@ -662,7 +684,11 @@ def main():
     # XLSX file with clinical scores (NLI, AIS) for NISCI
     # -----------
     df_clinical_nisci = pd.read_excel(args.file_clinical_nisci, engine='openpyxl',
-                                      usecols=['Patient', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05', 'AIS_06'])
+                                      usecols=['Patient', 'DOI', 'MRI_time', 'NLI_01', 'AIS_01', 'AIS_03', 'AIS_05',
+                                               'AIS_06'])
+    # Compute 'mri_time_since_injury' from the 'DOI' (date of injury) and 'MRI_time' columns
+    df_clinical_nisci['mri_time_since_injury'] = (df_clinical_nisci['MRI_time'] - df_clinical_nisci['DOI']).dt.days
+    df_clinical_nisci = df_clinical_nisci.drop(columns=['DOI', 'MRI_time'])
     # '01' -- Day 0 (Screening)
     # '02' -- Day 1 (Baseline)
     # '03' -- 2 Weeks (14 days)
@@ -693,15 +719,20 @@ def main():
     # NOTE: these columns already exist in df from sci-zurich, so we only add missing values from nisci
     df = pd.merge(df, df_clinical_nisci, on='participant_id', how='left', suffixes=('', '_nisci'))
     # Fill missing nli_bl values from nisci
+    df['mri_time_since_injury'] = df['mri_time_since_injury'].combine_first(df['mri_time_since_injury_nisci'])
     df['nli_bl'] = df['nli_bl'].combine_first(df['nli_bl_nisci'])
     df['ais_bl'] = df['ais_bl'].combine_first(df['ais_bl_nisci'])
     df['ais_1m'] = df['ais_1m'].combine_first(df['ais_1m_nisci'])
     df['ais_3m'] = df['ais_3m'].combine_first(df['ais_3m_nisci'])
     df['ais_6m'] = df['ais_6m'].combine_first(df['ais_6m_nisci'])
     # Drop the extra columns
-    df = df.drop(columns=['nli_bl_nisci', 'ais_bl_nisci', 'ais_1m_nisci', 'ais_3m_nisci', 'ais_6m_nisci'])
+    df = df.drop(columns=['mri_time_since_injury_nisci', 'nli_bl_nisci', 'ais_bl_nisci', 'ais_1m_nisci',
+                          'ais_3m_nisci', 'ais_6m_nisci'])
 
     report_MagneticFieldStrength(df)
+
+    # Print time since injury separately for both cohorts
+    report_time_since_injury(df)
 
     # Print number of subjects cervical and thoracic injuries
     report_cervical_and_thoracic_injuries(df)
