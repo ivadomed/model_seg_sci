@@ -184,7 +184,7 @@ def find_site_in_path(path):
     else:
         match = os.path.basename(path)
     
-    return match.group(0) if match else None
+    return match
 
 
 def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits):
