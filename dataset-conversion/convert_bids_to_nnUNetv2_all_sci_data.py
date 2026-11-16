@@ -178,6 +178,7 @@ def find_site_in_path(path):
     Returns:
     str: Extracted site identifier or None if not found.
     """
+    print(path)
     # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
     if 'dcm' in path:
         match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
@@ -186,6 +187,7 @@ def find_site_in_path(path):
     elif 'site' in path:
         # NOTE: PRAXIS data has 'site_xxx' in the path (and doesn't have the site names themselves in the path)
         match = re.search(r'site_\d{3}', path)
+    print(match)
 
     return match.group(0) if match else None
 
@@ -314,7 +316,6 @@ def main():
         site_name = find_site_in_path(dataset)
 
         # get recursively all GT '_label-lesion' files
-        print(site_name)
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
         # add to the list of all subjects
