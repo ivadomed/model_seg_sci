@@ -314,6 +314,7 @@ def main():
         site_name = find_site_in_path(dataset)
 
         # get recursively all GT '_label-lesion' files
+        print(site_name)
         lesion_label_suffix = LABEL_SUFFIXES[site_name][1]
         lesion_files = [str(path) for path in root.rglob(f'*_{lesion_label_suffix}.nii.gz')]
         # add to the list of all subjects
