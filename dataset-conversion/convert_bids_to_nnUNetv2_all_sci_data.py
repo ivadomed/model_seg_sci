@@ -178,14 +178,21 @@ def find_site_in_path(path):
     Returns:
     str: Extracted site identifier or None if not found.
     """
-    # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
-    if 'dcm' in path:
-        match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
-        match = match.group(0) if match else None
-    else:
-        match = os.path.basename(path)
-    
-    return match
+    # The path can be a dataset folder or a file inside it (e.g. <site>/derivatives/labels/sub-xx/anat/<file>),
+    # so look for the site name among the path components, starting from the deepest one
+    parts = Path(os.path.normpath(path)).parts
+    for part in reversed(parts):
+        if part in LABEL_SUFFIXES:
+            return part
+
+    # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-YYYYMMDD'
+    for part in reversed(parts):
+        match = re.fullmatch(r'dcm-zurich-lesions(-\d{8})?', part)
+        if match:
+            return match.group(0)
+
+    raise ValueError(f"Could not find a known site in path '{path}'. "
+                     f"Expected one of these folder names: {list(LABEL_SUFFIXES.keys())}")
 
 
 def create_yaml(train_niftis, test_nifitis, path_out, args, train_ctr, test_ctr, dataset_commits):
