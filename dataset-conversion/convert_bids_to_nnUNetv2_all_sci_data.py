@@ -78,14 +78,14 @@ LABEL_SUFFIXES = {
     "sci-colorado": ["seg-manual", "lesion-manual"],
     "sci-paris": ["seg-manual", "lesion-manual"],
     "sci-zurich": ["seg-manual", "lesion-manual"],
-    "site-001": ["seg", "lesion"],
-    "site-012": ["seg", "lesion"],
-    "site-013": ["seg", "lesion"],
-    "site-014": ["seg", "lesion"],
+    "site_001": ["seg", "lesion"],
+    "site_012": ["seg", "lesion"],
+    "site_013": ["seg", "lesion"],
+    "site_014": ["seg", "lesion"],
 }
 # NOTE: these datasets only contain a few subjects (n<20), hence using them all for training
-TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site-012', 'site-013']
-TEST_ONLY_SITES = ['site-001', 'site-014']
+TRAIN_ONLY_SITES = ['dcm-zurich-lesions', 'sci-paris', 'site_012', 'site_013']
+TEST_ONLY_SITES = ['site_001', 'site_014']
 
 
 def get_parser():
@@ -178,15 +178,14 @@ def find_site_in_path(path):
     Returns:
     str: Extracted site identifier or None if not found.
     """
-    print(path)
     # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
     if 'dcm' in path:
         match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
     elif 'sci' in path:
         match = re.search(r'sci-zurich|sci-colorado|sci-paris', path)
     elif 'site' in path:
-        # NOTE: PRAXIS data has 'site-xxx' in the path (and doesn't have the site names themselves in the path)
-        match = re.search(r'site-\d{3}', path)
+        # NOTE: PRAXIS data has 'site_xxx' in the path (and doesn't have the site names themselves in the path)
+        match = re.search(r'site_\d{3}', path)
 
     return match.group(0) if match else None
 
