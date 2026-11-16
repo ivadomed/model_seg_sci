@@ -182,7 +182,7 @@ def find_site_in_path(path):
     if 'dcm' in path:
         match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
     else:
-        match = os.basename(path)
+        match = os.path.basename(path)
     
     return match.group(0) if match else None
 
