@@ -182,12 +182,8 @@ def find_site_in_path(path):
     # Find 'dcm-zurich-lesions' or 'dcm-zurich-lesions-20231115'
     if 'dcm' in path:
         match = re.search(r'dcm-zurich-lesions(-\d{8})?', path)
-    elif 'sci' in path:
-        match = re.search(r'sci-zurich|sci-colorado|sci-paris', path)
-    elif 'site' in path:
-        # NOTE: PRAXIS data has 'site_xxx' in the path (and doesn't have the site names themselves in the path)
-        match = re.search(r'site_\d{3}', path)
-    print(match)
+    else:
+        match = os.basename(path)
 
     return match.group(0) if match else None
 
