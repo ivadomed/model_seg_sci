@@ -35,7 +35,7 @@ The data used for training the model are hosted on a private repository accordin
   - Lesion etiology: traumatic lesions
   - Surgery: Mix of operated and non-operated subjects
 - PRAXIS Spinal Cord Institue 🇨🇦
-  - Sites: ~~`site-003`~~ `site-001` (testing only), `site-012` (training only), `site-013` (training only), `site-014` (testing only)
+  - Sites: `site_001` (testing only), `site_012` (training only), `site_013` (training only), `site_014` (testing only)
   - Contrasts used for training: Sagittal T2w
   - Manual segmentations for both spinal cord (SC) and lesion available for Sagittal T2w
   - Single session
@@ -61,16 +61,16 @@ The data used for training the model are hosted on a private repository accordin
 - `dcm-zurich-lesions-20231115`
   - Name: git@data.neuro.polymtl.ca:datasets/dcm-zurich-lesions-20231115
   - Commit: 28a70d9
-- ~~`site-003`~~ `site-001` (PRAXIS)
+- `site_001` (PRAXIS)
   - Name: gitea@spineimage.ca:TOH/site_001.git
   - Commit: 92ee944
-- `site-012` (PRAXIS)
+- `site_012` (PRAXIS)
   - Name: gitea@spineimage.ca:NSHA/site_012.git
   - Commit: 375059b
-- `site-013` (PRAXIS)
+- `site_013` (PRAXIS)
   - Name: gitea@spineimage.ca:HGH/site_013.git
   - Commit: 7cd7611
-- `site-014` (PRAXIS)
+- `site_014` (PRAXIS)
   - Name: gitea@spineimage.ca:HEJ/site_014.git
   - Commit: bd8099e
 
